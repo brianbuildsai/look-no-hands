@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>An Atlas of Nowhere</title>
+  <meta name="description" content="Type a word and it becomes a world: continents, seas, mountains and towns, named in that world's own language and drawn as a turning chart. The same word always gives the same world.">
+  <meta name="theme-color" content="#f4f6f3">
+  <meta name="color-scheme" content="light">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/atlas.css">
+</head>
+<body>
+  <a class="skip-link" href="#gazetteer">Skip to the gazetteer</a>
+
+  <header class="masthead">
+    <a class="masthead__title" href="#sheet">An Atlas of Nowhere</a>
+    <nav class="masthead__nav" aria-label="On this page">
+      <a href="#gazetteer">Gazetteer</a>
+      <a href="#almanac">Almanac</a>
+      <a href="#made">How it was made</a>
+    </nav>
+    <a class="masthead__other" href="index.html">Next door: <span class="masthead__other-name">Look, no hands.</span></a>
+  </header>
+
+  <main>
+    <!-- The chart sheet -->
+    <section class="sheet" id="sheet" aria-labelledby="world-heading">
+      <div class="title-block">
+        <h1 class="title-block__heading" id="world-heading">
+          <span class="title-block__series">An Atlas of Nowhere</span>
+          <span class="title-block__name" data-world="name">&nbsp;</span>
+        </h1>
+        <p class="title-block__for">a world drawn for &ldquo;<span data-world="word">&hellip;</span>&rdquo;</p>
+
+        <form class="word-form" data-word-form autocomplete="off">
+          <label class="word-form__label" for="word">Type a word. It becomes a world.</label>
+          <div class="word-form__row">
+            <input class="word-form__input" id="word" name="word" type="text" maxlength="32" placeholder="your name, for instance" spellcheck="false" autocapitalize="none" enterkeyhint="go">
+            <button class="button button--primary" type="submit">Draw this world</button>
+          </div>
+        </form>
+        <div class="word-actions">
+          <button class="button" type="button" data-another>Another word</button>
+          <button class="button" type="button" data-copy>Copy link to this world</button>
+          <span class="word-actions__status" role="status" data-copy-status></span>
+        </div>
+        <p class="title-block__note">Drag the globe to turn it. Choose any name to go there.</p>
+      </div>
+
+      <div class="globe" data-globe tabindex="0" role="application" aria-label="Globe of this world. Drag, or use the arrow keys, to turn it." aria-describedby="globe-help">
+        <canvas class="globe__surface"></canvas>
+        <canvas class="globe__labels"></canvas>
+        <p class="globe__notice"></p>
+        <p class="globe__progress" role="status" data-progress></p>
+      </div>
+      <p class="visually-hidden" id="globe-help">Every place on the globe is also listed in the gazetteer below, where it can be chosen from the keyboard.</p>
+
+      <aside class="entry" aria-live="polite" data-entry>
+        <p class="entry__empty">Nothing chosen yet. Choose a name on the globe or in the gazetteer.</p>
+      </aside>
+
+      <div class="key" aria-label="Key to the chart">
+        <div class="key__group">
+          <p class="key__title">Depths, in metres</p>
+          <ol class="key__swatches" data-key="depths"></ol>
+        </div>
+        <div class="key__group">
+          <p class="key__title">Heights, in metres</p>
+          <ol class="key__swatches" data-key="heights"></ol>
+        </div>
+        <div class="key__group">
+          <p class="key__title">Scale at the centre</p>
+          <div class="scale-bar"><span class="scale-bar__rule"></span><span class="scale-bar__figure" data-key="scale">&nbsp;</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gazetteer -->
+    <section class="ruled" id="gazetteer" aria-labelledby="gazetteer-heading">
+      <h2 class="ruled__heading" id="gazetteer-heading">Gazetteer</h2>
+      <p class="ruled__intro">Every name here was coined for this world, in its own language, from your word. Choose one and the globe turns to it.</p>
+      <div class="gazetteer">
+        <div class="gazetteer__column">
+          <h3 class="gazetteer__title">Towns</h3>
+          <ol class="gazetteer__list" data-gazetteer="town"></ol>
+        </div>
+        <div class="gazetteer__column">
+          <h3 class="gazetteer__title gazetteer__title--water">Waters</h3>
+          <ol class="gazetteer__list" data-gazetteer="water"></ol>
+        </div>
+        <div class="gazetteer__column">
+          <h3 class="gazetteer__title">Heights</h3>
+          <ol class="gazetteer__list" data-gazetteer="peak"></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- Almanac -->
+    <section class="ruled" id="almanac" aria-labelledby="almanac-heading">
+      <h2 class="ruled__heading" id="almanac-heading">Almanac</h2>
+      <p class="ruled__intro">The measurements of <span data-world="name-inline">this world</span>, taken from the same survey the chart is drawn from.</p>
+      <dl class="almanac" data-almanac></dl>
+    </section>
+
+    <!-- How it was made -->
+    <section class="ruled" id="made" aria-labelledby="made-heading">
+      <h2 class="ruled__heading" id="made-heading">How it was made</h2>
+      <div class="made">
+        <p>Your word is turned into a number. That number decides everything: where the continents rise, how deep the seas run, which sounds this world's language allows and which it never uses. Nothing is fetched and nothing is stored. Type the same word on any machine and the same world comes back, down to the last village.</p>
+        <p>An AI, Claude, made by Anthropic, designed this sheet and wrote all of it: the terrain, the language, the globe and the typography, which follows the conventions of printed sea charts. Water is named in italic, land in upright letters, and notes are in magenta, as they have been for a century.</p>
+        <dl class="facts">
+          <div class="facts__row"><dt>Images and map data</dt><dd>0</dd></div>
+          <div class="facts__row"><dt>Libraries and frameworks</dt><dd>0</dd></div>
+          <div class="facts__row"><dt>Lines of code, all of them readable</dt><dd data-fact="lines">0</dd></div>
+          <div class="facts__row"><dt>Worlds it can draw</dt><dd>4,294,967,296</dd></div>
+        </dl>
+        <p>Read the source: <a href="js/atlas/world.js">world.js</a>, <a href="js/atlas/tongue.js">tongue.js</a>, <a href="js/atlas/globe.js">globe.js</a>, <a href="js/atlas/sheet.js">sheet.js</a>, <a href="css/atlas.css">atlas.css</a>.</p>
+        <p class="made__other">There is another show next door, in the dark: <a href="index.html">Look, no hands.</a></p>
+      </div>
+    </section>
+  </main>
+
+  <noscript>
+    <p class="noscript">The world is worked out on your device from your word, so this page needs JavaScript. There is no picture of it to show you otherwise.</p>
+  </noscript>
+</body>
+</html>
