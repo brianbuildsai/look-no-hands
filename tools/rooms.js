@@ -312,6 +312,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Falling-sand games turned up on the web in the mid-2000s and programmers have been rewriting them ever since, because so little code gives so much world. There is no physics engine here: no gravity constant, no pressure, no heat equation. Each cell is one number, and the rules for every number together would fit on a postcard.'
+    },
+    {
+      number: 16,
+      slug: 'bottom',
+      ready: true,
+      title: 'No Bottom',
+      line: 'Fall a trillion times into one line of arithmetic.',
+      description: 'A dive into the Mandelbrot set, trillions of times deep, far past what a graphics card can count, by keeping track only of how each pixel differs from one carefully computed point.',
+      canvasLabel: 'The edge of the Mandelbrot set, magnified continuously: spirals inside spirals in blue, bone, amber and rose, closing in on a point that looks the same at every scale, until a small copy of the whole set appears at the bottom.',
+      medium: '2026. Magnified <span class="live" data-live="bottom.zoom">1</span> times. Neighbouring pixels now differ in decimal place <span class="live" data-live="bottom.digits">3</span>; a graphics card keeps about seven. Up to <span class="live" data-live="bottom.steps">0</span> steps of arithmetic for every pixel of every frame.',
+      text: 'The whole shape is one sum, repeated: square a number, add where you are standing, see if it runs away. Its edge never runs out of detail, but numbers do. So one point in the middle of the view is worked out with great care, and every pixel keeps track only of how it differs from that one. At the bottom of each fall there is a small copy of the whole thing, waiting. Press and hold to steer somewhere else.',
+      controls: `
+<div class="controls" role="group" aria-label="No Bottom controls">
+  <label class="dial">
+    <span class="dial__label"><span>How fast it falls</span><span data-bottom-speed-value></span></span>
+    <input class="dial__input" type="range" min="2" max="16" step="1" value="7" data-bottom-speed>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-bottom-hold aria-pressed="false">Hold still</button>
+    <button class="btn" type="button" data-bottom-up>Come back up</button>
+  </div>
+</div>`,
+      wall: 'Benoit Mandelbrot had this shape drawn on an IBM printer in 1980 and nobody has reached the bottom of it since, because there is not one. Each fall here ends a few trillion times down, at one of the endless small copies of the whole set. It could not go much further: that is about where ordinary computer numbers give out. The shape was not getting any simpler.'
     }
   ]
 };

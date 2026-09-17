@@ -142,6 +142,23 @@
     pen.beginPath(); pen.moveTo(0, 0); pen.lineTo(0, h * 0.5); pen.stroke();
   };
 
+  // room 16: the cardioid and its bulb, and the same again, smaller, on the needle
+  glyphs.bottom = function (pen, s) {
+    function set(cx, k) {
+      pen.beginPath();
+      for (var i = 0; i <= 60; i++) {
+        var t = i / 60 * 6.2832;
+        var x = (2 * Math.cos(t) - Math.cos(2 * t)) / 4, y = (2 * Math.sin(t) - Math.sin(2 * t)) / 4;
+        if (i) pen.lineTo(cx + x * k, -y * k); else pen.moveTo(cx + x * k, -y * k);
+      }
+      pen.stroke();
+      pen.beginPath(); pen.arc(cx - k, 0, k * 0.25, 0, 6.2832); pen.stroke();
+    }
+    set(s * 0.2, s * 0.42);
+    set(-s * 0.4, s * 0.07);
+    pen.beginPath(); pen.moveTo(-s * 0.335, 0); pen.lineTo(-s * 0.49, 0); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
