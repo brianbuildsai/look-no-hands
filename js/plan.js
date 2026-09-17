@@ -89,6 +89,22 @@
     });
   };
 
+  // room 12: two spirals, each with a tail pulled out toward the other
+  glyphs.introduction = function (pen, s) {
+    [[-0.34, 0.06, 1, 0.3], [0.36, -0.08, -1, 0.24]].forEach(function (g) {
+      for (var arm = 0; arm < 2; arm++) {
+        pen.beginPath();
+        for (var i = 0; i <= 50; i++) {
+          var t = i / 50, a = g[2] * (t * 4.2) + arm * Math.PI, r = g[3] * s * t * (arm === 0 ? 1.45 : 1);
+          var x = g[0] * s + Math.cos(a) * r, y = g[1] * s + Math.sin(a) * r * 0.62;
+          if (i) pen.lineTo(x, y); else pen.moveTo(x, y);
+        }
+        pen.stroke();
+      }
+      pen.beginPath(); pen.arc(g[0] * s, g[1] * s, 2.5, 0, 6.2832); pen.fill();
+    });
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

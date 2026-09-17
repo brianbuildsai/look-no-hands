@@ -168,6 +168,33 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Each agent follows the scent the others left, and leaves a little of its own. That is the entire rule. Nobody is in charge of the network and nobody in it can see it. It is still, by any fair measure, a good network.'
+    },
+    {
+      number: 12,
+      slug: 'introduction',
+      ready: true,
+      title: 'An Introduction',
+      line: 'Two spiral galaxies pass through each other.',
+      description: 'Send two spiral galaxies through each other and watch tides pull them into bridges and tails: forty thousand stars, integrated live, that you can turn in your hand.',
+      canvasLabel: 'Two glowing spiral discs of stars, one amber and one blue, swinging past each other and drawing out long curved tails.',
+      medium: '2026. <span class="live" data-live="introduction.stars">0</span> stars and two heavy centres. <span class="live" data-live="introduction.years">0</span> million years since they first felt each other; <span class="live" data-live="introduction.fps">0</span> frames a second.',
+      text: 'Each star here feels the two centres and nothing else, a shortcut two brothers named Toomre used in 1972 to show that the long tails on real colliding galaxies are tides and nothing stranger. Drag to see it from another side. Choose how close they pass.',
+      controls: `
+<div class="controls" role="group" aria-label="An Introduction controls">
+  <div class="controls__row" role="group" aria-label="How close they pass">
+    <button class="btn" type="button" data-introduction-pass="grazing" aria-pressed="false">A grazing pass</button>
+    <button class="btn" type="button" data-introduction-pass="close" aria-pressed="true">A close pass</button>
+    <button class="btn" type="button" data-introduction-pass="headon" aria-pressed="false">Head on</button>
+  </div>
+  <label class="dial">
+    <span class="dial__label"><span>How fast time runs</span><span data-introduction-speed-value></span></span>
+    <input class="dial__input" type="range" min="0" max="3" step="0.25" value="1" data-introduction-speed>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-introduction-again>Introduce them again</button>
+  </div>
+</div>`,
+      wall: 'The Andromeda galaxy is coming toward ours at about a hundred kilometres a second. If the two do meet, several billion years from now, the night sky will look something like this, and almost no stars will actually collide. There is far too much room between them.'
     }
   ]
 };
