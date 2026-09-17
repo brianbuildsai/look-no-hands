@@ -194,6 +194,16 @@
     pen.restore();
   };
 
+  // room 19: a few hundred steps of the recipe itself
+  glyphs.numbers = function (pen, s) {
+    var a = -1.4, b = 1.6, c = 1.0, d = 0.7, x = 0.1, y = 0.1, k = s * 0.22;
+    for (var i = 0; i < 900; i++) {
+      var nx = Math.sin(a * y) + c * Math.cos(a * x), ny = Math.sin(b * x) + d * Math.cos(b * y);
+      x = nx; y = ny;
+      if (i > 20) pen.fillRect(x * k - 0.5, -y * k - 0.5, 1, 1);
+    }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

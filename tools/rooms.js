@@ -393,6 +393,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'In the first years of the 1800s Thomas Young let light through two slits and found stripes on the far wall, bright and dark, which only waves can make. So light was a wave. A century later it turned out that single particles of light, sent through one at a time, slowly build the same stripes. Nobody is entirely comfortable with that yet.'
+    },
+    {
+      number: 19,
+      slug: 'numbers',
+      ready: true,
+      title: 'Four Numbers',
+      line: 'Drag, and four numbers redraw a figure nobody has seen.',
+      description: 'A strange attractor drawn live: one point, moved by the same two lines of arithmetic for ever, traces a figure fixed entirely by four numbers. Drag to change them.',
+      canvasLabel: 'A luminous figure like folded silk or smoke, in amber, blue and rose on black, made of millions of specks of light. It slowly changes shape as the four numbers that define it drift.',
+      medium: '2026. a = <span class="live" data-live="numbers.a">0</span>, b = <span class="live" data-live="numbers.b">0</span>, c = <span class="live" data-live="numbers.c">0</span>, d = <span class="live" data-live="numbers.d">0</span>. <span class="live" data-live="numbers.points">0</span> specks of light a second, each put through the same two lines of arithmetic.',
+      text: 'Take a point. Move it to sin(a·y) + c·cos(a·x) across and sin(b·x) + d·cos(b·y) up. Do it again, for ever, and mark everywhere it lands. That is the whole recipe, and the four numbers are the only ingredients: nearly every choice of them draws a figure nobody has seen before. Drag to change them. Leave it alone and it wanders off to find another.',
+      controls: `
+<div class="controls" role="group" aria-label="Four Numbers controls">
+  <div class="controls__row" role="group" aria-label="Which numbers dragging changes">
+    <button class="btn" type="button" data-numbers-pair="0" aria-pressed="true">Drag changes a and b</button>
+    <button class="btn" type="button" data-numbers-pair="1" aria-pressed="false">c and d</button>
+  </div>
+  <div class="controls__row">
+    <button class="btn" type="button" data-numbers-hold aria-pressed="false">Hold it there</button>
+    <button class="btn" type="button" data-numbers-elsewhere>Somewhere else</button>
+  </div>
+</div>`,
+      wall: 'The point never settles and never repeats, and yet it never leaves the figure. Shapes like this are called strange attractors. The first was found in 1963 by Edward Lorenz, a meteorologist, inside a toy model of the weather; this recipe is Clifford Pickover’s. Nothing here is drawn. The figure is only where the point happens to go.'
     }
   ]
 };
