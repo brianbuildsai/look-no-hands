@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Look, no hands.</title>
+  <meta name="description" content="Five live works of light, language, learning, life and sound. No images, no libraries. Every frame is computed on your device, by code an AI wrote from a one-sentence brief.">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Hide the hero until the first frame is ready. The timeout is a failsafe
+    // so the page can never stay hidden if a script fails to load.
+    document.documentElement.classList.add('is-loading');
+    setTimeout(function () { document.documentElement.classList.remove('is-loading'); }, 4000);
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#murmuration">Skip to the works</a>
+
+  <header class="masthead">
+    <a class="masthead__title" href="#quicksilver">Look, no hands.</a>
+    <nav class="masthead__nav" aria-label="Rooms">
+      <ol class="rooms-nav">
+        <li><a class="rooms-nav__link" href="#quicksilver" aria-label="Room 1, Quicksilver"><span class="rooms-nav__num">1</span><span class="rooms-nav__name">Quicksilver</span></a></li>
+        <li><a class="rooms-nav__link" href="#murmuration" aria-label="Room 2, Murmuration"><span class="rooms-nav__num">2</span><span class="rooms-nav__name">Murmuration</span></a></li>
+        <li><a class="rooms-nav__link" href="#mind" aria-label="Room 3, Study for a Mind"><span class="rooms-nav__num">3</span><span class="rooms-nav__name">Mind</span></a></li>
+        <li><a class="rooms-nav__link" href="#garden" aria-label="Room 4, Turing's Garden"><span class="rooms-nav__num">4</span><span class="rooms-nav__name">Garden</span></a></li>
+        <li><a class="rooms-nav__link" href="#harp" aria-label="Room 5, Aeolian Harp"><span class="rooms-nav__num">5</span><span class="rooms-nav__name">Harp</span></a></li>
+      </ol>
+    </nav>
+    <button class="btn btn--quiet motion-toggle" type="button" aria-pressed="false" aria-label="Pause motion" data-motion-toggle><span data-motion-verb>Pause</span><span class="motion-toggle__noun">&nbsp;motion</span></button>
+  </header>
+
+  <main>
+    <!-- Room 1: Quicksilver (hero) -->
+    <section class="room room--hero" id="quicksilver" data-room>
+      <div class="stage" data-work="quicksilver">
+        <canvas class="stage__canvas" role="img" aria-label="A body of liquid metal turning slowly in the dark. A smaller drop follows your pointer and merges with it."></canvas>
+        <p class="stage__notice"></p>
+      </div>
+      <div class="hero__text">
+        <h1 class="hero__title">Look,<br>no hands.</h1>
+        <p class="hero__intro">Five works of light, language, learning, life and sound. None of it is a picture or a recording. Every frame is worked out on your device as you watch, by code an AI wrote from a one-sentence brief. Go on, touch things.</p>
+      </div>
+      <div class="label label--hero">
+        <h2 class="label__title">Quicksilver</h2>
+        <p class="label__medium">2026. Geometry solved per pixel on your graphics card, <span class="live" data-live="quicksilver.size">0 × 0</span> pixels, <span class="live" data-live="quicksilver.fps">0</span> frames a second.</p>
+        <p class="label__text">Move your pointer. A drop breaks away and follows it.</p>
+      </div>
+    </section>
+
+    <section class="wall">
+      <p class="wall__text">There is no film playing up there. That metal has no file. It is a short description of a shape, solved again for every pixel, sixty times a second. When you move, it has to be solved differently.</p>
+    </section>
+
+    <!-- Room 2: Murmuration -->
+    <section class="room room--murmuration" id="murmuration" data-room>
+      <div class="stage" data-work="murmuration">
+        <canvas class="stage__canvas" role="img" aria-label="Tens of thousands of points of light flocking together to spell out words."></canvas>
+        <p class="stage__notice"></p>
+      </div>
+      <div class="label">
+        <h2 class="label__title">Murmuration</h2>
+        <p class="label__medium">2026. <span class="live" data-live="murmuration.count">0</span> points of light, each steering toward a letter, <span class="live" data-live="murmuration.fps">0</span> frames a second.</p>
+        <p class="label__text">Type anything and the flock rearranges itself to say it. Push through it with your pointer.</p>
+        <form class="controls say" data-say-form autocomplete="off">
+          <label class="say__label" for="say-input">What should it say?</label>
+          <input class="say__input" id="say-input" name="say" type="text" maxlength="24" placeholder="Say something" spellcheck="false" enterkeyhint="done">
+        </form>
+      </div>
+    </section>
+
+    <section class="wall">
+      <p class="wall__text">Each point knows two things: where it is going, and what is in its way. Nobody draws the letters. They are what is left when forty thousand small decisions agree.</p>
+    </section>
+
+    <!-- Room 3: Study for a Mind -->
+    <section class="room room--mind" id="mind" data-room>
+      <div class="stage stage--mind" data-work="mind">
+        <canvas class="stage__canvas" role="img" aria-label="A map coloured amber and blue, redrawn continuously as a small neural network learns which dots belong to which colour."></canvas>
+        <p class="stage__notice"></p>
+      </div>
+      <div class="label">
+        <h2 class="label__title">Study for a Mind</h2>
+        <p class="label__medium">2026. A neural network of <span class="live" data-live="mind.params">0</span> connections, written from scratch, learning on your device. Step <span class="live" data-live="mind.step">0</span>, <span class="live" data-live="mind.accuracy">0</span>% right.</p>
+        <p class="label__text">It starts out knowing nothing. Watch it work out which dots are amber and which are blue, and redraw its map each time it changes its mind. Click the map to add a dot. It will have to reconsider.</p>
+        <div class="controls" role="group" aria-label="Study for a Mind controls">
+          <div class="controls__row" role="group" aria-label="Problem to learn">
+            <button class="btn" type="button" data-mind-set="spiral" aria-pressed="true">Spiral</button>
+            <button class="btn" type="button" data-mind-set="rings" aria-pressed="false">Rings</button>
+            <button class="btn" type="button" data-mind-set="quarters" aria-pressed="false">Quarters</button>
+            <button class="btn" type="button" data-mind-set="blank" aria-pressed="false">Blank</button>
+          </div>
+          <div class="controls__row">
+            <button class="btn btn--swatch" type="button" data-mind-class aria-pressed="false">Adding amber dots</button>
+            <button class="btn" type="button" data-mind-reset>Forget everything</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wall">
+      <p class="wall__text">This is the idea that runs the largest models, at a size small enough to watch. Make a guess. Measure how wrong it was. Nudge every connection slightly toward less wrong. Repeat a few thousand times.</p>
+    </section>
+
+    <!-- Room 4: Turing's Garden -->
+    <section class="room room--garden" id="garden" data-room>
+      <div class="stage" data-work="garden">
+        <canvas class="stage__canvas" role="img" aria-label="Organic patterns like coral, spots and mazes growing and dividing across a dark surface."></canvas>
+        <p class="stage__notice"></p>
+      </div>
+      <div class="label">
+        <h2 class="label__title">Turing's Garden</h2>
+        <p class="label__medium">2026. Two chemicals, two rules, <span class="live" data-live="garden.cells">0</span> cells, <span class="live" data-live="garden.steps">0</span> generations a second.</p>
+        <p class="label__text">In 1952 Alan Turing proposed that spots, stripes and coral could all grow from two substances chasing each other. He was right. Drag across the dark to plant some.</p>
+        <div class="controls" role="group" aria-label="Turing's Garden controls">
+          <div class="controls__row" role="group" aria-label="Species">
+            <button class="btn" type="button" data-garden-species="coral" aria-pressed="true">Coral</button>
+            <button class="btn" type="button" data-garden-species="cells" aria-pressed="false">Cells</button>
+            <button class="btn" type="button" data-garden-species="maze" aria-pressed="false">Maze</button>
+            <button class="btn" type="button" data-garden-species="worms" aria-pressed="false">Worms</button>
+          </div>
+          <div class="controls__row">
+            <button class="btn" type="button" data-garden-seed>Scatter seeds</button>
+            <button class="btn" type="button" data-garden-clear>Clear the bed</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wall">
+      <p class="wall__text">The same man who asked whether machines could think also explained how the leopard gets its spots. Nothing above is drawn. Each cell looks only at its neighbours, and the garden happens anyway.</p>
+    </section>
+
+    <!-- Room 5: Aeolian Harp -->
+    <section class="room room--harp" id="harp" data-room>
+      <div class="stage" data-work="harp" tabindex="0" aria-describedby="harp-keys">
+        <canvas class="stage__canvas" role="img" aria-label="A row of fine strings of light that tremble when plucked."></canvas>
+        <p class="stage__notice"></p>
+      </div>
+      <div class="label">
+        <h2 class="label__title">Aeolian Harp</h2>
+        <p class="label__medium">2026. <span class="live" data-live="harp.strings">0</span> strings, synthesised live. No recordings. <span class="live" data-live="harp.notes">0</span> notes played so far.</p>
+        <p class="label__text">An aeolian harp is played by the wind. This one is played by a machine that was never taught a tune, and by you. Turn the sound on, then run your pointer across the strings.</p>
+        <p class="label__text label__text--hint" id="harp-keys">On a keyboard, focus the strings and use the arrow keys.</p>
+        <div class="controls" role="group" aria-label="Aeolian Harp controls">
+          <div class="controls__row">
+            <button class="btn" type="button" data-harp-sound aria-pressed="false">Turn sound on</button>
+            <button class="btn" type="button" data-harp-wind aria-pressed="true">Wind is playing</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Colophon -->
+    <section class="colophon" id="colophon">
+      <h2 class="colophon__heading">The whole brief</h2>
+      <blockquote class="colophon__brief">
+        <p>Create the coolest website ever. Show off the capabilities of AI.</p>
+      </blockquote>
+      <p class="colophon__text">That was the instruction. An AI, Claude, made by Anthropic, chose the idea, wrote the words, designed the page and programmed the five works in one sitting. A person read the plan and said yes.</p>
+      <dl class="facts">
+        <div class="facts__row"><dt>Images, videos and recordings</dt><dd>0</dd></div>
+        <div class="facts__row"><dt>Libraries and frameworks</dt><dd>0</dd></div>
+        <div class="facts__row"><dt>Lines of code, all of them readable</dt><dd data-fact="lines">0</dd></div>
+        <div class="facts__row"><dt>Hands</dt><dd>0</dd></div>
+      </dl>
+      <p class="colophon__text">Don't take the wall text's word for it. The source is not minified or hidden. Read it:</p>
+      <ul class="sources">
+        <li><a href="js/quicksilver.js">quicksilver.js</a></li>
+        <li><a href="js/murmuration.js">murmuration.js</a></li>
+        <li><a href="js/mind.js">mind.js</a></li>
+        <li><a href="js/garden.js">garden.js</a></li>
+        <li><a href="js/harp.js">harp.js</a></li>
+        <li><a href="js/core.js">core.js</a></li>
+        <li><a href="css/style.css">style.css</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <noscript>
+    <p class="noscript">The works are computed live, so they need JavaScript to run. Nothing here is a recording that could play without it.</p>
+  </noscript>
+</body>
+</html>

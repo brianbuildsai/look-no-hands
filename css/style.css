@@ -1,0 +1,695 @@
+/* Look, no hands. — exhibition stylesheet
+   Sections: 1 tokens, 2 base, 3 masthead, 4 buttons and inputs,
+   5 rooms and stages, 6 hero, 7 labels and controls, 8 wall text,
+   9 room-specific layout, 10 colophon, 11 small screens, 12 motion */
+
+/* 1. Tokens ------------------------------------------------------------ */
+:root {
+  --void: #000000;
+  --bone: #e9e6df;
+  --ash: #8f8d88;
+  --amber: #ffb347;
+  --ultramarine: #3d5bff;
+  --rose: #ff4f7b;
+  --hairline: rgba(233, 230, 223, 0.28);
+
+  --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.3125rem;
+  --step-2: 2rem;
+  --step-3: 3rem;
+  --step-4: 4.5rem;
+  --display: clamp(4rem, 13.5vw, 13.75rem);
+
+  --gutter: clamp(16px, 4vw, 56px);
+  --masthead-h: 3.5rem;
+  --label-w: 27rem;
+}
+
+/* 2. Base -------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--void);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  scroll-padding-top: 0;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--bone);
+  font-family: var(--sans);
+  font-size: var(--step-0);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+p,
+ol,
+ul,
+dl,
+dd,
+blockquote {
+  margin: 0;
+  padding: 0;
+}
+
+ol,
+ul {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+}
+
+canvas {
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--bone);
+  color: var(--void);
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 30;
+  padding: 0.5rem 0.9rem;
+  background: var(--bone);
+  color: var(--void);
+  font-size: var(--step--1);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.live {
+  font-variant-numeric: tabular-nums;
+  color: var(--bone);
+  white-space: nowrap;
+}
+
+.noscript {
+  position: fixed;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 1rem;
+  z-index: 40;
+  padding: 1rem 1.25rem;
+  background: var(--bone);
+  color: var(--void);
+}
+
+/* 3. Masthead ---------------------------------------------------------- */
+.masthead {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: var(--masthead-h);
+  padding: 0 var(--gutter);
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+  font-size: var(--step--1);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+.masthead > * {
+  pointer-events: auto;
+}
+
+.masthead__title {
+  margin-right: auto;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-variation-settings: "opsz" 24, "SOFT" 100, "WONK" 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rooms-nav {
+  display: flex;
+  gap: 1.35rem;
+}
+
+.rooms-nav__link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+  padding: 0.35rem 0;
+  color: var(--ash);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.rooms-nav__link:hover,
+.rooms-nav__link.is-current {
+  color: var(--bone);
+}
+
+.rooms-nav__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.rooms-nav__link.is-current .rooms-nav__name {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}
+
+/* 4. Buttons and inputs ------------------------------------------------ */
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.95rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--bone);
+  font: 500 var(--step--1) / 1.2 var(--sans);
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.btn:hover {
+  border-color: var(--bone);
+}
+
+.btn[aria-pressed="true"] {
+  background: var(--bone);
+  border-color: var(--bone);
+  color: var(--void);
+}
+
+.btn--quiet {
+  min-height: 2rem;
+  padding: 0.3rem 0.8rem;
+  color: var(--ash);
+}
+
+.btn--quiet:hover {
+  color: var(--bone);
+}
+
+.motion-toggle {
+  gap: 0;
+}
+
+.btn--quiet[aria-pressed="true"] {
+  background: transparent;
+  border-color: var(--bone);
+  color: var(--bone);
+}
+
+/* The class picker in room 3 carries the colour it will add. */
+.btn--swatch::before {
+  content: "";
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.btn--swatch[aria-pressed="true"] {
+  background: rgba(0, 0, 0, 0.55);
+  border-color: var(--hairline);
+  color: var(--bone);
+}
+
+.btn--swatch[aria-pressed="true"]:hover {
+  border-color: var(--bone);
+}
+
+.btn--swatch[aria-pressed="true"]::before {
+  background: var(--ultramarine);
+}
+
+/* 5. Rooms and stages -------------------------------------------------- */
+.room {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, var(--label-w)) minmax(0, 1fr);
+  align-items: end;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: calc(var(--masthead-h) + 1rem) var(--gutter) clamp(1.5rem, 5vh, 3.5rem);
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.stage__canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.stage__notice {
+  display: none;
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  top: 38%;
+  max-width: 34rem;
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  line-height: 1.35;
+  color: var(--ash);
+}
+
+.stage.is-failed .stage__notice {
+  display: block;
+}
+
+.stage.is-failed .stage__canvas {
+  visibility: hidden;
+}
+
+/* 6. Hero -------------------------------------------------------------- */
+.room--hero {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 19rem);
+  column-gap: var(--gutter);
+}
+
+.hero__text {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  pointer-events: none;
+}
+
+.hero__title {
+  font-family: var(--serif);
+  font-size: var(--display);
+  font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  line-height: 0.84;
+  letter-spacing: -0.04em;
+  margin-left: -0.05em;
+  color: var(--bone);
+  mix-blend-mode: difference;
+}
+
+.hero__intro {
+  max-width: 34rem;
+  margin-top: clamp(1.25rem, 3vh, 2.25rem);
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-weight: 340;
+  font-variation-settings: "opsz" 30, "SOFT" 50, "WONK" 0;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+/* 7. Labels and controls ----------------------------------------------- */
+.label {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  max-width: var(--label-w);
+}
+
+/* A soft pool of dark behind the label so it reads over a live work. */
+.label::before {
+  content: "";
+  position: absolute;
+  inset: -4rem -5rem -4rem -4rem;
+  z-index: -1;
+  background: radial-gradient(ellipse at 35% 60%, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.6) 45%, rgba(0, 0, 0, 0) 72%);
+  pointer-events: none;
+}
+
+.label--hero {
+  grid-column: 2;
+}
+
+.label__title {
+  font-family: var(--serif);
+  font-size: var(--step-3);
+  font-style: italic;
+  font-weight: 300;
+  font-variation-settings: "opsz" 72, "SOFT" 100, "WONK" 1;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+
+.label--hero .label__title {
+  font-size: var(--step-2);
+}
+
+.label__medium {
+  margin-top: 0.7rem;
+  font-size: var(--step--1);
+  line-height: 1.45;
+  color: var(--ash);
+}
+
+.label__text {
+  margin-top: 0.7rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.label__text--hint {
+  font-size: var(--step--1);
+  color: var(--ash);
+}
+
+.controls {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+}
+
+.controls__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.say__label {
+  font-size: var(--step--1);
+  color: var(--ash);
+}
+
+.say__input {
+  width: 100%;
+  padding: 0.15rem 0 0.35rem;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  background: transparent;
+  color: var(--bone);
+  font-family: var(--serif);
+  font-size: var(--step-2);
+  font-style: italic;
+  font-weight: 300;
+  font-variation-settings: "opsz" 48, "SOFT" 100, "WONK" 1;
+  line-height: 1.2;
+  caret-color: var(--amber);
+}
+
+.say__input::placeholder {
+  color: var(--ash);
+  opacity: 1;
+}
+
+.say__input:focus {
+  outline: none;
+  border-bottom-color: var(--amber);
+}
+
+/* 8. Wall text --------------------------------------------------------- */
+.wall {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--gutter);
+  padding: clamp(6rem, 24vh, 15rem) var(--gutter);
+}
+
+.wall__text {
+  grid-column: 3 / span 9;
+  max-width: 25em;
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3.2vw, 3rem);
+  font-weight: 300;
+  font-variation-settings: "opsz" 72, "SOFT" 60, "WONK" 0;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+
+/* 9. Room-specific layout ---------------------------------------------- */
+
+/* 10. Colophon --------------------------------------------------------- */
+.colophon {
+  padding: clamp(6rem, 22vh, 14rem) var(--gutter) clamp(4rem, 12vh, 8rem);
+  border-top: 1px solid var(--hairline);
+}
+
+.colophon__heading {
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--ash);
+}
+
+.colophon__brief {
+  margin-top: 1rem;
+  max-width: 17em;
+  font-family: var(--serif);
+  font-size: clamp(2.25rem, 6.2vw, 6rem);
+  font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.colophon__brief p::before {
+  content: "\201C";
+  position: absolute;
+  margin-left: -0.45em;
+}
+
+.colophon__brief p::after {
+  content: "\201D";
+}
+
+.colophon__text {
+  max-width: 38rem;
+  margin-top: clamp(2rem, 6vh, 3.5rem);
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-variation-settings: "opsz" 24, "SOFT" 50, "WONK" 0;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+.facts {
+  max-width: 38rem;
+  margin-top: clamp(2rem, 6vh, 3.5rem);
+}
+
+.facts__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.facts__row:last-child {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.facts__row dt {
+  color: var(--ash);
+}
+
+.facts__row dd {
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  max-width: 38rem;
+  margin-top: 1.25rem;
+}
+
+.sources a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+  text-decoration-color: var(--hairline);
+  transition: text-decoration-color 0.2s;
+}
+
+.sources a:hover {
+  text-decoration-color: var(--bone);
+}
+
+/* 11. Small screens ---------------------------------------------------- */
+@media (max-width: 899px) {
+  .masthead {
+    gap: 0.6rem;
+  }
+
+  .rooms-nav {
+    gap: 0;
+  }
+
+  .rooms-nav__link {
+    justify-content: center;
+    min-width: 1.625rem;
+    padding: 0.5rem 0;
+  }
+
+  .rooms-nav__name,
+  .motion-toggle__noun {
+    display: none;
+  }
+
+  .rooms-nav__link.is-current .rooms-nav__num {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
+  }
+
+  /* Works sit above their labels instead of behind them. */
+  .room {
+    display: block;
+    min-height: 0;
+    padding: 0 0 1rem;
+  }
+
+  .room .stage {
+    position: relative;
+    height: 68vh;
+    height: 68svh;
+  }
+
+  .room .label {
+    max-width: 36rem;
+    padding: 1.5rem var(--gutter) 0;
+  }
+
+  .room .label::before {
+    display: none;
+  }
+
+  /* The hero keeps its work behind the text at every size. */
+  .room.room--hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 1.75rem;
+    min-height: 100vh;
+    min-height: 100svh;
+    /* The top of the hero is left empty for the metal to hang in. */
+    padding: 44vh var(--gutter) 2rem;
+    padding-top: 44svh;
+  }
+
+  .hero__intro {
+    font-size: 1.125rem;
+  }
+
+  .room.room--hero .stage {
+    position: absolute;
+    height: auto;
+  }
+
+  .room.room--hero .label {
+    grid-column: 1;
+    padding: 0;
+  }
+
+  .wall__text {
+    grid-column: 1 / -1;
+  }
+
+  .colophon__brief p::before {
+    position: static;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .masthead__title {
+    font-size: 1rem;
+  }
+
+  .label__title {
+    font-size: 2.5rem;
+  }
+}
+
+/* 12. Motion ----------------------------------------------------------- */
+
+/* The one orchestrated moment: the title condenses out of thin air while
+   the metal does the same behind it. core.js removes .is-loading. */
+.hero__title {
+  transition: opacity 1.4s ease-out, font-weight 2.4s cubic-bezier(0.2, 0.7, 0.1, 1),
+    font-variation-settings 2.4s cubic-bezier(0.2, 0.7, 0.1, 1), letter-spacing 2.4s cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+
+.hero__intro,
+.label--hero,
+.masthead {
+  transition: opacity 1.2s ease-out 1.3s;
+}
+
+.is-loading .hero__title {
+  opacity: 0;
+  font-weight: 100;
+  font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 1;
+  letter-spacing: 0.01em;
+}
+
+.is-loading .hero__intro,
+.is-loading .label--hero,
+.is-loading .masthead {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero__title,
+  .hero__intro,
+  .label--hero,
+  .masthead,
+  .btn,
+  .rooms-nav__link {
+    transition: none;
+  }
+}
