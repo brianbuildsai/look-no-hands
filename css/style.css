@@ -229,8 +229,7 @@ canvas {
   gap: 0;
 }
 
-.btn--quiet[aria-pressed="true"] {
-  background: transparent;
+.motion-toggle.is-paused {
   border-color: var(--bone);
   color: var(--bone);
 }
