@@ -159,6 +159,24 @@
     pen.beginPath(); pen.moveTo(-s * 0.335, 0); pen.lineTo(-s * 0.49, 0); pen.stroke();
   };
 
+  // room 17: cloth swagged between three pegs, with its folds
+  glyphs.drapery = function (pen, s) {
+    var top = -s * 0.36, w = s * 0.46, k;
+    pen.beginPath();
+    pen.moveTo(-w, top);
+    pen.quadraticCurveTo(-w * 0.5, top + s * 0.14, 0, top);
+    pen.quadraticCurveTo(w * 0.5, top + s * 0.14, w, top);
+    pen.stroke();
+    for (k = -2; k <= 2; k++) {
+      var x = k * w / 2, lean = k * s * 0.03;
+      pen.beginPath();
+      pen.moveTo(x, top + (k % 2 ? s * 0.07 : 0));
+      pen.quadraticCurveTo(x + lean * 2, 0, x + lean, s * 0.4 - Math.abs(k) * s * 0.03);
+      pen.stroke();
+    }
+    [-w, 0, w].forEach(function (x) { pen.beginPath(); pen.arc(x, top, 2, 0, 6.2832); pen.fill(); });
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

@@ -335,6 +335,34 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Benoit Mandelbrot had this shape drawn on an IBM printer in 1980 and nobody has reached the bottom of it since, because there is not one. Each fall here ends a few trillion times down, at one of the endless small copies of the whole set. It could not go much further: that is about where ordinary computer numbers give out. The shape was not getting any simpler.'
+    },
+    {
+      number: 17,
+      slug: 'drapery',
+      ready: true,
+      title: 'Drapery',
+      line: 'Take hold of a sheet of silk that is only arithmetic.',
+      description: 'A sheet of silk you can take hold of, hang from pegs, or let fall over a hidden form. It is a grid of points and threads that refuse to stretch, lit in WebGL.',
+      canvasLabel: 'A sheet of pale silk with a blue lining, hanging in folds from five pegs and stirring in a light wind. It can also be let fall over a form that is never shown.',
+      medium: '2026. <span class="live" data-live="drapery.points">0</span> points joined by <span class="live" data-live="drapery.threads">0</span> threads that refuse to stretch, each put back to its proper length ten times a frame.',
+      text: 'There is no cloth here. There is a grid of points, each insisting on staying the same distance from its neighbours while gravity and the wind pull at it, and the folds are what that argument looks like. Take hold of it anywhere. Move a peg. Or let it fall over something: whatever is under there is never drawn, and is only there where the cloth touches it.',
+      controls: `
+<div class="controls" role="group" aria-label="Drapery controls">
+  <div class="controls__row" role="group" aria-label="What the cloth is doing">
+    <button class="btn" type="button" data-drapery-mode="hang" aria-pressed="true">Hang it up</button>
+    <button class="btn" type="button" data-drapery-mode="drape" aria-pressed="false">Let it fall over something</button>
+  </div>
+  <p class="controls__caption">Ask again and something else will be under it.</p>
+  <label class="dial">
+    <span class="dial__label"><span>Wind</span><span data-drapery-wind-value></span></span>
+    <input class="dial__input" type="range" min="0" max="10" step="1" value="4" data-drapery-wind>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-drapery-gust>A gust</button>
+    <button class="btn" type="button" data-drapery-again>Smooth it out</button>
+  </div>
+</div>`,
+      wall: 'Painters spent years of their apprenticeship on drapery, because a fold is hard: each one depends on all the others. A computer finds them the way the cloth does, by letting every thread pull until nothing is pulled any more. The method was worked out in 1967 to follow atoms, and borrowed in 2001 to make cloth for a video game.'
     }
   ]
 };
