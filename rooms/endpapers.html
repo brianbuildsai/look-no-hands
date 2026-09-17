@@ -19,7 +19,11 @@
 
   <header class="masthead">
     <a class="masthead__title" href="../index.html">Look, no hands.</a>
-    <p class="masthead__where">Room 10 of 15</p>
+    <nav class="masthead__turn" aria-label="Previous and next room">
+      <a class="masthead__arrow" href="pencil.html" rel="prev" data-way="previous" aria-label="Previous room: 9. Ptolemy's Pencil">&larr;</a>
+      <p class="masthead__where"><span class="masthead__word">Room </span>10<span class="masthead__word"> of </span><span class="masthead__slash" aria-hidden="true"> / </span>15</p>
+      <a class="masthead__arrow" href="wayfinding.html" rel="next" data-way="next" aria-label="Next room: 11. Wayfinding">&rarr;</a>
+    </nav>
     <a class="masthead__plan" href="../index.html#plan">Floor plan</a>
     <button class="btn btn--quiet motion-toggle" type="button" aria-label="Pause motion" data-motion-toggle><span data-motion-verb>Pause</span><span class="motion-toggle__noun">&nbsp;motion</span></button>
   </header>
@@ -55,6 +59,7 @@
             <button class="btn" type="button" data-endpapers-compose>Lay one for me</button>
           </div>
         </div>
+        <a class="label__next" href="wayfinding.html"><span class="label__next-label">Next room</span><span class="label__next-name">11. Wayfinding</span><span class="label__next-arrow" aria-hidden="true">&rarr;</span></a>
       </div>
     </section>
 

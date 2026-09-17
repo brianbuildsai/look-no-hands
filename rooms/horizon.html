@@ -19,7 +19,11 @@
 
   <header class="masthead">
     <a class="masthead__title" href="../index.html">Look, no hands.</a>
-    <p class="masthead__where">Room 7 of 15</p>
+    <nav class="masthead__turn" aria-label="Previous and next room">
+      <a class="masthead__arrow" href="weather.html" rel="prev" data-way="previous" aria-label="Previous room: 6. Indoor Weather">&larr;</a>
+      <p class="masthead__where"><span class="masthead__word">Room </span>7<span class="masthead__word"> of </span><span class="masthead__slash" aria-hidden="true"> / </span>15</p>
+      <a class="masthead__arrow" href="alike.html" rel="next" data-way="next" aria-label="Next room: 8. Nearly Alike">&rarr;</a>
+    </nav>
     <a class="masthead__plan" href="../index.html#plan">Floor plan</a>
     <button class="btn btn--quiet motion-toggle" type="button" aria-label="Pause motion" data-motion-toggle><span data-motion-verb>Pause</span><span class="motion-toggle__noun">&nbsp;motion</span></button>
   </header>
@@ -43,6 +47,7 @@
             <button class="btn" type="button" data-horizon-disc aria-pressed="true">Glowing disc</button>
           </div>
         </div>
+        <a class="label__next" href="alike.html"><span class="label__next-label">Next room</span><span class="label__next-name">8. Nearly Alike</span><span class="label__next-arrow" aria-hidden="true">&rarr;</span></a>
       </div>
     </section>
 

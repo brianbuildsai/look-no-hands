@@ -20,7 +20,8 @@ var root = path.join(__dirname, '..');
 var data = require('./rooms.js');
 
 var TOTAL = data.hall.length + data.rooms.length;
-var WORDS = [null, 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+var WORDS = [null, 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+  'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
 var ready = data.rooms.filter(function (room) { return room.ready; });
 
 function escapeHtml(text) {
@@ -43,7 +44,7 @@ function page(room, index) {
     : { href: '../index.html#' + lastHall.id, label: 'Previous room', name: lastHall.number + '. ' + lastHall.title + ', in the hall' };
   var onward = next
     ? { href: next.slug + '.html', label: 'Next room', name: next.number + '. ' + next.title }
-    : { href: '../index.html', label: 'Last room', name: 'Back to the entrance' };
+    : { href: '../index.html', label: 'Round again', name: data.hall[0].number + '. ' + data.hall[0].title + ', at the entrance' };
   var scripts = ['../js/core.js'].concat((room.scripts || []).map(function (s) { return '../js/' + s; }), ['../js/rooms/' + room.slug + '.js']);
 
   return [
@@ -68,7 +69,11 @@ function page(room, index) {
     '',
     '  <header class="masthead">',
     '    <a class="masthead__title" href="../index.html">Look, no hands.</a>',
-    '    <p class="masthead__where">Room ' + room.number + ' of ' + TOTAL + '</p>',
+    '    <nav class="masthead__turn" aria-label="Previous and next room">',
+    '      <a class="masthead__arrow" href="' + back.href + '" rel="prev" data-way="previous" aria-label="Previous room: ' + escapeHtml(back.name) + '">&larr;</a>',
+    '      <p class="masthead__where"><span class="masthead__word">Room </span>' + room.number + '<span class="masthead__word"> of </span><span class="masthead__slash" aria-hidden="true"> / </span>' + TOTAL + '</p>',
+    '      <a class="masthead__arrow" href="' + onward.href + '" rel="next" data-way="next" aria-label="' + (next ? 'Next room: ' : 'Round again: ') + escapeHtml(onward.name) + '">&rarr;</a>',
+    '    </nav>',
     '    <a class="masthead__plan" href="../index.html#plan">Floor plan</a>',
     '    <button class="btn btn--quiet motion-toggle" type="button" aria-label="Pause motion" data-motion-toggle><span data-motion-verb>Pause</span><span class="motion-toggle__noun">&nbsp;motion</span></button>',
     '  </header>',
@@ -84,6 +89,7 @@ function page(room, index) {
     '        <p class="label__medium">' + room.medium + '</p>',
     '        <p class="label__text">' + room.text + '</p>',
     room.controls ? indent(room.controls, 8) : '',
+    '        <a class="label__next" href="' + onward.href + '"><span class="label__next-label">' + (next ? 'Next room' : 'Round again') + '</span><span class="label__next-name">' + escapeHtml(onward.name) + '</span><span class="label__next-arrow" aria-hidden="true">&rarr;</span></a>',
     '      </div>',
     '    </section>',
     '',

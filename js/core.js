@@ -461,6 +461,26 @@
     }
   };
 
+  /* ---- from room to room by keyboard ------------------------------------------------ */
+
+  // On a room page the left and right arrow keys are the masthead's two arrows.
+  // Sliders and text boxes keep their arrow keys, and so does anything that asked for focus.
+  function wireArrowKeys() {
+    var back = document.querySelector('[data-way="previous"]');
+    var onward = document.querySelector('[data-way="next"]');
+    if (!back && !onward) return;
+    document.addEventListener('keydown', function (e) {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      var t = e.target;
+      if (t && t.closest && t.closest('input, textarea, select, [contenteditable], [tabindex]:not(a):not(button)')) return;
+      var link = e.key === 'ArrowRight' ? onward : back;
+      if (!link) return;
+      e.preventDefault();
+      window.location.href = link.href;
+    });
+  }
+
   /* ---- boot ------------------------------------------------------------------------ */
 
   function boot() {
@@ -475,6 +495,7 @@
     drawFavicon();
     wireMotionToggle();
     wireRoomsNav();
+    wireArrowKeys();
     watch();
     scheduleReveal();
     requestAnimationFrame(tick);

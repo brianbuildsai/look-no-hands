@@ -19,7 +19,11 @@
 
   <header class="masthead">
     <a class="masthead__title" href="../index.html">Look, no hands.</a>
-    <p class="masthead__where">Room 15 of 15</p>
+    <nav class="masthead__turn" aria-label="Previous and next room">
+      <a class="masthead__arrow" href="necklaces.html" rel="prev" data-way="previous" aria-label="Previous room: 14. Necklaces">&larr;</a>
+      <p class="masthead__where"><span class="masthead__word">Room </span>15<span class="masthead__word"> of </span><span class="masthead__slash" aria-hidden="true"> / </span>15</p>
+      <a class="masthead__arrow" href="../index.html" rel="next" data-way="next" aria-label="Round again: 1. Quicksilver, at the entrance">&rarr;</a>
+    </nav>
     <a class="masthead__plan" href="../index.html#plan">Floor plan</a>
     <button class="btn btn--quiet motion-toggle" type="button" aria-label="Pause motion" data-motion-toggle><span data-motion-verb>Pause</span><span class="motion-toggle__noun">&nbsp;motion</span></button>
   </header>
@@ -53,6 +57,7 @@
             <button class="btn" type="button" data-hourglass-empty>Empty it</button>
           </div>
         </div>
+        <a class="label__next" href="../index.html"><span class="label__next-label">Round again</span><span class="label__next-name">1. Quicksilver, at the entrance</span><span class="label__next-arrow" aria-hidden="true">&rarr;</span></a>
       </div>
     </section>
 
@@ -63,7 +68,7 @@
     <nav class="ways" aria-label="Other rooms">
       <a class="ways__link" href="necklaces.html"><span class="ways__label">Previous room</span><span class="ways__name">14. Necklaces</span></a>
       <a class="ways__link ways__link--plan" href="../index.html#plan"><span class="ways__label">All 15 rooms</span><span class="ways__name">Floor plan</span></a>
-      <a class="ways__link ways__link--onward" href="../index.html"><span class="ways__label">Last room</span><span class="ways__name">Back to the entrance</span></a>
+      <a class="ways__link ways__link--onward" href="../index.html"><span class="ways__label">Round again</span><span class="ways__name">1. Quicksilver, at the entrance</span></a>
     </nav>
   </main>
 

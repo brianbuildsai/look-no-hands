@@ -477,7 +477,70 @@ canvas {
 /* Rooms 6 to 15 are pages of their own (rooms/*.html). They reuse .room,
    .stage and .label from the hall; what follows is only what they add. */
 
-/* in a room page's masthead: where you are, and the way back to the plan */
+/* in a room page's masthead: the way back, where you are, the way on */
+.masthead__turn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.masthead__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--bone);
+  text-decoration: none;
+  line-height: 1;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.masthead__arrow:hover {
+  border-color: var(--bone);
+  background: var(--bone);
+  color: var(--void);
+}
+
+.masthead__slash {
+  display: none;
+}
+
+/* under the controls of every work: the next room, by name */
+.label__next {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  margin-top: 1.4rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--step--1);
+  text-decoration: none;
+}
+
+.label__next-label {
+  color: var(--ash);
+}
+
+.label__next-name {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.0625rem;
+  font-variation-settings: "opsz" 24, "SOFT" 100, "WONK" 1;
+}
+
+.label__next-arrow {
+  margin-left: auto;
+  transition: transform 0.25s;
+}
+
+.label__next:hover .label__next-arrow {
+  transform: translateX(0.3em);
+}
+
 .masthead__where {
   color: var(--ash);
   font-variant-numeric: tabular-nums;
@@ -924,8 +987,17 @@ canvas {
   }
 
   .rooms-nav__name,
-  .motion-toggle__noun {
+  .motion-toggle__noun,
+  .masthead__word {
     display: none;
+  }
+
+  .masthead__slash {
+    display: inline;
+  }
+
+  .masthead__turn {
+    gap: 0.45rem;
   }
 
   .rooms-nav__link.is-current .rooms-nav__num {
@@ -1084,6 +1156,8 @@ canvas {
   .btn,
   .rooms-nav__link,
   .masthead__plan,
+  .masthead__arrow,
+  .label__next-arrow,
   .ways__link,
   .plan__door,
   .plan__link,
