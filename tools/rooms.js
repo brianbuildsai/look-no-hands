@@ -110,6 +110,40 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Ptolemy stacked circles on circles to explain the wandering of the planets, and he was wrong about the planets. He was right about circles. Seventeen centuries later Fourier showed that enough of them, turning at whole-number speeds, can draw anything at all. It is the idea behind how music and pictures are stored.'
+    },
+    {
+      number: 10,
+      slug: 'endpapers',
+      ready: true,
+      title: 'Endpapers',
+      line: 'Drop ink, rake it, swirl it: marbled paper by algebra.',
+      description: 'Drop ink, rake it and swirl it into marbled paper. Every stroke is an exactly reversible map, undone per pixel in a shader; nothing is ever painted.',
+      canvasLabel: 'A sheet of marbled paper in amber, blue, rose and bone inks, combed into feathered patterns.',
+      medium: '2026. <span class="live" data-live="endpapers.strokes">0</span> strokes. For every pixel, each one is undone in turn, newest first, to find out which ink ended up there.',
+      text: 'The machine lays a sheet to begin with. Then it is your bath: press and hold to let a drop of ink spread, drag to pull a rake or a comb through it, drag sideways to swirl. Each stroke moves everything already there, exactly as it would on water.',
+      controls: `
+<div class="controls" role="group" aria-label="Endpapers controls">
+  <div class="controls__row" role="group" aria-label="Tool">
+    <button class="btn" type="button" data-endpapers-tool="drop" aria-pressed="true">Drop</button>
+    <button class="btn" type="button" data-endpapers-tool="rake" aria-pressed="false">Rake</button>
+    <button class="btn" type="button" data-endpapers-tool="comb" aria-pressed="false">Comb</button>
+    <button class="btn" type="button" data-endpapers-tool="swirl" aria-pressed="false">Swirl</button>
+  </div>
+  <div class="controls__row" role="group" aria-label="Ink for the next drop">
+    <span class="controls__caption">Next drop</span>
+    <button class="swatch swatch--amber" type="button" data-endpapers-ink="0" aria-pressed="true" aria-label="Amber ink"></button>
+    <button class="swatch swatch--ultramarine" type="button" data-endpapers-ink="1" aria-pressed="false" aria-label="Ultramarine ink"></button>
+    <button class="swatch swatch--rose" type="button" data-endpapers-ink="2" aria-pressed="false" aria-label="Rose ink"></button>
+    <button class="swatch swatch--bone" type="button" data-endpapers-ink="3" aria-pressed="false" aria-label="Bone ink"></button>
+    <button class="swatch swatch--void" type="button" data-endpapers-ink="4" aria-pressed="false" aria-label="Black ink"></button>
+  </div>
+  <div class="controls__row">
+    <button class="btn" type="button" data-endpapers-undo>Take back the last stroke</button>
+    <button class="btn" type="button" data-endpapers-fresh>Fresh bath</button>
+    <button class="btn" type="button" data-endpapers-compose>Lay one for me</button>
+  </div>
+</div>`,
+      wall: 'Marblers float ink on thickened water and pull it about with combs, and have done for five hundred years. Here there is no water and no ink, only a list of what was done. The sheet is worked out backwards from that list, which is why a drop can shove aside a pattern that was never really there.'
     }
   ]
 };

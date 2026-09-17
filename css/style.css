@@ -550,6 +550,36 @@ canvas {
   outline-offset: 0;
 }
 
+/* Ink wells in room 10: a colour you pick by pressing it. */
+.swatch {
+  appearance: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--swatch, var(--bone));
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--void), 0 0 0 3px var(--bone);
+}
+
+.swatch--amber { --swatch: #faad40; }
+.swatch--ultramarine { --swatch: #2b47e0; }
+.swatch--rose { --swatch: #f04573; }
+.swatch--bone { --swatch: #e8e3d6; }
+.swatch--void { --swatch: #06070b; }
+
+.controls__caption {
+  align-self: center;
+  margin-right: 0.25rem;
+  font-size: var(--step--1);
+  color: var(--ash);
+}
+
 /* the ways out of a room: back, the plan, onward */
 .ways {
   display: grid;

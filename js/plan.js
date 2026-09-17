@@ -60,6 +60,20 @@
     pen.beginPath(); pen.arc(x, y, 2.5, 0, 6.2832); pen.fill();
   };
 
+  // room 10: lines of ink pulled into feathers by a comb
+  glyphs.endpapers = function (pen, s) {
+    for (var row = -3; row <= 3; row++) {
+      pen.beginPath();
+      for (var i = 0; i <= 60; i++) {
+        var x = (i / 60 - 0.5) * s * 1.5;
+        var tooth = Math.abs(((x / (s * 0.25)) % 1 + 1.5) % 1 - 0.5);
+        var y = row * s * 0.12 + Math.pow(2, -tooth * 9) * s * 0.17 * (row % 2 ? -1 : 1);
+        if (i) pen.lineTo(x, y); else pen.moveTo(x, y);
+      }
+      pen.stroke();
+    }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
