@@ -440,6 +440,35 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Leonardo da Vinci noticed that when a branch forks, the two new branches together are as thick as the one they came from, all the way up, as though a tree were a bundle of pipes. The thicknesses here follow his rule. The growing follows a method published in 2007 for leaf veins, which turned out to make trees as well. Nobody tells it what a tree looks like.'
+    },
+    {
+      number: 21,
+      slug: 'limit',
+      ready: true,
+      title: 'Circle Limit',
+      line: 'Drag an infinite plane through a disc. You never reach the rim.',
+      description: 'An infinite tiling of the hyperbolic plane inside a disc, after Escher. Drag it and new tiles stream in from a rim you can never reach. Choose how many sides a tile has and how many meet at a corner.',
+      canvasLabel: 'A disc filled with black and pale triangles that shrink without end toward its rim, arranged in seven-sided tiles. The whole pattern drifts and turns slowly, new tiles growing from the rim as others shrink away.',
+      medium: '2026, after M. C. Escher. Tiles with <span class="live" data-live="limit.p">7</span> sides, <span class="live" data-live="limit.q">3</span> meeting at every corner: more than a flat sheet has room for. Every pixel is folded back into one triangle, by up to fifty-six reflections, every frame.',
+      text: 'This is the whole of an infinite plane, seen from outside. Every tile is exactly the same size and shape as every other. They only look smaller toward the rim, the way a distant tree looks smaller, and the rim is infinitely far away. Drag it. However far you go there is always as much again ahead of you. Then change how many sides a tile has, and how many meet at a corner.',
+      controls: `
+<div class="controls" role="group" aria-label="Circle Limit controls">
+  <label class="dial">
+    <span class="dial__label"><span>Sides to a tile</span><span data-limit-sides-value></span></span>
+    <input class="dial__input" type="range" min="3" max="8" step="1" value="7" data-limit-sides>
+  </label>
+  <label class="dial">
+    <span class="dial__label"><span>Tiles meeting at a corner</span><span data-limit-meet-value></span></span>
+    <input class="dial__input" type="range" min="3" max="8" step="1" value="3" data-limit-meet>
+  </label>
+  <p class="controls__caption">Pairs that would fit on flat paper, or on a ball, are moved up to the nearest that needs this much room.</p>
+  <div class="controls__row" role="group" aria-label="How it is drawn">
+    <button class="btn" type="button" data-limit-look="0" aria-pressed="true">Woodcut</button>
+    <button class="btn" type="button" data-limit-look="1" aria-pressed="false">Lines</button>
+    <button class="btn" type="button" data-limit-look="2" aria-pressed="false">Lanterns</button>
+  </div>
+</div>`,
+      wall: 'In 1958 the geometer H. S. M. Coxeter sent M. C. Escher a figure like this one, and Escher, who said he understood none of the mathematics, worked out how to construct it with ruler and compass and cut four Circle Limit prints. The geometry itself dates from about 1830, when Bolyai and Lobachevsky each found that Euclid\u2019s rule about parallel lines could be broken without anything else going wrong.'
     }
   ]
 };

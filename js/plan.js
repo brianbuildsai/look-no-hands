@@ -217,6 +217,24 @@
     });
   };
 
+  // room 21: a disc, a seven-sided tile in the middle, and arcs crowding toward the rim
+  glyphs.limit = function (pen, s) {
+    var R = s * 0.46, k, n = 7;
+    pen.beginPath(); pen.arc(0, 0, R, 0, 6.2832); pen.stroke();
+    // each edge of the middle tile is an arc of a circle that meets the rim at right angles
+    var far = 2.0108 * R, radius = 1.7446 * R;
+    for (k = 0; k < n; k++) {
+      var a = k / n * 6.2832 + 0.2, cx = Math.cos(a) * far, cy = Math.sin(a) * far, half = Math.atan2(R, radius);
+      pen.beginPath(); pen.arc(cx, cy, radius, a + Math.PI - half, a + Math.PI + half); pen.stroke();
+    }
+    pen.save(); pen.globalAlpha = 0.5;
+    for (k = 0; k < n * 2; k++) {
+      var b = k / (n * 2) * 6.2832 + 0.2 + 3.1416 / n / 2 * 0, far2 = 1.18 * R, r2 = 0.63 * R, h2 = Math.atan2(R, r2);
+      if (k % 2) { pen.beginPath(); pen.arc(Math.cos(b) * far2, Math.sin(b) * far2, r2, b + Math.PI - h2, b + Math.PI + h2); pen.stroke(); }
+    }
+    pen.restore();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
