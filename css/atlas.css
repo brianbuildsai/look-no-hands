@@ -578,6 +578,13 @@ canvas {
   letter-spacing: 0.04em;
 }
 
+.gazetteer__none {
+  padding: 0.5rem 0;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 .place {
   appearance: none;
   display: flex;

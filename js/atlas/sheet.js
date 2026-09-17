@@ -18,7 +18,7 @@
   var SERIF = '"Libre Caslon Text", "Iowan Old Style", Georgia, serif';
   var SANS = '"Barlow Semi Condensed", "Arial Narrow", "Segoe UI", sans-serif';
   var INK = '#14202b';
-  var WATER_INK = '#21506e';
+  var WATER_INK = '#173f59';        // 4.7:1 even on the deepest tint
   var MAGENTA = '#a8286f';
 
   var world = null;
@@ -231,7 +231,10 @@
     ['town', 'water', 'land', 'peak'].forEach(function (kind) {
       var list = $('[data-gazetteer="' + kind + '"]');
       list.textContent = '';
-      chart.places.filter(function (p) { return p.kind === kind; })
+      var found = chart.places.filter(function (p) { return p.kind === kind; });
+      // some worlds have no gulfs, or nothing high enough to call a summit
+      if (!found.length) list.appendChild(make('li', 'gazetteer__none', 'None on this world.'));
+      found
         .sort(function (a, b) { return a.name.localeCompare(b.name); })
         .forEach(function (place) {
           var item = make('li');
@@ -425,6 +428,24 @@
   el.copy.addEventListener('click', copyLink);
   window.addEventListener('hashchange', function () { draw(wordFromAddress() || DEFAULT_WORD); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { globe.invalidate(); });
+
+  // a favicon drawn the same way as everything else: a small blue world
+  try {
+    var icon = document.createElement('canvas');
+    icon.width = icon.height = 64;
+    var ink = icon.getContext('2d');
+    ink.fillStyle = '#96c3db';
+    ink.beginPath(); ink.arc(32, 32, 27, 0, 6.2832); ink.fill();
+    ink.fillStyle = '#eeddaa';
+    ink.beginPath(); ink.ellipse(25, 27, 12, 8, -0.5, 0, 6.2832); ink.fill();
+    ink.beginPath(); ink.ellipse(42, 42, 7, 5, 0.6, 0, 6.2832); ink.fill();
+    ink.strokeStyle = '#14202b'; ink.lineWidth = 3;
+    ink.beginPath(); ink.arc(32, 32, 27, 0, 6.2832); ink.stroke();
+    var link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = icon.toDataURL('image/png');
+    document.head.appendChild(link);
+  } catch (e) { /* a missing favicon is not worth a warning */ }
 
   fillKey();
   draw(wordFromAddress() || DEFAULT_WORD);
