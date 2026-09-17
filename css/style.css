@@ -1,7 +1,7 @@
 /* Look, no hands. — exhibition stylesheet
    Sections: 1 tokens, 2 base, 3 masthead, 4 buttons and inputs,
    5 rooms and stages, 6 hero, 7 labels and controls, 8 wall text,
-   9 room-specific layout, 10 colophon, 11 small screens, 12 motion */
+   9 room pages and the floor plan, 10 colophon, 11 small screens, 12 motion */
 
 /* 1. Tokens ------------------------------------------------------------ */
 :root {
@@ -445,7 +445,249 @@ canvas {
   text-wrap: pretty;
 }
 
-/* 9. Room-specific layout ---------------------------------------------- */
+/* 9. Room pages and the floor plan -------------------------------------- */
+
+/* Rooms 6 to 15 are pages of their own (rooms/*.html). They reuse .room,
+   .stage and .label from the hall; what follows is only what they add. */
+
+/* in a room page's masthead: where you are, and the way back to the plan */
+.masthead__where {
+  color: var(--ash);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.masthead__plan {
+  color: var(--ash);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.masthead__plan:hover {
+  color: var(--bone);
+}
+
+/* A dial: a hairline with a bead on it, for "how many" and "how fast". */
+.dial {
+  display: grid;
+  gap: 0.15rem;
+  max-width: 22rem;
+}
+
+.dial__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: var(--step--1);
+  color: var(--ash);
+}
+
+.dial__input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 1.75rem;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dial__input::-webkit-slider-runnable-track {
+  height: 1px;
+  background: var(--hairline);
+}
+
+.dial__input::-moz-range-track {
+  height: 1px;
+  background: var(--hairline);
+}
+
+.dial__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: calc(-0.45rem + 0.5px);
+  border: 0;
+  border-radius: 50%;
+  background: var(--bone);
+}
+
+.dial__input::-moz-range-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bone);
+}
+
+.dial__input:focus-visible {
+  outline-offset: 0;
+}
+
+/* the ways out of a room: back, the plan, onward */
+.ways {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--hairline);
+}
+
+.ways__link {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: clamp(1.5rem, 4vh, 2.5rem) var(--gutter) clamp(2.5rem, 7vh, 4rem);
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.ways__link + .ways__link {
+  border-left: 1px solid var(--hairline);
+}
+
+.ways__link:hover {
+  background: rgba(233, 230, 223, 0.06);
+}
+
+.ways__label {
+  font-size: var(--step--1);
+  color: var(--ash);
+}
+
+.ways__name {
+  font-family: var(--serif);
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+  font-style: italic;
+  font-weight: 300;
+  font-variation-settings: "opsz" 48, "SOFT" 100, "WONK" 1;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.ways__link--onward {
+  text-align: right;
+}
+
+/* The floor plan in the hall: rooms drawn as rooms, hairline walls, each
+   with a door in its lower wall. */
+.plan {
+  padding: clamp(5rem, 16vh, 10rem) var(--gutter) clamp(4rem, 12vh, 8rem);
+  border-top: 1px solid var(--hairline);
+}
+
+.plan__heading {
+  font-family: var(--serif);
+  font-size: clamp(2.25rem, 6.2vw, 6rem);
+  font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.plan__intro {
+  max-width: 38rem;
+  margin-top: clamp(1.25rem, 3vh, 2rem);
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-weight: 340;
+  font-variation-settings: "opsz" 30, "SOFT" 50, "WONK" 0;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+.plan__hall,
+.plan__rooms {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-left: 1px solid var(--hairline);
+}
+
+.plan__hall {
+  margin-top: clamp(2.5rem, 7vh, 4rem);
+  border-top: 1px solid var(--hairline);
+}
+
+.plan__hall > li,
+.plan__room {
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.plan__door,
+.plan__link {
+  position: relative;
+  display: grid;
+  align-content: start;
+  height: 100%;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.plan__door {
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.plan__link {
+  gap: 0.2rem;
+  padding: 1rem 1rem 1.6rem;
+}
+
+.plan__door:hover,
+.plan__link:hover {
+  background: rgba(233, 230, 223, 0.07);
+}
+
+/* the door: a gap in the wall below each room */
+.plan__door::after,
+.plan__link::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  bottom: -1px;
+  width: 1.75rem;
+  height: 1px;
+  background: var(--void);
+}
+
+.plan__glyph {
+  width: 100%;
+  height: clamp(5.5rem, 9vw, 8rem);
+  margin-bottom: 0.6rem;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.plan__link:hover .plan__glyph {
+  opacity: 1;
+}
+
+.plan__num {
+  font-size: var(--step--1);
+  color: var(--ash);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__door-name {
+  font-size: var(--step--1);
+}
+
+.plan__title {
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-style: italic;
+  font-weight: 340;
+  font-variation-settings: "opsz" 30, "SOFT" 100, "WONK" 1;
+  line-height: 1.15;
+}
+
+.plan__line {
+  margin-top: 0.25rem;
+  font-size: var(--step--1);
+  line-height: 1.4;
+  color: var(--ash);
+}
 
 /* 10. Colophon --------------------------------------------------------- */
 .colophon {
@@ -629,6 +871,37 @@ canvas {
     grid-column: 1 / -1;
   }
 
+  .masthead__plan {
+    display: none;
+  }
+
+  .plan__hall,
+  .plan__rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan__hall > li:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .ways {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ways__link + .ways__link {
+    border-left: 0;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .ways__link--onward {
+    text-align: left;
+  }
+
+  .ways__link {
+    padding-top: 1.25rem;
+    padding-bottom: 1.5rem;
+  }
+
   .colophon__brief p::before {
     position: static;
     margin-left: 0;
@@ -683,7 +956,12 @@ canvas {
   .label--hero,
   .masthead,
   .btn,
-  .rooms-nav__link {
+  .rooms-nav__link,
+  .masthead__plan,
+  .ways__link,
+  .plan__door,
+  .plan__link,
+  .plan__glyph {
     transition: none;
   }
 }

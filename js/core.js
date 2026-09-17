@@ -415,6 +415,49 @@
       var out = {};
       names.forEach(function (name) { out[name] = gl.getUniformLocation(program, name); });
       return out;
+    },
+
+    // Simulations on the graphics card keep their state in half-float
+    // textures and need to be able to draw into them. WebGL 2 only.
+    canRenderFloat: function (gl) {
+      return !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
+    },
+
+    // A half-float texture that can be drawn into. `channels` is 1, 2 or 4.
+    // Returns null if this graphics card refuses the combination.
+    floatTarget: function (gl, width, height, channels, smooth) {
+      var formats = { 1: [gl.R16F, gl.RED], 2: [gl.RG16F, gl.RG], 4: [gl.RGBA16F, gl.RGBA] }[channels];
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, formats[0], width, height, 0, formats[1], gl.HALF_FLOAT, null);
+      var filter = smooth ? gl.LINEAR : gl.NEAREST;
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      var framebuffer = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+      var complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+      gl.clearColor(0, 0, 0, 0);
+      if (complete) gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      if (!complete) { gl.deleteTexture(texture); gl.deleteFramebuffer(framebuffer); return null; }
+      return { texture: texture, framebuffer: framebuffer, width: width, height: height };
+    },
+
+    // Two of them, for steps that read the last state and write the next.
+    floatPair: function (gl, width, height, channels, smooth) {
+      var a = glHelpers.floatTarget(gl, width, height, channels, smooth);
+      var b = a && glHelpers.floatTarget(gl, width, height, channels, smooth);
+      if (!a || !b) return null;
+      return {
+        read: a, write: b, width: width, height: height,
+        swap: function () { var t = this.read; this.read = this.write; this.write = t; },
+        dispose: function () {
+          [a, b].forEach(function (t) { gl.deleteTexture(t.texture); gl.deleteFramebuffer(t.framebuffer); });
+        }
+      };
     }
   };
 
