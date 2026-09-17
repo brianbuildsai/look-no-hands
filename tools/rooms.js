@@ -363,6 +363,36 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Painters spent years of their apprenticeship on drapery, because a fold is hard: each one depends on all the others. A computer finds them the way the cloth does, by letting every thread pull until nothing is pulled any more. The method was worked out in 1967 to follow atoms, and borrowed in 2001 to make cloth for a video game.'
+    },
+    {
+      number: 18,
+      slug: 'slits',
+      ready: true,
+      title: 'Two Slits',
+      line: 'Send waves through two gaps and watch the stripes build.',
+      description: 'A ripple tank on your graphics card. Send waves through two slits and watch the interference stripes build on the far wall, focus them with a lens of slow glass, or draw your own walls.',
+      canvasLabel: 'Blue ripples travelling across dark water, passing through two gaps in a pale wall and spreading as two sets of crossing rings. An amber strip on the far side shows bright and dark stripes.',
+      medium: '2026. <span class="live" data-live="slits.cells">0</span> cells of water, each compared with its four neighbours <span class="live" data-live="slits.rate">180</span> times a second. Nothing else is calculated.',
+      text: 'Waves come in from one side, meet a wall with two gaps in it, and leave as two sets of rings that cross. Where crest meets crest the water leaps; where crest meets trough it lies still. The amber strip on the far wall keeps count of how hard the water moved, and slowly shows stripes. Tap the water to drop a pebble in, hold for a dripping tap, or draw walls and glass of your own.',
+      controls: `
+<div class="controls" role="group" aria-label="Two Slits controls">
+  <div class="controls__row" role="group" aria-label="What is in the tank">
+    <button class="btn" type="button" data-slits-layout="two" aria-pressed="true">Two slits</button>
+    <button class="btn" type="button" data-slits-layout="one" aria-pressed="false">One slit</button>
+    <button class="btn" type="button" data-slits-layout="lens" aria-pressed="false">A lens</button>
+    <button class="btn" type="button" data-slits-layout="open" aria-pressed="false">Open water</button>
+  </div>
+  <div class="controls__row" role="group" aria-label="What your hand does">
+    <button class="btn" type="button" data-slits-tool="pebble" aria-pressed="true">Pebble</button>
+    <button class="btn" type="button" data-slits-tool="wall" aria-pressed="false">Wall</button>
+    <button class="btn" type="button" data-slits-tool="glass" aria-pressed="false">Glass</button>
+    <button class="btn" type="button" data-slits-tool="rub" aria-pressed="false">Rub out</button>
+  </div>
+  <div class="controls__row">
+    <button class="btn" type="button" data-slits-calm>Calm the water</button>
+  </div>
+</div>`,
+      wall: 'In the first years of the 1800s Thomas Young let light through two slits and found stripes on the far wall, bright and dark, which only waves can make. So light was a wave. A century later it turned out that single particles of light, sent through one at a time, slowly build the same stripes. Nobody is entirely comfortable with that yet.'
     }
   ]
 };

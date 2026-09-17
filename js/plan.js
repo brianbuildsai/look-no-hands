@@ -177,6 +177,23 @@
     [-w, 0, w].forEach(function (x) { pen.beginPath(); pen.arc(x, top, 2, 0, 6.2832); pen.fill(); });
   };
 
+  // room 18: a wall with two gaps, plane waves going in, rings coming out
+  glyphs.slits = function (pen, s) {
+    var x = -s * 0.08, gap = s * 0.05, apart = s * 0.13, k;
+    pen.beginPath();
+    pen.moveTo(x, -s * 0.46); pen.lineTo(x, -apart - gap);
+    pen.moveTo(x, -apart + gap); pen.lineTo(x, apart - gap);
+    pen.moveTo(x, apart + gap); pen.lineTo(x, s * 0.46);
+    pen.stroke();
+    pen.save(); pen.globalAlpha = 0.55;
+    for (k = 1; k <= 3; k++) { pen.beginPath(); pen.moveTo(x - k * s * 0.11, -s * 0.4); pen.lineTo(x - k * s * 0.11, s * 0.4); pen.stroke(); }
+    for (k = 1; k <= 4; k++) {
+      pen.beginPath(); pen.arc(x, -apart, k * s * 0.11, -1.25, 1.25); pen.stroke();
+      pen.beginPath(); pen.arc(x, apart, k * s * 0.11, -1.25, 1.25); pen.stroke();
+    }
+    pen.restore();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
