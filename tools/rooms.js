@@ -223,6 +223,63 @@ module.exports = {
   </div>
 </div>`,
       wall: 'It has never had a hand, and has seen a great many. This one was not copied from any of them. It was reasoned out from where a palm, a thumb and four fingers have to go, and then given to a loop that knows nothing about hands at all.'
+    },
+    {
+      number: 14,
+      slug: 'necklaces',
+      ready: true,
+      title: 'Necklaces',
+      line: 'Spread beats evenly round a wheel and get the world’s rhythms.',
+      description: 'Four rhythm wheels with synthesised drums. Spread beats as evenly as they will go and the rhythms of Cuba, Brazil, West Africa and Turkey fall out.',
+      canvasLabel: 'Four concentric rings of beads with a hand sweeping round them like a clock. Beads light up as the hand passes, each ring in its own colour.',
+      medium: '2026. Four rings, <span class="live" data-live="necklaces.beats">0</span> beats a minute, four beats to a turn. Every sound is synthesised at the moment it is struck.',
+      text: 'Each ring spreads its beats as evenly as they will go. Add or take away a beat and the ring rearranges itself, and more often than not the result already has a name somewhere in the world. Take hold of a ring to turn it against the others. Turn the sound on.',
+      controls: `
+<div class="controls" role="group" aria-label="Necklaces controls">
+  <div class="ring-rows" role="group" aria-label="Beats on each ring, outermost first">
+    <div class="ring-row ring-row--shaker">
+      <span class="ring-row__name">Shaker</span>
+      <button class="btn btn--step" type="button" data-ring-less="0" aria-label="Shaker: one beat fewer">&minus;</button>
+      <span class="ring-row__count live" data-ring-count="0"></span>
+      <button class="btn btn--step" type="button" data-ring-more="0" aria-label="Shaker: one beat more">+</button>
+      <span class="ring-row__where" data-ring-where="0"></span>
+    </div>
+    <div class="ring-row ring-row--bell">
+      <span class="ring-row__name">Bell</span>
+      <button class="btn btn--step" type="button" data-ring-less="1" aria-label="Bell: one beat fewer">&minus;</button>
+      <span class="ring-row__count live" data-ring-count="1"></span>
+      <button class="btn btn--step" type="button" data-ring-more="1" aria-label="Bell: one beat more">+</button>
+      <span class="ring-row__where" data-ring-where="1"></span>
+    </div>
+    <div class="ring-row ring-row--clap">
+      <span class="ring-row__name">Clap</span>
+      <button class="btn btn--step" type="button" data-ring-less="2" aria-label="Clap: one beat fewer">&minus;</button>
+      <span class="ring-row__count live" data-ring-count="2"></span>
+      <button class="btn btn--step" type="button" data-ring-more="2" aria-label="Clap: one beat more">+</button>
+      <span class="ring-row__where" data-ring-where="2"></span>
+    </div>
+    <div class="ring-row ring-row--drum">
+      <span class="ring-row__name">Low drum</span>
+      <button class="btn btn--step" type="button" data-ring-less="3" aria-label="Low drum: one beat fewer">&minus;</button>
+      <span class="ring-row__count live" data-ring-count="3"></span>
+      <button class="btn btn--step" type="button" data-ring-more="3" aria-label="Low drum: one beat more">+</button>
+      <span class="ring-row__where" data-ring-where="3"></span>
+    </div>
+  </div>
+  <div class="controls__row" role="group" aria-label="Ensemble">
+    <button class="btn" type="button" data-necklaces-ensemble="havana" aria-pressed="true">Havana</button>
+    <button class="btn" type="button" data-necklaces-ensemble="accra" aria-pressed="false">Accra</button>
+    <button class="btn" type="button" data-necklaces-ensemble="istanbul" aria-pressed="false">Istanbul</button>
+  </div>
+  <label class="dial">
+    <span class="dial__label"><span>How fast the wheel turns</span><span data-necklaces-tempo-value></span></span>
+    <input class="dial__input" type="range" min="60" max="160" step="2" value="104" data-necklaces-tempo>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-necklaces-sound>Turn sound on</button>
+  </div>
+</div>`,
+      wall: 'In 2005 the computer scientist Godfried Toussaint pointed out that if you spread some beats as evenly as possible round a circle, using a method Euclid wrote down for another purpose entirely, you get rhythms people have played for centuries: the Cuban tresillo, the bossa nova, the bell pattern of West Africa. Nobody designed them that way. Evenness just sounds right.'
     }
   ]
 };

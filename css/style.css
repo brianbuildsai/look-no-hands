@@ -580,6 +580,63 @@ canvas {
   color: var(--ash);
 }
 
+/* Room 14: one row per ring, with a way to add and take away beats. */
+.ring-rows {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ring-row {
+  display: grid;
+  grid-template-columns: 5.5rem 2rem 4.4rem 2rem 1fr;
+  column-gap: 0.4rem;
+  align-items: center;
+  font-size: var(--step--1);
+}
+
+.ring-row__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ring-row__name::before {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--ring, var(--bone));
+}
+
+.ring-row--shaker { --ring: var(--ultramarine); }
+.ring-row--bell { --ring: var(--bone); }
+.ring-row--clap { --ring: var(--rose); }
+.ring-row--drum { --ring: var(--amber); }
+
+.ring-row__count {
+  text-align: center;
+}
+
+.ring-row__where {
+  grid-column: 1 / -1;
+  color: var(--ash);
+  line-height: 1.3;
+}
+
+.btn--step {
+  justify-content: center;
+  width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+@media (pointer: coarse) {
+  .ring-row { grid-template-columns: 5.5rem 2.6rem 4.4rem 2.6rem 1fr; }
+  .btn--step { width: 2.6rem; min-height: 2.6rem; }
+}
+
 /* the ways out of a room: back, the plan, onward */
 .ways {
   display: grid;

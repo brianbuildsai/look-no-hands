@@ -118,6 +118,19 @@
     for (i = 0; i < n; i++) { pen.beginPath(); pen.arc(Math.cos(i / n * 6.2832) * r, Math.sin(i / n * 6.2832) * r, 1.2, 0, 6.2832); pen.fill(); }
   };
 
+  // room 14: three necklaces, some beads sounded
+  glyphs.necklaces = function (pen, s) {
+    [[0.46, 16, 5], [0.31, 8, 3], [0.16, 4, 1]].forEach(function (ring) {
+      var r = ring[0] * s, n = ring[1], k = ring[2];
+      pen.save(); pen.globalAlpha = 0.4; pen.beginPath(); pen.arc(0, 0, r, 0, 6.2832); pen.stroke(); pen.restore();
+      for (var i = 0; i < n; i++) {
+        var a = -Math.PI / 2 + i / n * 6.2832, on = (i * k) % n < k;
+        pen.beginPath(); pen.arc(Math.cos(a) * r, Math.sin(a) * r, on ? 3 : 1, 0, 6.2832); pen.fill();
+      }
+    });
+    pen.beginPath(); pen.moveTo(0, 0); pen.lineTo(s * 0.34, -s * 0.34); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
