@@ -52,7 +52,7 @@ module.exports = {
       line: 'Walk round a black hole and watch it bend the sky.',
       description: 'Orbit a black hole and watch it bend the stars and its own glowing disc: light paths traced through curved space, per pixel, live.',
       canvasLabel: 'A black disc ringed with glowing gas against a field of stars. The ring appears to arch over and under the hole, and the stars behind it are smeared into arcs.',
-      medium: '2026. <span class="live" data-live="horizon.rays">0</span> paths of light, each bent step by step through curved space, <span class="live" data-live="horizon.fps">0</span> frames a second.',
+      medium: '2026. <span class="live" data-live="horizon.rays">0</span> paths of light, each bent step by step through curved space, <span class="live" data-live="horizon.fps">60</span> frames a second.',
       text: 'Drag to walk round it. The glowing disc is flat. The arch you see over the top, and the one underneath, are the far side of that same disc: its light set off away from you and was bent back. One side is brighter because the gas there is coming toward you at up to half the speed of light.',
       controls: `
 <div class="controls" role="group" aria-label="Where Light Turns Back controls">
@@ -153,7 +153,7 @@ module.exports = {
       line: 'A slime mould with no brain builds a road network.',
       description: 'Tens of thousands of brainless agents build road networks between flakes of food, the way slime mould redrew the Tokyo rail map. Put food down and watch the roads grow.',
       canvasLabel: 'Glowing veins spreading across the dark and joining small white circles of food into a network, like roads between towns.',
-      medium: '2026. <span class="live" data-live="wayfinding.agents">0</span> agents, each smelling three points ahead and turning toward the strongest. <span class="live" data-live="wayfinding.flakes">0</span> flakes of food, <span class="live" data-live="wayfinding.fps">0</span> frames a second.',
+      medium: '2026. <span class="live" data-live="wayfinding.agents">0</span> agents, each smelling three points ahead and turning toward the strongest. <span class="live" data-live="wayfinding.flakes">0</span> flakes of food, <span class="live" data-live="wayfinding.fps">60</span> frames a second.',
       text: 'Slime mould has no brain and no plan. In 2010 researchers laid out oat flakes like the towns around Tokyo, and it grew something very close to the Tokyo rail network. This is that behaviour from one small rule. Click to put a flake down, click a flake to take it away, and drag through the roads to scatter them and watch them grow back.',
       controls: `
 <div class="controls" role="group" aria-label="Wayfinding controls">
@@ -177,7 +177,7 @@ module.exports = {
       line: 'Two spiral galaxies pass through each other.',
       description: 'Send two spiral galaxies through each other and watch tides pull them into bridges and tails: forty thousand stars, integrated live, that you can turn in your hand.',
       canvasLabel: 'Two glowing spiral discs of stars, one amber and one blue, swinging past each other and drawing out long curved tails.',
-      medium: '2026. <span class="live" data-live="introduction.stars">0</span> stars and two heavy centres. <span class="live" data-live="introduction.years">0</span> million years since they first felt each other; <span class="live" data-live="introduction.fps">0</span> frames a second.',
+      medium: '2026. <span class="live" data-live="introduction.stars">0</span> stars and two heavy centres. <span class="live" data-live="introduction.years">0</span> million years since they first felt each other; <span class="live" data-live="introduction.fps">60</span> frames a second.',
       text: 'Each star here feels the two centres and nothing else, a shortcut two brothers named Toomre used in 1972 to show that the long tails on real colliding galaxies are tides and nothing stranger. Drag to see it from another side. Choose how close they pass.',
       controls: `
 <div class="controls" role="group" aria-label="An Introduction controls">

@@ -74,3 +74,20 @@ manual `Gallery.step` hook apply to every new room exactly as in the hall.
 
 Each room lands in the floor plan only in its own commit, so the building is
 never open with an empty room.
+
+## Status
+
+All thirteen tasks are done and committed on `feat/ten-rooms` (one commit per
+room, plus the Atlas removal and the final pass). Where the build departs from
+the table above:
+
+- *Wayfinding* runs about 53,000 agents on a desktop, not 100,000: at a fifth of
+  the cells the network reads as roads rather than fog.
+- *An Introduction* uses 39,000 stars (16,000 on a phone) on a bound orbit, and
+  starts again after the two cores have merged.
+- *Hourglass* is about 140,000 cells on a desktop. It opens as a real hourglass
+  that turns itself over; the frame is wood and will burn.
+- The final pass checked every room at 375 and 1440 pixels for overflow, NaN in
+  the live figures, computed text contrast, paused-motion rendering and console
+  errors after a hard reload. `tools/rooms.js` is the single source for room
+  copy; regenerate with `node tools/make-rooms.js`.

@@ -150,6 +150,8 @@ canvas {
 
 .masthead__title {
   margin-right: auto;
+  padding-block: 0.6rem;
+  margin-block: -0.6rem;
   font-family: var(--serif);
   font-size: 1.0625rem;
   font-style: italic;
@@ -825,6 +827,10 @@ canvas {
   text-wrap: balance;
 }
 
+.colophon__brief p + p {
+  margin-top: 0.4em;
+}
+
 .colophon__brief p::before {
   content: "\201C";
   position: absolute;
@@ -882,15 +888,23 @@ canvas {
   margin-top: 1.25rem;
 }
 
-.sources a {
+.sources a,
+.hero__link {
   text-decoration-thickness: 1px;
   text-underline-offset: 0.25em;
   text-decoration-color: var(--hairline);
   transition: text-decoration-color 0.2s;
 }
 
-.sources a:hover {
+.sources a:hover,
+.hero__link:hover {
   text-decoration-color: var(--bone);
+}
+
+/* the hero's words let the pointer through to the metal; its one link takes it back */
+.hero__link {
+  pointer-events: auto;
+  text-decoration-color: rgba(233, 230, 223, 0.6);
 }
 
 /* 11. Small screens ---------------------------------------------------- */
