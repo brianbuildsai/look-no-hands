@@ -47,6 +47,19 @@
     pen.beginPath(); pen.arc(elbowX, elbowY, 2.5, 0, 6.2832); pen.fill();
   };
 
+  // room 9: circles riding on circles
+  glyphs.pencil = function (pen, s) {
+    var x = -s * 0.22, y = s * 0.08;
+    [[0.34, -0.5], [0.17, 0.9], [0.085, -2.0], [0.04, 0.4]].forEach(function (c) {
+      var r = c[0] * s;
+      pen.beginPath(); pen.arc(x, y, r, 0, 6.2832); pen.stroke();
+      var nx = x + Math.cos(c[1]) * r, ny = y + Math.sin(c[1]) * r;
+      pen.beginPath(); pen.moveTo(x, y); pen.lineTo(nx, ny); pen.stroke();
+      x = nx; y = ny;
+    });
+    pen.beginPath(); pen.arc(x, y, 2.5, 0, 6.2832); pen.fill();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

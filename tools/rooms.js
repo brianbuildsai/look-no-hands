@@ -87,6 +87,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'This is why the weather forecast gives up after ten days. Nothing in this room is random. Every pendulum obeys the same exact law, worked out to sixteen digits. It is the law itself that pulls them apart.'
+    },
+    {
+      number: 9,
+      slug: 'pencil',
+      ready: true,
+      scripts: ['hand.js'],
+      title: "Ptolemy's Pencil",
+      line: 'Draw anything. Turning circles learn to redraw it.',
+      description: 'Draw any closed shape and a chain of turning circles learns to redraw it: a Fourier transform you can watch, with a dial for how many circles it may use.',
+      canvasLabel: 'A chain of circles, each turning on the rim of the last, whose final point traces the outline of a hand in amber light.',
+      medium: '2026. <span class="live" data-live="pencil.circles">0</span> turning circles, found by a Fourier transform of <span class="live" data-live="pencil.points">0</span> points along the drawing.',
+      text: 'The drawing has been taken apart into circles, each turning at its own steady speed, each riding on the rim of the one before. Turn the dial down and the hand melts into a blob; turn it up and it comes back. Then draw a closed shape of your own, in one stroke, anywhere.',
+      controls: `
+<div class="controls" role="group" aria-label="Ptolemy's Pencil controls">
+  <label class="dial">
+    <span class="dial__label"><span>How many circles it may use</span></span>
+    <input class="dial__input" type="range" min="0" max="100" step="1" value="45" data-pencil-circles>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-pencil-hand>Draw the hand again</button>
+  </div>
+</div>`,
+      wall: 'Ptolemy stacked circles on circles to explain the wandering of the planets, and he was wrong about the planets. He was right about circles. Seventeen centuries later Fourier showed that enough of them, turning at whole-number speeds, can draw anything at all. It is the idea behind how music and pictures are stored.'
     }
   ]
 };
