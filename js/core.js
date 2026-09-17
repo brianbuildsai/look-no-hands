@@ -288,7 +288,6 @@
       button.setAttribute('aria-label', on ? 'Pause motion' : 'Play motion');
       button.classList.toggle('is-paused', !on);
     }
-    document.documentElement.classList.toggle('is-still', !on);
     instances.forEach(function (inst) {
       inst.dirty = true;
       if (inst.api && inst.api.motion) inst.api.motion(on);

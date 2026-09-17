@@ -156,6 +156,9 @@ canvas {
   font-variation-settings: "opsz" 24, "SOFT" 100, "WONK" 1;
   text-decoration: none;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rooms-nav {
@@ -315,6 +318,10 @@ canvas {
   z-index: 1;
   grid-column: 1;
   pointer-events: none;
+  /* Inverts wherever the metal passes behind the words. It has to live on
+     this element: it is the stacking context that sits over the canvas, and
+     a blend mode on the h1 inside it would have nothing to blend with. */
+  mix-blend-mode: difference;
 }
 
 .hero__title {
@@ -326,7 +333,6 @@ canvas {
   letter-spacing: -0.04em;
   margin-left: -0.05em;
   color: var(--bone);
-  mix-blend-mode: difference;
 }
 
 .hero__intro {
@@ -338,6 +344,12 @@ canvas {
   font-variation-settings: "opsz" 30, "SOFT" 50, "WONK" 0;
   line-height: 1.42;
   text-wrap: pretty;
+}
+
+.room--hero .stage__notice {
+  left: auto;
+  top: 24%;
+  max-width: 22rem;
 }
 
 /* 7. Labels and controls ----------------------------------------------- */
@@ -499,7 +511,8 @@ canvas {
   margin-top: clamp(2rem, 6vh, 3.5rem);
   font-family: var(--serif);
   font-size: var(--step-1);
-  font-variation-settings: "opsz" 24, "SOFT" 50, "WONK" 0;
+  font-weight: 340;
+  font-variation-settings: "opsz" 30, "SOFT" 50, "WONK" 0;
   line-height: 1.42;
   text-wrap: pretty;
 }
@@ -527,9 +540,9 @@ canvas {
 }
 
 .facts__row dd {
-  font-family: var(--serif);
   font-size: var(--step-1);
-  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .sources {
@@ -625,6 +638,11 @@ canvas {
   .room.room--hero .stage {
     position: absolute;
     height: auto;
+  }
+
+  .room.room--hero .stage__notice {
+    left: var(--gutter);
+    top: 5rem;
   }
 
   .room.room--hero .label {
