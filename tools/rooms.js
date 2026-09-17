@@ -195,6 +195,34 @@ module.exports = {
   </div>
 </div>`,
       wall: 'The Andromeda galaxy is coming toward ours at about a hundred kilometres a second. If the two do meet, several billion years from now, the night sky will look something like this, and almost no stars will actually collide. There is far too much room between them.'
+    },
+    {
+      number: 13,
+      slug: 'hand',
+      ready: true,
+      scripts: ['hand.js'],
+      title: "The Hand It Doesn't Have",
+      line: 'One thread, wound nail to nail, becomes a hand.',
+      description: 'Watch one continuous thread, wound from nail to nail by a greedy solver, become a hand. Or type letters and it winds those instead.',
+      canvasLabel: 'A ring of nails with fine pale thread criss-crossing between them. Where the threads pile up, the shape of an open hand appears.',
+      medium: '2026. One unbroken thread: <span class="live" data-live="hand.runs">0</span> straight runs between <span class="live" data-live="hand.nails">0</span> nails so far, about <span class="live" data-live="hand.metres">0</span> metres of it if the board were 60 cm across.',
+      text: 'Nothing here is drawn. A single thread goes from nail to nail, and each time the machine asks one question: from this nail, which straight line lies across the most of the picture still missing? The hand is what piles up. Type up to three letters and it will wind those instead.',
+      controls: `
+<form class="controls say" data-hand-form autocomplete="off">
+  <label class="say__label" for="hand-letters">Letters to wind instead</label>
+  <input class="say__input" id="hand-letters" name="letters" type="text" maxlength="3" placeholder="Your initials" spellcheck="false" autocapitalize="characters" enterkeyhint="done" data-hand-letters>
+</form>
+<div class="controls" role="group" aria-label="The Hand It Doesn't Have controls">
+  <label class="dial">
+    <span class="dial__label"><span>How fast it winds</span><span data-hand-pace-value></span></span>
+    <input class="dial__input" type="range" min="1" max="30" step="1" value="1" data-hand-pace>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-hand-hand>Wind the hand</button>
+    <button class="btn" type="button" data-hand-again>Start again</button>
+  </div>
+</div>`,
+      wall: 'It has never had a hand, and has seen a great many. This one was not copied from any of them. It was reasoned out from where a palm, a thumb and four fingers have to go, and then given to a loop that knows nothing about hands at all.'
     }
   ]
 };

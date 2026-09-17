@@ -105,6 +105,19 @@
     });
   };
 
+  // room 13: a ring of nails and the chords between them
+  glyphs.hand = function (pen, s) {
+    var r = s * 0.46, n = 28;
+    pen.save();
+    pen.globalAlpha = 0.5;
+    for (var i = 0; i < n; i++) {
+      var a = i / n * 6.2832, b = ((i * 11) % n) / n * 6.2832;
+      pen.beginPath(); pen.moveTo(Math.cos(a) * r, Math.sin(a) * r); pen.lineTo(Math.cos(b) * r, Math.sin(b) * r); pen.stroke();
+    }
+    pen.restore();
+    for (i = 0; i < n; i++) { pen.beginPath(); pen.arc(Math.cos(i / n * 6.2832) * r, Math.sin(i / n * 6.2832) * r, 1.2, 0, 6.2832); pen.fill(); }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
