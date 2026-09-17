@@ -281,6 +281,16 @@
     pen.stroke();
   };
 
+  // room 25: a ball on a plinth under a lamp, and the path of one guess
+  glyphs.guesses = function (pen, s) {
+    pen.beginPath(); pen.rect(-s * 0.13, s * 0.18, s * 0.26, s * 0.26); pen.stroke();
+    pen.beginPath(); pen.arc(0, s * 0.04, s * 0.14, 0, 6.2832); pen.stroke();
+    pen.beginPath(); pen.moveTo(-s * 0.16, -s * 0.44); pen.lineTo(s * 0.16, -s * 0.44); pen.stroke();
+    pen.save(); pen.globalAlpha = 0.6; pen.setLineDash([2, 3]);
+    pen.beginPath(); pen.moveTo(-s * 0.46, s * 0.3); pen.lineTo(-s * 0.1, -s * 0.06); pen.lineTo(-s * 0.36, -s * 0.3); pen.lineTo(0, -s * 0.44); pen.stroke();
+    pen.restore();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

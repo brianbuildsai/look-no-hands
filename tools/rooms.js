@@ -542,6 +542,34 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Ludwig Schl\u00e4fli found all six of these in about 1850, in Bern, without ever seeing one; the work was not printed whole until after his death. In the 1880s Alicia Boole Stott, who had no mathematical schooling at all, found them again by picturing their slices, and gave English the word polytope. Neither had a screen to turn one on.'
+    },
+    {
+      number: 25,
+      slug: 'guesses',
+      ready: true,
+      title: 'A Thousand Guesses',
+      line: 'A room that starts as noise and clears while you wait.',
+      description: 'A small gallery of glass, mirror and chalk, lit by one lamp and rendered by Monte Carlo path tracing: it starts as noise and clears while you watch, because the picture is the average of thousands of guesses.',
+      canvasLabel: 'A small open-fronted room with a blue wall, a rose wall and a skylight. Three balls stand on plinths: one mirror, one glass, one chalk. The picture begins as coloured noise and becomes clear and softly lit over a few seconds.',
+      medium: '2026. <span class="live" data-live="guesses.count">0</span> guesses at every pixel so far. Each is one ray of light followed backwards from your eye through up to six bounces.',
+      text: 'This room is not drawn. It is estimated. For every pixel a ray is followed backwards from your eye, bouncing off whatever it meets, at random where the surface is matt, until it finds the lamp or gives up. One such guess is nearly worthless. The picture is the average of all of them so far, which is why it starts as snow and clears as you wait. Look at the blue and the rose the walls lend to the floor: nobody painted that. Drag to walk round, and it has to start again.',
+      controls: `
+<div class="controls" role="group" aria-label="A Thousand Guesses controls">
+  <div class="controls__row" role="group" aria-label="What the middle ball is made of">
+    <button class="btn" type="button" data-guesses-ball="glass" aria-pressed="true">Glass</button>
+    <button class="btn" type="button" data-guesses-ball="mirror" aria-pressed="false">Mirror</button>
+    <button class="btn" type="button" data-guesses-ball="gold" aria-pressed="false">Gold</button>
+    <button class="btn" type="button" data-guesses-ball="chalk" aria-pressed="false">Chalk</button>
+  </div>
+  <label class="dial">
+    <span class="dial__label"><span>The lamp</span><span data-guesses-lamp-value></span></span>
+    <input class="dial__input" type="range" min="15" max="200" step="5" value="80" data-guesses-lamp>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-guesses-again>Start guessing again</button>
+  </div>
+</div>`,
+      wall: 'This is how films are lit now, and it is mostly patience: James Kajiya set the method out in 1986 and nothing about it has needed inventing since, only faster machines. Every work in this building was worked out rather than recorded. This one lets you watch the working. Thank you for coming. The way out is also the way in.'
     }
   ]
 };
