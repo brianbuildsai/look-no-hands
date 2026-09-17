@@ -131,6 +131,17 @@
     pen.beginPath(); pen.moveTo(0, 0); pen.lineTo(s * 0.34, -s * 0.34); pen.stroke();
   };
 
+  // room 15: an hourglass, half run
+  glyphs.hourglass = function (pen, s) {
+    var w = s * 0.3, h = s * 0.44;
+    pen.beginPath();
+    pen.moveTo(-w, -h); pen.lineTo(w, -h); pen.lineTo(1.5, 0); pen.lineTo(w, h); pen.lineTo(-w, h); pen.lineTo(-1.5, 0);
+    pen.closePath(); pen.stroke();
+    pen.beginPath(); pen.moveTo(-w * 0.55, -h * 0.5); pen.lineTo(w * 0.55, -h * 0.5); pen.lineTo(0, -2); pen.closePath(); pen.fill();
+    pen.beginPath(); pen.moveTo(-w * 0.8, h - 1); pen.lineTo(w * 0.8, h - 1); pen.lineTo(0, h * 0.5); pen.closePath(); pen.fill();
+    pen.beginPath(); pen.moveTo(0, 0); pen.lineTo(0, h * 0.5); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

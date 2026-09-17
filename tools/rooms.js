@@ -280,6 +280,38 @@ module.exports = {
   </div>
 </div>`,
       wall: 'In 2005 the computer scientist Godfried Toussaint pointed out that if you spread some beats as evenly as possible round a circle, using a method Euclid wrote down for another purpose entirely, you get rhythms people have played for centuries: the Cuban tresillo, the bossa nova, the bell pattern of West Africa. Nobody designed them that way. Evenness just sounds right.'
+    },
+    {
+      number: 15,
+      slug: 'hourglass',
+      ready: true,
+      title: 'Hourglass',
+      line: 'Pour sand, water and fire. Every grain follows two rules.',
+      description: 'A falling-sand world where every cell looks only at its neighbours, and sand piles, water levels and fire spreads. It starts as an hourglass. It need not stay one.',
+      canvasLabel: 'An hourglass drawn in small square cells, sand streaming from the upper bulb into the lower one. Whatever the visitor pours in falls, flows or burns.',
+      medium: '2026. <span class="live" data-live="hourglass.cells">0</span> cells, each looking only at the cells beside it, sixty times a second. <span class="live" data-live="hourglass.grains">0</span> grains of sand. Turns of the glass so far: <span class="live" data-live="hourglass.turns">0</span>.',
+      text: 'Nothing here knows it is an hourglass. A grain of sand knows two things: fall if there is room below, otherwise slide. Water knows three. Fire knows that wood burns. Pour something in, set light to the frame, or rub out the glass and see what the sand does. When the sand runs out it turns itself over.',
+      controls: `
+<div class="controls" role="group" aria-label="Hourglass controls">
+  <div class="controls__row" role="group" aria-label="What to pour">
+    <button class="btn" type="button" data-hourglass-tool="sand" aria-pressed="true">Sand</button>
+    <button class="btn" type="button" data-hourglass-tool="water" aria-pressed="false">Water</button>
+    <button class="btn" type="button" data-hourglass-tool="fire" aria-pressed="false">Fire</button>
+    <button class="btn" type="button" data-hourglass-tool="wood" aria-pressed="false">Wood</button>
+    <button class="btn" type="button" data-hourglass-tool="stone" aria-pressed="false">Stone</button>
+    <button class="btn" type="button" data-hourglass-tool="erase" aria-pressed="false">Rub out</button>
+  </div>
+  <label class="dial">
+    <span class="dial__label"><span>How wide it pours</span><span data-hourglass-brush-value></span></span>
+    <input class="dial__input" type="range" min="1" max="10" step="1" value="4" data-hourglass-brush>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-hourglass-turn>Turn it over</button>
+    <button class="btn" type="button" data-hourglass-again>Start again</button>
+    <button class="btn" type="button" data-hourglass-empty>Empty it</button>
+  </div>
+</div>`,
+      wall: 'Falling-sand games turned up on the web in the mid-2000s and programmers have been rewriting them ever since, because so little code gives so much world. There is no physics engine here: no gravity constant, no pressure, no heat equation. Each cell is one number, and the rules for every number together would fit on a postcard.'
     }
   ]
 };
