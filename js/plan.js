@@ -24,6 +24,15 @@
     });
   };
 
+  // room 7: a dark disc, its ring, and the ring's far side arched over it
+  glyphs.horizon = function (pen, s) {
+    var r = s * 0.17;
+    pen.beginPath(); pen.arc(0, 0, r, 0, 6.2832); pen.fill();
+    pen.beginPath(); pen.ellipse(0, 0, s * 0.62, s * 0.085, 0, 0, 6.2832); pen.stroke();
+    pen.beginPath(); pen.ellipse(0, 0, r * 1.75, r * 1.6, 0, Math.PI, 0); pen.stroke();
+    pen.beginPath(); pen.ellipse(0, 0, r * 1.45, r * 1.3, 0, 0.35, Math.PI - 0.35); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
