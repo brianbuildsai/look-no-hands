@@ -9,6 +9,21 @@
   var BONE = 'rgba(233,230,223,';
   var glyphs = {};
 
+  // room 6: two eddies turning against each other
+  glyphs.weather = function (pen, s) {
+    [[-0.36, 0.03, 1], [0.37, -0.04, -1]].forEach(function (eddy) {
+      pen.beginPath();
+      for (var i = 0; i <= 160; i++) {
+        var t = i / 160;
+        var a = eddy[2] * t * 13 + 0.6;
+        var r = s * (0.03 + 0.33 * t);
+        var x = eddy[0] * s + Math.cos(a) * r, y = eddy[1] * s + Math.sin(a) * r * 0.86;
+        if (i) pen.lineTo(x, y); else pen.moveTo(x, y);
+      }
+      pen.stroke();
+    });
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

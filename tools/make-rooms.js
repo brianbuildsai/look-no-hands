@@ -20,6 +20,7 @@ var root = path.join(__dirname, '..');
 var data = require('./rooms.js');
 
 var TOTAL = data.hall.length + data.rooms.length;
+var WORDS = [null, 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 var ready = data.rooms.filter(function (room) { return room.ready; });
 
 function escapeHtml(text) {
@@ -113,7 +114,7 @@ function plan() {
   var lines = [
     '    <section class="plan" id="plan" aria-labelledby="plan-heading">',
     '      <h2 class="plan__heading" id="plan-heading">The rest of the building</h2>',
-    '      <p class="plan__intro">' + data.planIntro.replace('{count}', String(ready.length)) + '</p>',
+    '      <p class="plan__intro">' + data.planIntro.replace('{are}', ready.length === 1 ? 'is' : 'are').replace('{count}', WORDS[ready.length] || String(ready.length)) + '</p>',
     '      <ol class="plan__hall" aria-label="The hall">'
   ];
   data.hall.forEach(function (room) {
