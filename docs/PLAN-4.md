@@ -69,3 +69,23 @@ glyph; the plan becomes five by four.
 12. Adversarial pass over all twenty-five: overflow, NaN, contrast, undefined
     classes, paused-motion rendering, fresh-tab console; hall copy, colophon
     (third brief, true line count, sources), README, memory notes.
+
+## Status
+
+All twelve tasks are done and committed on `feat/ten-more-rooms`, one commit
+each. Where the build departs from the table above:
+
+- *No Bottom* ends each fall a few trillion times down (not ten), at a minibrot
+  found by Newton's method beside the Misiurewicz point it aims at; that is
+  where double precision gives out. Pressing steers; the arithmetic was checked
+  against a double-precision render.
+- *Drapery* has no tearing; instead the sheet can be let fall over a hidden
+  ball, figure or box, and pegs can be moved.
+- *Four Numbers* wanders a loop of ten presets found by search so that every
+  path between neighbours stays a full figure.
+- *Circle Limit* has three looks (woodcut, lines, lanterns).
+- *A Thousand Guesses* stops at 3,000 guesses a pixel and renders at about half
+  a million pixels so that integrated graphics keep up.
+- The final pass checked all twenty room pages at 375 and 1440 pixels
+  (overflow, off-screen elements, NaN, failure notices, script errors, the
+  next-room chain), computed text contrast on the ten new pages, and the hall.

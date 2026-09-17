@@ -21,7 +21,7 @@ Fonts. Offline it falls back to system fonts and still works.
 
 ```
 index.html            the hall: rooms 1 to 5, and the floor plan to the rest
-rooms/*.html          rooms 6 to 15, one work to a page (generated, committed)
+rooms/*.html          rooms 6 to 25, one work to a page (generated, committed)
 css/style.css
 js/core.js            frame loop, visibility, motion switch, GL helpers
 js/plan.js            the floor plan's hairline glyphs
@@ -41,9 +41,27 @@ js/rooms/introduction.js  room 12  two galaxies meeting, Toomre's restricted N-b
 js/rooms/hand.js          room 13  greedy string-art solver
 js/rooms/necklaces.js     room 14  Euclidean rhythms, Web Audio synthesis
 js/rooms/hourglass.js     room 15  falling-sand cellular automaton
+js/rooms/bottom.js        room 16  Mandelbrot deep zoom by perturbation (CPU doubles + GPU floats)
+js/rooms/drapery.js       room 17  Verlet cloth, lit as silk in WebGL
+js/rooms/slits.js         room 18  the wave equation on float textures: a ripple tank
+js/rooms/numbers.js       room 19  a strange attractor iterated in a vertex shader
+js/rooms/reaching.js      room 20  space-colonisation tree growth
+js/rooms/limit.js         room 21  hyperbolic tilings folded per pixel
+js/rooms/follower.js      room 22  inverse kinematics and a stepping gait
+js/rooms/choir.js         room 23  formant voice synthesis, Web Audio
+js/rooms/shadow.js        room 24  the six regular 4D solids, generated and projected
+js/rooms/guesses.js       room 25  progressive Monte Carlo path tracer
 tools/                authoring tools (Node): rooms.js is the copy, make-rooms.js stamps the pages
 docs/                 design and task plans
 ```
+
+## Getting from room to room
+
+Every room page has previous and next arrows in its masthead, a "Next room"
+link under its controls, and the same in a footer; the left and right arrow
+keys do the same unless a slider or text box has focus. Rooms 1 to 5 in the
+hall have the link too. Room 25 leads back to room 1. All of it is stamped by
+the generator from the order of the list in `tools/rooms.js`.
 
 ## Adding or editing a room
 
@@ -68,6 +86,10 @@ the console:
 Gallery.step('garden', 600, 1 / 60)   // advance one work by 600 frames
 Gallery.inspect('harp').sound()       // { state, level, rate } of the audio engine
 Gallery.step('hourglass', 3000, 1 / 60) // on rooms/hourglass.html: run the sand out
+Gallery.inspect('bottom').look()        // rooms/bottom.html: where the dive is, how many steps
+Gallery.inspect('slits').plate()        // rooms/slits.html: the far wall's fringe record
+Gallery.inspect('follower').gait()      // rooms/follower.html: feet in the air, leg stretch
+Gallery.inspect('choir').sound()        // rooms/choir.html: level and spectral peaks
 ```
 
 ## Notes
@@ -76,7 +98,11 @@ Gallery.step('hourglass', 3000, 1 / 60) // on rooms/hourglass.html: run the sand
   control) and shows each work's resting state.
 - Works that need WebGL, WebGL 2 float targets or Web Audio say so plainly in
   place of the work if the browser lacks them; the rest of the page carries on.
-- Rooms 5 and 14 make sound only after the visitor asks for it, and pausing
-  motion silences them.
+- Rooms 5, 14 and 23 make sound only after the visitor asks for it, and pausing
+  motion silences them (room 23 also hushes when the tab is hidden).
+- Room 16 was checked against a double-precision CPU render at 2.8 trillion
+  times magnification (99.5% agreement on inside/outside); room 18's fringe
+  spacing matches Young's formula within 3%; room 24's solids are checked by
+  corner, edge and degree counts.
 - The Gray-Scott feed/kill pairs in `garden.js` were chosen by simulating on the
   CPU at half-float rounding: two textbook pairs die out in this discretisation.
