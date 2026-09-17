@@ -274,7 +274,9 @@
 
   /* ---- putting the chart's contents together ---- */
 
-  function find(world, tongue) {
+  // `name` is the world's own name, coined by the caller with tongue.world()
+  // before anything else, so it can be shown while the survey is still running.
+  function find(world, tongue, name) {
     var rand = worldApi.fork(world.seedText, 'places');
     function pick(list) { return list[Math.floor(rand() * list.length)]; }
     function two(list) {
@@ -283,7 +285,6 @@
       return [a, b];
     }
 
-    var name = tongue.world();
     var lands = findLands(world);
     var places = [];
 

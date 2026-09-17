@@ -84,16 +84,18 @@
       <h2 class="ruled__heading" id="gazetteer-heading">Gazetteer</h2>
       <p class="ruled__intro">Every name here was coined for this world, in its own language, from your word. Choose one and the globe turns to it.</p>
       <div class="gazetteer">
-        <div class="gazetteer__column">
+        <div class="gazetteer__column gazetteer__column--wide">
           <h3 class="gazetteer__title">Towns</h3>
-          <ol class="gazetteer__list" data-gazetteer="town"></ol>
+          <ol class="gazetteer__list gazetteer__list--split" data-gazetteer="town"></ol>
         </div>
         <div class="gazetteer__column">
           <h3 class="gazetteer__title gazetteer__title--water">Waters</h3>
           <ol class="gazetteer__list" data-gazetteer="water"></ol>
         </div>
         <div class="gazetteer__column">
-          <h3 class="gazetteer__title">Heights</h3>
+          <h3 class="gazetteer__title">Lands</h3>
+          <ol class="gazetteer__list" data-gazetteer="land"></ol>
+          <h3 class="gazetteer__title gazetteer__title--second">Heights</h3>
           <ol class="gazetteer__list" data-gazetteer="peak"></ol>
         </div>
       </div>
@@ -118,7 +120,7 @@
           <div class="facts__row"><dt>Lines of code, all of them readable</dt><dd data-fact="lines">0</dd></div>
           <div class="facts__row"><dt>Worlds it can draw</dt><dd>4,294,967,296</dd></div>
         </dl>
-        <p>Read the source: <a href="js/atlas/world.js">world.js</a>, <a href="js/atlas/tongue.js">tongue.js</a>, <a href="js/atlas/globe.js">globe.js</a>, <a href="js/atlas/sheet.js">sheet.js</a>, <a href="css/atlas.css">atlas.css</a>.</p>
+        <p>Read the source: <a href="js/atlas/world.js">world.js</a>, <a href="js/atlas/tongue.js">tongue.js</a>, <a href="js/atlas/places.js">places.js</a>, <a href="js/atlas/globe.js">globe.js</a>, <a href="js/atlas/sheet.js">sheet.js</a>, <a href="css/atlas.css">atlas.css</a>.</p>
         <p class="made__other">There is another show next door, in the dark: <a href="index.html">Look, no hands.</a></p>
       </div>
     </section>
@@ -129,6 +131,8 @@
   </noscript>
 
   <script src="js/atlas/world.js"></script>
+  <script src="js/atlas/tongue.js"></script>
+  <script src="js/atlas/places.js"></script>
   <script src="js/atlas/globe.js"></script>
   <script src="js/atlas/sheet.js"></script>
 </body>

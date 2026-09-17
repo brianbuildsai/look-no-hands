@@ -4,7 +4,7 @@ const tongue = require('../js/atlas/tongue.js');
 const places = require('../js/atlas/places.js');
 let failures = 0;
 function check(name, ok, detail) { if (!ok) failures++; if (!ok || process.env.VERBOSE) console.log((ok ? 'ok   ' : 'FAIL ') + name + (detail ? '  ' + detail : '')); }
-function build(word) { const w = world.create(word); while (!w.done) w.step(200); const t0 = Date.now(); const found = places.find(w, tongue.create(w.seedText)); found.ms = Date.now() - t0; found.world = w; return found; }
+function build(word) { const w = world.create(word); while (!w.done) w.step(200); const t0 = Date.now(); const speech = tongue.create(w.seedText); const found = places.find(w, speech, speech.world()); found.ms = Date.now() - t0; found.world = w; return found; }
 
 const words = ['brian', 'hello', 'a', 'Zürich', 'the quick brown fox', '', '12345', 'nowhere', 'claude', 'atlas', 'x', 'moon'];
 for (const word of words) {

@@ -545,7 +545,7 @@ canvas {
 /* 10. Gazetteer ----------------------------------------------------------- */
 .gazetteer {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   column-gap: clamp(1.5rem, 3vw, 3rem);
   margin-top: 1.75rem;
 }
@@ -555,6 +555,20 @@ canvas {
   border-bottom: 1px solid var(--ink);
   font-size: var(--step-1);
   font-weight: 600;
+}
+
+.gazetteer__title--second {
+  margin-top: 2rem;
+}
+
+/* the long list of towns runs in two columns, like an atlas index */
+.gazetteer__list--split {
+  column-count: 2;
+  column-gap: clamp(1.5rem, 3vw, 3rem);
+}
+
+.gazetteer__list--split li {
+  break-inside: avoid;
 }
 
 .gazetteer__title--water {
@@ -699,15 +713,41 @@ canvas {
 
 /* 12. Small screens ------------------------------------------------------- */
 @media (max-width: 959px) {
+  /* One column, and the globe moves up between the world's name and the
+     form, so a phone shows the world before it shows the controls. */
   .sheet {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
     grid-template-areas:
-      "title"
+      "heading"
+      "for"
       "globe"
+      "form"
+      "actions"
+      "note"
       "entry"
       "key";
+    row-gap: 0;
     min-height: 0;
+  }
+
+  .title-block {
+    display: contents;
+  }
+
+  .title-block__heading { grid-area: heading; }
+  .title-block__for { grid-area: for; }
+  .word-form { grid-area: form; margin-top: 1.25rem; }
+  .word-actions { grid-area: actions; }
+  .title-block__note { grid-area: note; }
+
+  .globe {
+    margin: 1rem 0 0.25rem;
+  }
+
+  .entry,
+  .key {
+    margin-top: 1.5rem;
   }
 
   .globe {
@@ -717,6 +757,10 @@ canvas {
   .gazetteer {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 2rem;
+  }
+
+  .gazetteer__list--split {
+    column-count: 1;
   }
 }
 
