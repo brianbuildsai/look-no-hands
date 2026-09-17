@@ -243,17 +243,7 @@ canvas {
   background: var(--amber);
 }
 
-.btn--swatch[aria-pressed="true"] {
-  background: rgba(0, 0, 0, 0.55);
-  border-color: var(--hairline);
-  color: var(--bone);
-}
-
-.btn--swatch[aria-pressed="true"]:hover {
-  border-color: var(--bone);
-}
-
-.btn--swatch[aria-pressed="true"]::before {
+.btn--swatch.is-blue::before {
   background: var(--ultramarine);
 }
 
@@ -593,6 +583,12 @@ canvas {
     position: relative;
     height: 68vh;
     height: 68svh;
+  }
+
+  /* Room 3 is a square map plus a row of neurons: size the stage to fit them. */
+  .room.room--mind .stage {
+    height: min(calc(100vw + 138px), 78vh);
+    height: min(calc(100vw + 138px), 78svh);
   }
 
   .room .label {
