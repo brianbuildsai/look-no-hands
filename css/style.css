@@ -356,9 +356,9 @@ canvas {
 .label::before {
   content: "";
   position: absolute;
-  inset: -4rem -5rem -4rem -4rem;
+  inset: -6rem -7rem;
   z-index: -1;
-  background: radial-gradient(ellipse at 35% 60%, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.6) 45%, rgba(0, 0, 0, 0) 72%);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.62) 50%, rgba(0, 0, 0, 0) 100%);
   pointer-events: none;
 }
 
