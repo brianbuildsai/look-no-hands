@@ -209,7 +209,8 @@ canvas {
   border-color: var(--bone);
 }
 
-.btn[aria-pressed="true"] {
+.btn[aria-pressed="true"],
+.btn.is-on {
   background: var(--bone);
   border-color: var(--bone);
   color: var(--void);
@@ -288,6 +289,11 @@ canvas {
   font-size: var(--step-1);
   line-height: 1.35;
   color: var(--ash);
+}
+
+/* Room 5 takes keyboard focus; the ring sits inside so the room cannot clip it. */
+.stage:focus-visible {
+  outline-offset: -6px;
 }
 
 .stage.is-failed .stage__notice {

@@ -444,6 +444,12 @@
     clamp: clamp,
     formatCount: formatCount,
 
+    // A work's own interface, for testing from the console.
+    inspect: function (name) {
+      var inst = instances.filter(function (i) { return i.name === name; })[0];
+      return inst ? inst.api : null;
+    },
+
     // Advance one work by hand, without waiting for the display. Used to test
     // the works in a browser window that is not being painted.
     step: function (name, frames, dtSeconds) {
