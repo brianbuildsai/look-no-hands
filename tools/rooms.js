@@ -491,6 +491,30 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Animators call this procedural animation, and the leg part inverse kinematics: you say where the foot is, and the knee is worked out with the cosine rule you learned at school. Real centipedes do much the same. Nothing in a centipede knows the pattern its legs make; each leg only minds its neighbours.'
+    },
+    {
+      number: 23,
+      slug: 'choir',
+      ready: true,
+      title: 'Choir',
+      line: 'Four voices that belong to nobody, singing in harmony.',
+      description: 'Four synthetic voices sing in harmony: a buzz put through the resonances of a throat. Move across the stage for the vowel and up and down for the chord.',
+      canvasLabel: 'Four simple faces in a row, amber, rose, bone and blue, each with a mouth that opens and spreads to the shape of the vowel being sung. Below them four coloured lines trace the notes of the bass, tenor, alto and soprano.',
+      medium: '2026. <span class="live" data-live="choir.voices">4</span> voices singing \u201c<span class="live" data-live="choir.vowel">ah</span>\u201d on a chord of <span class="live" data-live="choir.chord">D major</span>. Each is a sawtooth buzz put through four resonant filters. Nobody was recorded.',
+      text: 'A voice is a buzz in the throat, shaped by the mouth in front of it. Here the buzz is a plain sawtooth wave and the mouth is four filters; slide the filters and \u201cah\u201d becomes \u201cee\u201d. Let them sing, then move across the stage to change the vowel and up and down to change the chord. Rest a singer to hear the others. Left alone they carry on by themselves.',
+      controls: `
+<div class="controls" role="group" aria-label="Choir controls">
+  <div class="controls__row">
+    <button class="btn" type="button" data-choir-sound>Let them sing</button>
+  </div>
+  <div class="controls__row" role="group" aria-label="Who is singing">
+    <button class="btn" type="button" data-choir-voice="0" aria-pressed="true">Bass</button>
+    <button class="btn" type="button" data-choir-voice="1" aria-pressed="true">Tenor</button>
+    <button class="btn" type="button" data-choir-voice="2" aria-pressed="true">Alto</button>
+    <button class="btn" type="button" data-choir-voice="3" aria-pressed="true">Soprano</button>
+  </div>
+</div>`,
+      wall: 'In 1791 Wolfgang von Kempelen finished a machine of bellows, a reed and a leather mouth that could say whole words, and showed that speech is only air, a buzz and a shape. The measurements of which shape makes which vowel date from the 1950s. The voices here use them, which is why they sound like people and are not.'
     }
   ]
 };

@@ -255,6 +255,19 @@
     pen.beginPath(); pen.arc(pts[12][0], pts[12][1], 2.4, 0, 6.2832); pen.fill();
   };
 
+  // room 23: four mouths, more and more open
+  glyphs.choir = function (pen, s) {
+    for (var k = 0; k < 4; k++) {
+      var x = (k - 1.5) * s * 0.24, w = s * 0.085, h = s * (0.015 + k * 0.035);
+      pen.save(); pen.globalAlpha = 0.45; pen.beginPath(); pen.arc(x, 0, s * 0.105, 0, 6.2832); pen.stroke(); pen.restore();
+      pen.beginPath();
+      pen.moveTo(x - w * 0.7, s * 0.02);
+      pen.quadraticCurveTo(x, s * 0.02 - h, x + w * 0.7, s * 0.02);
+      pen.quadraticCurveTo(x, s * 0.02 + h * 1.3, x - w * 0.7, s * 0.02);
+      pen.stroke();
+    }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
