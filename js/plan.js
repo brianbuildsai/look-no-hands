@@ -204,6 +204,19 @@
     }
   };
 
+  // room 20: a tree that forks three times, and a few specks still out of reach
+  glyphs.reaching = function (pen, s) {
+    function limb(x, y, angle, length, level) {
+      var ex = x + Math.sin(angle) * length, ey = y - Math.cos(angle) * length;
+      pen.beginPath(); pen.moveTo(x, y); pen.lineTo(ex, ey); pen.stroke();
+      if (level < 3) { limb(ex, ey, angle - 0.5, length * 0.68, level + 1); limb(ex, ey, angle + 0.42, length * 0.72, level + 1); }
+    }
+    limb(0, s * 0.46, 0.04, s * 0.3, 0);
+    [[-0.38, -0.34], [0.4, -0.3], [0.05, -0.46], [-0.2, -0.44], [0.3, -0.42]].forEach(function (p) {
+      pen.beginPath(); pen.arc(p[0] * s, p[1] * s, 1.3, 0, 6.2832); pen.fill();
+    });
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

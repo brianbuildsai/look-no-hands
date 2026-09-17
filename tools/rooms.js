@@ -416,6 +416,30 @@ module.exports = {
   </div>
 </div>`,
       wall: 'The point never settles and never repeats, and yet it never leaves the figure. Shapes like this are called strange attractors. The first was found in 1963 by Edward Lorenz, a meteorologist, inside a toy model of the weather; this recipe is Clifford Pickover’s. Nothing here is drawn. The figure is only where the point happens to go.'
+    },
+    {
+      number: 20,
+      slug: 'reaching',
+      ready: true,
+      title: 'Reaching',
+      line: 'Scatter light and a tree grows to reach it.',
+      description: 'Scatter specks of light and a tree grows toward them, branch by branch, thickening by Leonardo’s rule and swaying as it goes. Nothing in the method says what a tree looks like.',
+      canvasLabel: 'A pale, bare tree drawn in fine lines growing up from a ground line into a cloud of small blue specks of light. Where a branch reaches a speck it leaves an amber leaf of light. The tree sways slightly.',
+      medium: '2026. <span class="live" data-live="reaching.branches">0</span> lengths of branch. <span class="live" data-live="reaching.reached">0</span> specks of light reached, <span class="live" data-live="reaching.left">0</span> still in the air.',
+      text: 'Light hangs in the air as specks. Every moment, each bit of branch that can sense a speck grows a little way toward it, and a speck that is reached is used up. There is no plan of a tree anywhere in this. Its shape is the order in which the light ran out. Click or drag to scatter more light, anywhere you like, and it will go and get it.',
+      controls: `
+<div class="controls" role="group" aria-label="Reaching controls">
+  <label class="dial">
+    <span class="dial__label"><span>How far it can sense light</span><span data-reaching-sense-value></span></span>
+    <input class="dial__input" type="range" min="36" max="160" step="4" value="80" data-reaching-sense>
+  </label>
+  <p class="controls__caption">Applies to what grows from now on. Plant another to see the whole difference.</p>
+  <div class="controls__row">
+    <button class="btn" type="button" data-reaching-rain>Let it rain light</button>
+    <button class="btn" type="button" data-reaching-again>Plant another</button>
+  </div>
+</div>`,
+      wall: 'Leonardo da Vinci noticed that when a branch forks, the two new branches together are as thick as the one they came from, all the way up, as though a tree were a bundle of pipes. The thicknesses here follow his rule. The growing follows a method published in 2007 for leaf veins, which turned out to make trees as well. Nobody tells it what a tree looks like.'
     }
   ]
 };
