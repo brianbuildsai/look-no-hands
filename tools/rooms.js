@@ -469,6 +469,28 @@ module.exports = {
   </div>
 </div>`,
       wall: 'In 1958 the geometer H. S. M. Coxeter sent M. C. Escher a figure like this one, and Escher, who said he understood none of the mathematics, worked out how to construct it with ruler and compass and cut four Circle Limit prints. The geometry itself dates from about 1830, when Bolyai and Lobachevsky each found that Euclid\u2019s rule about parallel lines could be broken without anything else going wrong.'
+    },
+    {
+      number: 22,
+      slug: 'follower',
+      ready: true,
+      title: 'A Follower',
+      line: 'Something with a lot of legs follows you round the room.',
+      description: 'A many-legged creature follows your pointer and walks properly while it does, with no animation anywhere in it: four small rules about heads, spines and feet.',
+      canvasLabel: 'A pale, many-legged creature seen from above, drawn in fine lines like a specimen, with two feelers and amber eyes. It walks toward the pointer, each foot planting and stepping in turn, leaving a fading trail of blue footprints.',
+      medium: '2026. <span class="live" data-live="follower.legs">16</span> legs, each solved backwards from its foot sixty times a second. <span class="live" data-live="follower.steps">0</span> steps taken, <span class="live" data-live="follower.walked">0.0</span> metres walked. No animation was drawn or recorded.',
+      text: 'It follows you. Nothing tells it how to walk. Its head turns toward you and goes; its spine is dragged along behind; each foot stays planted until the body has left it too far behind, and then steps to where it ought to be, but only if the feet next to it are on the ground. The ripple that runs down its legs was never written. It is what those rules do. Move, and it comes. Tap, and it hurries.',
+      controls: `
+<div class="controls" role="group" aria-label="A Follower controls">
+  <label class="dial">
+    <span class="dial__label"><span>How many legs</span><span data-follower-pairs-value></span></span>
+    <input class="dial__input" type="range" min="2" max="24" step="1" value="8" data-follower-pairs>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-follower-another>Another species</button>
+  </div>
+</div>`,
+      wall: 'Animators call this procedural animation, and the leg part inverse kinematics: you say where the foot is, and the knee is worked out with the cosine rule you learned at school. Real centipedes do much the same. Nothing in a centipede knows the pattern its legs make; each leg only minds its neighbours.'
     }
   ]
 };

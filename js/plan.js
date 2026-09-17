@@ -235,6 +235,26 @@
     pen.restore();
   };
 
+  // room 22: a spine on a curve, with legs
+  glyphs.follower = function (pen, s) {
+    var pts = [], i;
+    for (i = 0; i <= 12; i++) { var t = i / 12; pts.push([(-0.42 + t * 0.84) * s, Math.sin(t * 4.4) * s * 0.13]); }
+    pen.beginPath();
+    pts.forEach(function (p, k) { if (k) pen.lineTo(p[0], p[1]); else pen.moveTo(p[0], p[1]); });
+    pen.stroke();
+    for (i = 2; i <= 10; i += 2) {
+      var a = pts[i - 1], b = pts[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], d = Math.sqrt(dx * dx + dy * dy), nx = -dy / d, ny = dx / d;
+      for (var side = -1; side <= 1; side += 2) {
+        pen.beginPath();
+        pen.moveTo(pts[i][0], pts[i][1]);
+        pen.lineTo(pts[i][0] + nx * side * s * 0.1 + dx / d * s * 0.06, pts[i][1] + ny * side * s * 0.1 + dy / d * s * 0.06);
+        pen.lineTo(pts[i][0] + nx * side * s * 0.2, pts[i][1] + ny * side * s * 0.2);
+        pen.stroke();
+      }
+    }
+    pen.beginPath(); pen.arc(pts[12][0], pts[12][1], 2.4, 0, 6.2832); pen.fill();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
