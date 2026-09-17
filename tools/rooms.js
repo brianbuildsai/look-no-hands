@@ -144,6 +144,30 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Marblers float ink on thickened water and pull it about with combs, and have done for five hundred years. Here there is no water and no ink, only a list of what was done. The sheet is worked out backwards from that list, which is why a drop can shove aside a pattern that was never really there.'
+    },
+    {
+      number: 11,
+      slug: 'wayfinding',
+      ready: true,
+      title: 'Wayfinding',
+      line: 'A slime mould with no brain builds a road network.',
+      description: 'Tens of thousands of brainless agents build road networks between flakes of food, the way slime mould redrew the Tokyo rail map. Put food down and watch the roads grow.',
+      canvasLabel: 'Glowing veins spreading across the dark and joining small white circles of food into a network, like roads between towns.',
+      medium: '2026. <span class="live" data-live="wayfinding.agents">0</span> agents, each smelling three points ahead and turning toward the strongest. <span class="live" data-live="wayfinding.flakes">0</span> flakes of food, <span class="live" data-live="wayfinding.fps">0</span> frames a second.',
+      text: 'Slime mould has no brain and no plan. In 2010 researchers laid out oat flakes like the towns around Tokyo, and it grew something very close to the Tokyo rail network. This is that behaviour from one small rule. Click to put a flake down, click a flake to take it away, and drag through the roads to scatter them and watch them grow back.',
+      controls: `
+<div class="controls" role="group" aria-label="Wayfinding controls">
+  <div class="controls__row" role="group" aria-label="Habit">
+    <button class="btn" type="button" data-wayfinding-habit="roads" aria-pressed="true">Roads</button>
+    <button class="btn" type="button" data-wayfinding-habit="lace" aria-pressed="false">Lace</button>
+    <button class="btn" type="button" data-wayfinding-habit="rivers" aria-pressed="false">Rivers</button>
+  </div>
+  <div class="controls__row">
+    <button class="btn" type="button" data-wayfinding-scatter>Scatter them</button>
+    <button class="btn" type="button" data-wayfinding-clear>Take the food away</button>
+  </div>
+</div>`,
+      wall: 'Each agent follows the scent the others left, and leaves a little of its own. That is the entire rule. Nobody is in charge of the network and nobody in it can see it. It is still, by any fair measure, a good network.'
     }
   ]
 };

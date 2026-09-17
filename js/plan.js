@@ -74,6 +74,21 @@
     }
   };
 
+  // room 11: food, and the roads between it
+  glyphs.wayfinding = function (pen, s) {
+    var towns = [[-0.62, -0.1], [-0.2, -0.36], [-0.12, 0.3], [0.28, -0.08], [0.66, -0.32], [0.6, 0.3]];
+    [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [3, 5], [1, 2]].forEach(function (road) {
+      var a = towns[road[0]], b = towns[road[1]];
+      var mx = (a[0] + b[0]) / 2 + (a[1] - b[1]) * 0.18, my = (a[1] + b[1]) / 2 + (b[0] - a[0]) * 0.18;
+      pen.beginPath(); pen.moveTo(a[0] * s, a[1] * s); pen.quadraticCurveTo(mx * s, my * s, b[0] * s, b[1] * s); pen.stroke();
+    });
+    towns.forEach(function (t) {
+      pen.save(); pen.fillStyle = '#000';
+      pen.beginPath(); pen.arc(t[0] * s, t[1] * s, 4, 0, 6.2832); pen.fill(); pen.stroke();
+      pen.restore();
+    });
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
