@@ -65,6 +65,28 @@ module.exports = {
   </div>
 </div>`,
       wall: 'No picture of a black hole was used, because for most of history there was none to use. This is what general relativity says you would see, worked out one ray at a time. When a real one was finally photographed in 2019, the shadow and the bright ring were where the equations had put them.'
+    },
+    {
+      number: 8,
+      slug: 'alike',
+      ready: true,
+      title: 'Nearly Alike',
+      line: 'Release 1,500 pendulums a millionth of a degree apart.',
+      description: 'Fifteen hundred double pendulums released a millionth of a degree apart: watch them move as one, then come apart into chaos.',
+      canvasLabel: 'A double pendulum swinging from a fixed point. It is really hundreds of pendulums drawn on top of each other, which slowly fan out into a coloured cloud.',
+      medium: '2026. <span class="live" data-live="alike.count">0</span> double pendulums released together, almost exactly alike. <span class="live" data-live="alike.time">0.0</span> seconds later they differ by <span class="live" data-live="alike.drift">0°</span>.',
+      text: 'For the first few seconds you are looking at all of them and seeing one. Nothing pushes them apart. The difference was there from the start, far too small to see, and it doubles several times a second. Take hold of the tip, put it where you like, and let go.',
+      controls: `
+<div class="controls" role="group" aria-label="Nearly Alike controls">
+  <label class="dial">
+    <span class="dial__label"><span>How alike they start</span><span data-alike-spread-value></span></span>
+    <input class="dial__input" type="range" min="3" max="9" step="1" value="6" data-alike-spread>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-alike-again>Let go again</button>
+  </div>
+</div>`,
+      wall: 'This is why the weather forecast gives up after ten days. Nothing in this room is random. Every pendulum obeys the same exact law, worked out to sixteen digits. It is the law itself that pulls them apart.'
     }
   ]
 };

@@ -33,6 +33,20 @@
     pen.beginPath(); pen.ellipse(0, 0, r * 1.45, r * 1.3, 0, 0.35, Math.PI - 0.35); pen.stroke();
   };
 
+  // room 8: one pendulum at the top, several by the bottom
+  glyphs.alike = function (pen, s) {
+    var top = -s * 0.42, arm = s * 0.4;
+    var elbowX = Math.sin(0.5) * arm, elbowY = top + Math.cos(0.5) * arm;
+    pen.beginPath(); pen.moveTo(0, top); pen.lineTo(elbowX, elbowY); pen.stroke();
+    [-0.9, -0.55, -0.2, 0.15, 0.5].forEach(function (a, i) {
+      pen.globalAlpha = 0.35 + i * 0.16;
+      pen.beginPath(); pen.moveTo(elbowX, elbowY); pen.lineTo(elbowX + Math.sin(a) * arm, elbowY + Math.cos(a) * arm); pen.stroke();
+    });
+    pen.globalAlpha = 1;
+    pen.beginPath(); pen.arc(0, top, 2, 0, 6.2832); pen.fill();
+    pen.beginPath(); pen.arc(elbowX, elbowY, 2.5, 0, 6.2832); pen.fill();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
