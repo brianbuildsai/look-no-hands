@@ -14,11 +14,11 @@ const words = ['brian', 'hello', 'a', 'Zürich', 'the quick brown fox', '', '123
 for (const word of words) {
   const a = build(word), b = build(word);
   check('deterministic: "' + word + '"', digest(a) === digest(b), a.ms + ' ms');
-  let bad = 0; for (let i = 0; i < a.heights.length; i++) if (!(a.heights[i] === a.heights[i]) || Math.abs(a.heights[i]) > 12000) bad++;
+  let bad = 0; for (let i = 0; i < a.heights.length; i++) if (!(a.heights[i] === a.heights[i]) || (a.heights[i] > 12000 || a.heights[i] < -14000)) bad++;
   check('no NaN or out-of-range heights: "' + word + '"', bad === 0, bad + ' bad');
   const s = a.stats;
   check('land share near target: "' + word + '"', Math.abs(s.landShare - a.shape.landShare) < 0.04, 'target ' + a.shape.landShare.toFixed(3) + ' got ' + s.landShare.toFixed(3));
-  check('peak and deep plausible: "' + word + '"', s.highest.metres > 2500 && s.highest.metres <= a.shape.peak + 1 && s.deepest.metres < -3000, Math.round(s.highest.metres) + ' m / ' + Math.round(s.deepest.metres) + ' m, coast ' + Math.round(s.coastKm) + ' km, R ' + a.shape.radiusKm);
+  check('peak and deep plausible: "' + word + '"', s.highest.metres > 2500 && s.highest.metres <= a.shape.peak * 1.3 && s.deepest.metres < -3000 && s.deepest.metres >= -a.shape.deepest * 1.25, Math.round(s.highest.metres) + ' m / ' + Math.round(s.deepest.metres) + ' m, coast ' + Math.round(s.coastKm) + ' km, R ' + a.shape.radiusKm);
   check('heightAt agrees with grid: "' + word + '"', Math.abs(a.heightAt(s.highest.lat, s.highest.lon) - s.highest.metres) < 1);
 }
 check('different words differ', digest(build('brian')) !== digest(build('brianna')));

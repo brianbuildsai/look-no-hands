@@ -180,7 +180,7 @@
 
   /* ---- the survey -------------------------------------------------------------- */
 
-  var ENCODE_MIN = -12000;       // metres; heights are packed into 16 bits over this range
+  var ENCODE_MIN = -14000;       // metres; heights are packed into 16 bits over this range
   var ENCODE_MAX = 12000;
 
   function clock() {
@@ -225,11 +225,13 @@
     // Broad lowlands and few high summits; shallow shelves and few deeps.
     function toMetres(e) {
       var t;
+      // (not clamped at 1: the fine survey finds summits and trenches the
+      // coarse one missed, and a hard ceiling would flatten them all alike)
       if (e >= sea) {
-        t = Math.min(1, (e - sea) / (top - sea));
+        t = Math.min(1.12, (e - sea) / (top - sea));
         return shape.peak * (0.1 * t + 0.9 * Math.pow(t, 2.3));
       }
-      t = Math.min(1, (sea - e) / (sea - bottom));
+      t = Math.min(1.12, (sea - e) / (sea - bottom));
       return -shape.deepest * (0.05 * t + 0.95 * Math.pow(t, 1.6));
     }
 
