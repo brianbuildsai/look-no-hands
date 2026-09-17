@@ -515,6 +515,33 @@ module.exports = {
   </div>
 </div>`,
       wall: 'In 1791 Wolfgang von Kempelen finished a machine of bellows, a reed and a leather mouth that could say whole words, and showed that speech is only air, a buzz and a shape. The measurements of which shape makes which vowel date from the 1950s. The voices here use them, which is why they sound like people and are not.'
+    },
+    {
+      number: 24,
+      slug: 'shadow',
+      ready: true,
+      title: 'A Shadow of a Shadow',
+      line: 'Turn a four-dimensional solid by hand.',
+      description: 'The six regular solids of four dimensions, generated from their symmetries, turning in a direction you do not have, and flattened twice to reach your screen. Drag to turn them yourself.',
+      canvasLabel: 'A large, intricate cage of fine curved lines, amber where it is near in the fourth dimension and blue where it is far, slowly turning inside out. It is the shadow of the 120-cell, a solid with four dimensions.',
+      medium: '2026. <span class="live" data-live="shadow.name">The 120-cell</span>: <span class="live" data-live="shadow.corners">600</span> corners, <span class="live" data-live="shadow.edges">1,200</span> edges, and <span class="live" data-live="shadow.sides">120 dodecahedra</span> for sides. A solid with four dimensions, flattened twice to get here.',
+      text: 'A cube\u2019s shadow on a wall is a flat drawing of something with one more dimension than the wall has. This is the same trick, played twice. The solid is turning in a direction you do not have, which is why it seems to pass through itself and turn inside out; it is doing neither. Drag to turn it yourself. If it is too much, work up from the 5-cell: there are exactly six of these, and no more.',
+      controls: `
+<div class="controls" role="group" aria-label="A Shadow of a Shadow controls">
+  <label class="dial">
+    <span class="dial__label"><span>Which of the six</span><span data-shadow-solid-value></span></span>
+    <input class="dial__input" type="range" min="0" max="5" step="1" value="5" data-shadow-solid>
+  </label>
+  <div class="controls__row" role="group" aria-label="How four dimensions are flattened to three">
+    <button class="btn" type="button" data-shadow-flat="bubble" aria-pressed="true">Flattened like a map</button>
+    <button class="btn" type="button" data-shadow-flat="lamp" aria-pressed="false">As a shadow</button>
+  </div>
+  <div class="controls__row" role="group" aria-label="Which way dragging turns it">
+    <button class="btn" type="button" data-shadow-drag="fourth" aria-pressed="true">Drag turns it through the fourth</button>
+    <button class="btn" type="button" data-shadow-drag="ours" aria-pressed="false">In our three</button>
+  </div>
+</div>`,
+      wall: 'Ludwig Schl\u00e4fli found all six of these in about 1850, in Bern, without ever seeing one; the work was not printed whole until after his death. In the 1880s Alicia Boole Stott, who had no mathematical schooling at all, found them again by picturing their slices, and gave English the word polytope. Neither had a screen to turn one on.'
     }
   ]
 };

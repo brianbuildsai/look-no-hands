@@ -268,6 +268,19 @@
     }
   };
 
+  // room 24: a cube inside a cube, corner joined to corner: the tesseract's shadow
+  glyphs.shadow = function (pen, s) {
+    var big = s * 0.4, small = s * 0.19, lean = s * 0.07, k;
+    function square(r, ox, oy) { pen.beginPath(); pen.rect(-r + ox, -r + oy, r * 2, r * 2); pen.stroke(); }
+    square(big, 0, 0); square(small, lean, -lean);
+    pen.beginPath();
+    for (k = 0; k < 4; k++) {
+      var sx = k % 2 ? 1 : -1, sy = k < 2 ? 1 : -1;
+      pen.moveTo(sx * big, sy * big); pen.lineTo(sx * small + lean, sy * small - lean);
+    }
+    pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
