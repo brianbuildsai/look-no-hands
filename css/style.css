@@ -166,58 +166,6 @@ canvas {
   gap: 1.35rem;
 }
 
-/* The way through to the second show. Shown in the masthead only where
-   there is room; it is always at the foot of the page. */
-.masthead__other {
-  display: none;
-  color: var(--ash);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color 0.2s;
-}
-
-.masthead__other:hover {
-  color: var(--bone);
-}
-
-.masthead__other-name {
-  font-family: var(--serif);
-  font-style: italic;
-  font-variation-settings: "opsz" 24, "SOFT" 100, "WONK" 1;
-  color: var(--bone);
-}
-
-@media (min-width: 1240px) {
-  .masthead__other {
-    display: inline;
-  }
-}
-
-.rooms-nav__link {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4em;
-  padding: 0.35rem 0;
-  color: var(--ash);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.rooms-nav__link:hover,
-.rooms-nav__link.is-current {
-  color: var(--bone);
-}
-
-.rooms-nav__num {
-  font-variant-numeric: tabular-nums;
-}
-
-.rooms-nav__link.is-current .rooms-nav__name {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.3em;
-}
-
 /* 4. Buttons and inputs ------------------------------------------------ */
 .btn {
   appearance: none;
@@ -589,24 +537,6 @@ canvas {
 
 .sources a:hover {
   text-decoration-color: var(--bone);
-}
-
-.colophon__next {
-  max-width: 30em;
-  margin-top: clamp(3rem, 9vh, 5rem);
-  font-family: var(--serif);
-  font-size: var(--step-2);
-  font-weight: 300;
-  font-variation-settings: "opsz" 48, "SOFT" 80, "WONK" 0;
-  line-height: 1.2;
-  text-wrap: pretty;
-}
-
-.colophon__next a {
-  font-style: italic;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
-  text-decoration-color: var(--amber);
 }
 
 /* 11. Small screens ---------------------------------------------------- */
