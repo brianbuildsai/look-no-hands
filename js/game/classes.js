@@ -125,7 +125,7 @@
   CLASSES.kite = {
     id: 'kite', name: 'The Kite', line: 'Never where the blow lands',
     hp: 5, energy: 3, run: 1.18, weapon: 'daggers', dash: 'blink', flips: true, colour: '#ff3b4e',
-    traits: ['Five hearts, the quickest on his feet', 'The dash is a blink: he is simply elsewhere', 'Three jumps, the second and third turned over', 'Holds a wall and leaps from it; a kill gives the blink back'],
+    traits: ['Five hearts, the quickest on his feet', 'The dash is a blink: he is simply elsewhere', 'Three jumps, the second and third turned over', 'Holds walls and leaps from them. A kill gives the blink back'],
     apply: function (m) { m.airJumps += 1; m.wallgrip = true; }
   };
   ORDER.push('kite');

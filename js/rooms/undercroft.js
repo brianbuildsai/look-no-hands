@@ -69,22 +69,22 @@
       v: 'cast', V: 'cast', i: 'cast', I: 'cast',
       Enter: 'start', Escape: 'pause', p: 'pause', P: 'pause'
     };
-    var held = {}, queued = {}, pressed = {}, touches = {};
+    var keysDown = {}, queued = {}, pressed = {}, touches = {};
 
     function focused() { return document.activeElement === env.stage; }
     document.addEventListener('keydown', function (e) {
       var name = KEYS[e.key];
       if (!name || !focused() || e.ctrlKey || e.metaKey || e.altKey) return;
       e.preventDefault();
-      if (!held[name]) queued[name] = true;
-      held[name] = true;
+      if (!keysDown[name]) queued[name] = true;
+      keysDown[name] = true;
     });
     document.addEventListener('keyup', function (e) {
       var name = KEYS[e.key];
       if (!name) return;
-      held[name] = false;
+      keysDown[name] = false;
     });
-    window.addEventListener('blur', function () { held = {}; });
+    window.addEventListener('blur', function () { keysDown = {}; });
 
     // touch: zones drawn in the frame on phones; a pointer over one holds its button
     var ZONES = [], touchy = false;
@@ -117,7 +117,7 @@
       pen.font = '600 12px "Hanken Grotesk", system-ui, sans-serif';
       pen.textAlign = 'center'; pen.textBaseline = 'middle';
       for (var k = 0; k < ZONES.length; k++) {
-        var z = ZONES[k], isHeld = !!held[z.name];
+        var z = ZONES[k], isHeld = !!keysDown[z.name];
         pen.fillStyle = isHeld ? 'rgba(255,179,71,0.35)' : 'rgba(233,230,223,0.08)';
         pen.strokeStyle = isHeld ? 'rgba(255,179,71,0.9)' : 'rgba(233,230,223,0.3)';
         pen.lineWidth = 1;
@@ -128,26 +128,26 @@
     }
     canvas.addEventListener('pointerdown', function (e) {
       try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
-      if (e.pointerType === 'mouse') { if (state === 'title') queued.start = true; return; }
+      if (e.pointerType === 'mouse') { if (state === 'title' || state === 'choose') queued.start = true; return; }
       if (!touchy) { touchy = true; layoutZones(); }
       e.preventDefault();
       var p = framePoint(e), name = zoneAt(p.x, p.y);
-      if (state === 'title' && !name) { queued.start = true; return; }
+      if ((state === 'title' || state === 'choose') && !name) { queued.start = true; return; }
       if (state === 'summary' && !name) { queued.start = true; return; }
-      if (name) { touches[e.pointerId] = name; if (!held[name]) queued[name] = true; held[name] = true; }
+      if (name) { touches[e.pointerId] = name; if (!keysDown[name]) queued[name] = true; keysDown[name] = true; }
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
     });
     canvas.addEventListener('pointermove', function (e) {
       if (e.pointerType === 'mouse' || touches[e.pointerId] === undefined) return;
       var p = framePoint(e), name = zoneAt(p.x, p.y), was = touches[e.pointerId];
       if (name === was) return;
-      if (was) held[was] = false;
+      if (was) keysDown[was] = false;
       touches[e.pointerId] = name;
-      if (name) { if (!held[name]) queued[name] = true; held[name] = true; }
+      if (name) { if (!keysDown[name]) queued[name] = true; keysDown[name] = true; }
     });
     function lift(e) {
       var was = touches[e.pointerId];
-      if (was) held[was] = false;
+      if (was) keysDown[was] = false;
       delete touches[e.pointerId];
     }
     canvas.addEventListener('pointerup', lift);
@@ -158,7 +158,7 @@
     function poll() {
       pressed = queued; queued = {};
     }
-    function down(name) { return !!held[name]; }
+    function down(name) { return !!keysDown[name]; }
     function hit(name) { return !!pressed[name]; }
 
     /* ---- the world ----
@@ -1556,6 +1556,7 @@
       if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 32, 8, 2); }
       for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
       if (state === 'title') drawTitle();
+      if (state === 'choose') drawChoose();
       else if (state === 'summary') drawSummary();
       else if (state === 'paused') {
         fpen.fillStyle = 'rgba(0,0,0,0.5)'; fpen.fillRect(0, 0, W, H);
@@ -1622,7 +1623,7 @@
     var SND = window.Sound;
     function sfx(name) { if (SND) SND.play(name); }
     var STORE = 'undercroft';
-    var kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false };
+    var kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false, klass: 'warden' };
     function load() {
       try { var raw = window.localStorage.getItem(STORE); if (raw) { var got = JSON.parse(raw); Object.keys(kept).forEach(function (k) { if (got[k] !== undefined) kept[k] = got[k]; }); } } catch (e) { /* a private window, or no storage: nothing is kept */ }
     }
@@ -1698,12 +1699,64 @@
       if (summary.ticks > 40 && (tick >> 4) % 2 === 0) text('PRESS TO GO ON', W / 2, H - 22, '#e9e6df', 1, 'center');
     }
     // the title: the seed, the best, and the starting power to choose among what is unlocked
+    /* ---- who goes down: four on plinths, the chosen one showing what is theirs ---- */
+
+    var choose = { index: 0, t: 0 };
+    function enterChoose() { state = 'choose'; choose.index = Math.max(0, CL.ORDER.indexOf(kept.klass || classId)); choose.t = 0; sfx('select'); }
+    function stepChoose() {
+      var n = CL.ORDER.length;
+      choose.t++;
+      if (hit('left')) { choose.index = (choose.index + n - 1) % n; choose.t = 0; sfx('select'); }
+      if (hit('right')) { choose.index = (choose.index + 1) % n; choose.t = 0; sfx('select'); }
+      if (hit('dash') || hit('pause')) { state = 'title'; return; }
+      if (choose.t > 8 && (hit('start') || hit('jump') || hit('attack') || hit('up'))) { pickClass(CL.ORDER[choose.index]); kept.klass = classId; save(); var c = chosenSeed(); run.seed = c.seed; begin(); }
+    }
+    // what the chosen one does while you look: stands, runs, strikes, dashes, and whatever else is theirs
+    function showcase(K, F, t) {
+      var swing = WP.MOVESETS[WP.WEAPONS[K.weapon].moveset][0], reel = [['idle', 40, 10], ['run', 48, 5], [swing.anim, 28, 6], ['dash', 16, 6]];
+      if (F.flip) reel.push(['flip', 32, 2]); else reel.push(['cast', 25, 5]);
+      var total = 0, k; for (k = 0; k < reel.length; k++) total += reel[k][1];
+      var at = t % total;
+      for (k = 0; k < reel.length; k++) { if (at < reel[k][1]) { var frames = F[reel[k][0]] || F.idle; return frames[Math.floor(at / reel[k][2]) % frames.length]; } at -= reel[k][1]; }
+      return F.idle[0];
+    }
+    function drawChoose() {
+      var n = CL.ORDER.length, gap = 84, x0 = W / 2 - gap * (n - 1) / 2, k, j;
+      fpen.fillStyle = '#07060b'; fpen.fillRect(0, 0, W, H);
+      for (var sk = 0; sk < 40; sk++) { fpen.fillStyle = sk % 3 ? '#2b2836' : '#4a4560'; fpen.fillRect((sk * 97 + (tick >> 3)) % W, (sk * 53) % 84 + 24, 1, 1); }
+      text('WHO GOES DOWN', W / 2, 12, '#e9e6df', 2, 'center');
+      for (k = 0; k < n; k++) {
+        var K = CL.CLASSES[CL.ORDER[k]], chosen = k === choose.index, x = Math.round(x0 + k * gap), base = 92;
+        var F = P.hero.build(K.id, K.weapon, WP.views(K.weapon)), img = chosen ? showcase(K, F, choose.t) : F.idle[Math.floor(tick / 14) % F.idle.length];
+        // the plinth, and the light on it
+        fpen.fillStyle = '#1c1a24'; fpen.fillRect(x - 17, base, 34, 5); fpen.fillStyle = '#2b2836'; fpen.fillRect(x - 15, base + 5, 30, 7); fpen.fillStyle = chosen ? K.colour : '#4a4560'; fpen.fillRect(x - 17, base, 34, 1);
+        if (chosen) { var lg = fpen.createRadialGradient(x, base - 14, 2, x, base - 14, 44); lg.addColorStop(0, K.colour); lg.addColorStop(1, 'rgba(0,0,0,0)'); fpen.globalAlpha = 0.22 + 0.05 * Math.sin(tick * 0.08); fpen.fillStyle = lg; fpen.fillRect(x - 44, base - 58, 88, 88); fpen.globalAlpha = 1; }
+        fpen.globalAlpha = chosen ? 1 : 0.4;
+        fpen.drawImage(img, x - P.hero.anchor.x, base - P.hero.anchor.y);
+        fpen.globalAlpha = 1;
+        text(K.name.replace('The ', '').toUpperCase(), x, base + 16, chosen ? '#ffdc9a' : '#5c5a56', 1, 'center');
+        if (chosen) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(x - 14, base + 24, 28, 1); fpen.fillStyle = '#8f8d88'; for (j = 0; j < 4; j++) { fpen.fillRect(x - 28 - j, base - 22 + j, 1, 7 - j * 2); fpen.fillRect(x + 28 + j, base - 22 + j, 1, 7 - j * 2); } }
+      }
+      var C = CL.CLASSES[CL.ORDER[choose.index]], wp = WP.WEAPONS[C.weapon], y = 126;
+      text(C.name.toUpperCase(), W / 2, y, C.colour, 2, 'center'); y += 15;
+      text(C.line.toUpperCase(), W / 2, y, '#e9e6df', 1, 'center'); y += 10;
+      // hearts, energy, and what is in the hand
+      var wide = C.hp * 8 + 8 + C.energy * 6 + 10 + wp.name.length * 4, hx = Math.round(W / 2 - wide / 2);
+      for (j = 0; j < C.hp; j++) { fpen.fillStyle = '#ff4f7b'; fpen.fillRect(hx + j * 8, y, 3, 3); fpen.fillRect(hx + j * 8 + 3, y, 3, 3); fpen.fillRect(hx + j * 8 + 1, y + 3, 4, 2); fpen.fillRect(hx + j * 8 + 2, y + 5, 2, 1); }
+      hx += C.hp * 8 + 8;
+      for (j = 0; j < C.energy; j++) { fpen.fillStyle = '#ffb347'; fpen.fillRect(hx + j * 6, y + 1, 4, 4); }
+      hx += C.energy * 6 + 10;
+      text(wp.name.toUpperCase(), hx, y, WP.RARITY[wp.rarity].colour, 1, 'left'); y += 11;
+      for (j = 0; j < C.traits.length; j++) { text(C.traits[j].toUpperCase(), W / 2, y, '#8f8d88', 1, 'center'); y += 8; }
+      text('LEFT AND RIGHT TO CHOOSE   JUMP OR ATTACK TO GO DOWN   DASH TO GO BACK', W / 2, H - 9, '#5c5a56', 1, 'center');
+    }
+
     function stepTitle() {
       var options = kept.unlocked;
       if (hit('left')) { startPower = (startPower + options.length - 1) % options.length; sfx('select'); }
       if (hit('right')) { startPower = (startPower + 1) % options.length; sfx('select'); }
       power = options[Math.min(startPower, options.length - 1)];
-      if (hit('start') || hit('jump') || hit('attack')) { var c = chosenSeed(); run.seed = c.seed; begin(); }
+      if (hit('start') || hit('jump') || hit('attack')) enterChoose();
     }
     function drawTitle() {
       fpen.fillStyle = 'rgba(0,0,0,0.6)'; fpen.fillRect(0, 0, W, H);
@@ -1722,7 +1775,7 @@
       if (n > 1) text('LEFT AND RIGHT TO CHOOSE A POWER', W / 2, 134, '#8f8d88', 1, 'center');
       else text('MORE POWERS UNLOCK AS YOU GO DEEPER', W / 2, 134, '#8f8d88', 1, 'center');
       text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
-      text('C OR L DASH   V OR I CAST   ENTER TO BEGIN', W / 2, 170, '#8f8d88', 1, 'center');
+      text('C OR L DASH   V OR I CAST   UP TAKES   ENTER TO CHOOSE WHO GOES', W / 2, 170, '#8f8d88', 1, 'center');
     }
 
     /* ---- the loop and the room's wiring ---- */
@@ -1741,6 +1794,7 @@
       poll();
       tick++;
       if (state === 'title') { stepTitle(); return; }
+      if (state === 'choose') { stepChoose(); return; }
       if (state === 'summary') { stepSummary(); return; }
       if (state === 'relic') { stepChoice(); return; }
       if (state === 'ceremony') { stepCeremony(); return; }
@@ -1761,7 +1815,7 @@
     var startButton = env.room.querySelector('[data-undercroft-start]');
     if (startButton) startButton.addEventListener('click', function () {
       try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
-      var c = chosenSeed(); run.seed = c.seed; power = kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)]; begin(); env.redraw();
+      power = kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)]; if (state === 'choose') { queued.start = true; } else enterChoose(); env.redraw();
     });
     var dailyButton = env.room.querySelector('[data-undercroft-daily]');
     if (dailyButton) dailyButton.addEventListener('click', function () { if (seedField) { seedField.value = ''; noteSeed(); } });
@@ -1817,9 +1871,9 @@
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
         var list = String(names).split(/[\s,]+/).filter(Boolean), k;
-        for (k = 0; k < list.length; k++) { if (!held[list[k]]) queued[list[k]] = true; held[list[k]] = true; }
+        for (k = 0; k < list.length; k++) { if (!keysDown[list[k]]) queued[list[k]] = true; keysDown[list[k]] = true; }
         for (var n = 0; n < (frames || 1); n++) step();
-        for (k = 0; k < list.length; k++) held[list[k]] = false;
+        for (k = 0; k < list.length; k++) keysDown[list[k]] = false;
         render();
       },
       generate: function (seed, floor, section) { var L = WD.generate(seed, floor, section); return { cols: L.cols, reachable: WD.reachable(L), enemies: L.enemies.length, relics: L.relics.length, tries: L.tries }; },
@@ -1844,6 +1898,7 @@
       begin: function (seed, who) { if (seed !== undefined) run.seed = seed; if (who) pickClass(who); begin(); kills = 0; return run; },
       pick: function (who) { return pickClass(who); },
       classes: function () { return CL.ORDER.slice(); },
+      choose: function (index) { if (state !== 'choose') enterChoose(); if (index !== undefined) { choose.index = index; choose.t = 0; } return { state: state, index: choose.index, id: CL.ORDER[choose.index] }; },
       hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
       sprites: function () {
         var out = {};
