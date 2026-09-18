@@ -256,5 +256,21 @@
     return false;
   }
 
-  window.World = { TILE: TILE, ROWS: ROWS, AIR: AIR, STONE: STONE, LEDGE: LEDGE, SPIKES: SPIKES, HAZARD: HAZARD, ELEMENTS: ELEMENTS, generate: generate, reachable: reachable, makeRandom: makeRandom };
+  // the guardian's arena: a hall with walls at both ends, two ledges, and a door that opens when it is over
+  function arena(seed, floor) {
+    var element = ELEMENTS[Math.max(0, Math.min(4, floor - 1))];
+    var L = new Level(46, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 46; x++) L.column(x, g);
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }
+    for (x = 9; x < 12; x++) L.set(x, g - 3, LEDGE);
+    for (x = 34; x < 37; x++) L.set(x, g - 3, LEDGE);
+    L.spawn = { x: 4 * TILE + 8, y: g * TILE };
+    L.door = { x: 42 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 6, y: g - 4 }, { x: 22, y: g - 5 }, { x: 39, y: g - 4 });
+    L.boss = true; L.locked = true;
+    L.arena = { left: 2 * TILE, right: 44 * TILE, groundY: g * TILE, bossX: 30 * TILE + 8 };
+    return L;
+  }
+
+  window.World = { arena: arena, TILE: TILE, ROWS: ROWS, AIR: AIR, STONE: STONE, LEDGE: LEDGE, SPIKES: SPIKES, HAZARD: HAZARD, ELEMENTS: ELEMENTS, generate: generate, reachable: reachable, makeRandom: makeRandom };
 })();

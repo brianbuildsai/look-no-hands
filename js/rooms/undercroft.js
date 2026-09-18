@@ -134,7 +134,7 @@
     var element = WD.ELEMENTS[0];
 
     function loadSection() {
-      level = WD.generate(run.seed, run.floor, run.section);
+      level = run.section >= 3 ? WD.arena(run.seed, run.floor) : WD.generate(run.seed, run.floor, run.section);
       element = level.element;
       makeTiles(element);
       env.live('floor', run.floor);
@@ -389,7 +389,7 @@
       for (var rk = 0; rk < level.relics.length; rk++) { var rl = level.relics[rk]; if (!rl.taken && Math.abs(hero.x - (rl.x * TILE + 8)) < 10 && Math.abs(hero.y - rl.y * TILE) < 20) { rl.taken = true; spark(hero.x, hero.y - 14, '#ffdc9a', 24, 1.8, 30, -0.01); openChoice(1); } }
       if (shieldUp > 0) shieldUp--;
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; }
-      if (hero.alive && hero.onGround && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) transition = 1;
+      if (hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) transition = 1;
       if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) begin();
       if (!hero.act) animateHero();
       if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
@@ -435,27 +435,78 @@
 
     var AC = window.Actors;
     if (!AC) { env.fail('The undercroft’s creatures did not load. The other rooms still run.'); return null; }
-    var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build();
+    var GD = window.Guardians;
+    if (!GD) { env.fail('The undercroft\u2019s guardians did not load. The other rooms still run.'); return null; }
+    var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null, afterChoice = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
       hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); },
-      zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); }
+      zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
+      hazard: function (h) { hazards.push(h); },
+      telegraph: function (x, y, w, h, life, colour) { telegraphs.push({ x: x, y: y, w: w, h: h, life: life, max: life, colour: colour }); },
+      shake: shake,
+      count: function () { return creatures.length; },
+      summon: function (kind, x, y) { var e = AC.spawn({ x: Math.floor(x / TILE), y: Math.floor(y / TILE), kind: 'flyer' }, AC.KINDS[kind].element, run.floor, random); e.kind = kind; e.spec = AC.KINDS[kind]; e.element = AC.KINDS[kind].element; e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
+      afterimage: function (e) { var set = guardianSprites.mirror, frames = (e.dir >= 0 ? set : set.flipped).dash; afterimages.push({ img: P.silhouette(frames[0], '#5b3fa0'), x: e.x, y: e.y, dir: 1, life: 12 }); },
+      mirrorCast: function (e) { mirrorCast(e); }
     };
+    // the mirror casts the Warden's own power back at her
+    function mirrorCast(e) {
+      var dir = hero.x > e.x ? 1 : -1;
+      flash = { colour: '#a48cff', life: 8 };
+      if (power === 'emberwave') { hazards.push({ x0: dir > 0 ? e.x : e.x - 58, x1: dir > 0 ? e.x + 58 : e.x, y0: e.y - 46, y1: e.y + 4, life: 6, damage: 2, element: 'ember', colour: '#ff8c42' }); for (var k = 0; k < 30; k++) { var a = (random() - 0.5) * 0.9, v = 2 + random() * 2.5; particles.push({ x: e.x + dir * 6, y: e.y - 14, vx: Math.cos(a) * v * dir, vy: Math.sin(a) * v - 0.4, life: 18 + random() * 16, max: 30, colour: random() < 0.5 ? '#5b3fa0' : '#a48cff', size: 1, gravity: -0.02 }); } }
+      else if (power === 'frostlance') projectiles.push({ x: e.x + dir * 8, y: e.y - 9, vx: dir * 4.5, vy: 0, life: 70, colour: '#a48cff', size: 6, damage: 2, element: 'frost', gravity: 0, from: 'enemy', lance: true });
+      else if (power === 'stormchain') { zaps.push({ x0: e.x, y0: e.y - 14, x1: hero.x, y1: hero.y - 11, colour: '#ffffff', life: 10 }); if (Math.abs(hero.x - e.x) < 140 && hurtHero(e.x, 2)) afflict('storm'); }
+      else { hazards.push({ x0: e.x - 44, x1: e.x + 44, y0: e.y - 40, y1: e.y + 6, life: 6, damage: 2, element: 'bloom', colour: '#9ae66e' }); e.hp = Math.min(e.maxHp, e.hp + 4); for (var k3 = 0; k3 < 24; k3++) { var a3 = k3 / 24 * Math.PI * 2; particles.push({ x: e.x, y: e.y - 12, vx: Math.cos(a3) * 2.4, vy: Math.sin(a3) * 2.4, life: 22, max: 22, colour: '#a48cff', size: 2, gravity: 0 }); } }
+    }
     function placeCreatures() {
       creatures = []; projectiles = []; zaps = [];
       var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
       for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
+      boss = null; hazards = []; telegraphs = [];
+      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd); creatures.push(boss); }
+    }
+    function stepHazards() {
+      var k, h;
+      for (k = hazards.length - 1; k >= 0; k--) {
+        h = hazards[k];
+        if (hero.alive && hero.x + hero.w / 2 > h.x0 && hero.x - hero.w / 2 < h.x1 && hero.y > h.y0 && hero.y - hero.h < h.y1) { if (hurtHero((h.x0 + h.x1) / 2, h.damage)) afflict(h.element); }
+        if (h.life % 3 === 0) particles.push({ x: h.x0 + random() * (h.x1 - h.x0), y: h.y0 + random() * (h.y1 - h.y0), vx: 0, vy: -0.4 - random() * 0.6, life: 14, max: 14, colour: h.colour, size: random() < 0.4 ? 2 : 1, gravity: 0 });
+        if (--h.life <= 0) hazards.splice(k, 1);
+      }
+      for (k = telegraphs.length - 1; k >= 0; k--) if (--telegraphs[k].life <= 0) telegraphs.splice(k, 1);
+      // the guardian falls: the way opens, and there is choosing to do
+      if (boss && boss.dying === 60) {
+        level.locked = false; kills++;
+        spark(boss.x, boss.y - boss.h / 2, '#ffffff', 60, 3, 50, 0.02); spark(boss.x, boss.y - boss.h / 2, element.glow, 40, 2.4, 60, -0.01); shake(6);
+        afterChoice = 'altar';
+        openChoice(3);
+      }
+    }
+    function drawHazards() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, h;
+      for (k = 0; k < telegraphs.length; k++) { h = telegraphs[k]; var a = 0.25 + 0.25 * Math.sin(tick * 0.5); fpen.globalAlpha = a; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x) - cx, Math.round(h.y) - cy, h.w, h.h); fpen.globalAlpha = 1; fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.strokeRect(Math.round(h.x) - cx + 0.5, Math.round(h.y) - cy + 0.5, h.w - 1, h.h - 1); }
+      for (k = 0; k < hazards.length; k++) { h = hazards[k]; fpen.globalAlpha = 0.45; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x0) - cx, Math.round(h.y0) - cy, Math.round(h.x1 - h.x0), Math.round(h.y1 - h.y0)); fpen.globalAlpha = 1; light((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2, 30, 0.6); }
+    }
+    function drawBossBar() {
+      if (!boss || boss.dying > 60) return;
+      var w = 140, x = Math.round(W / 2 - w / 2), y = H - 16;
+      text(boss.name, W / 2, y - 8, '#e9e6df', 1, 'center');
+      fpen.fillStyle = '#0b0b12'; fpen.fillRect(x - 1, y - 1, w + 2, 5);
+      fpen.fillStyle = '#3a3936'; fpen.fillRect(x, y, w, 3);
+      fpen.fillStyle = boss.phase ? '#ff4f7b' : element.glow; fpen.fillRect(x, y, Math.round(w * boss.hp / boss.maxHp), 3);
+      if (boss.state === 'wake') text(boss.name.toUpperCase(), W / 2, 70, element.glow, 2, 'center');
     }
     function stepCreatures() {
       var k, e;
       for (k = creatures.length - 1; k >= 0; k--) {
         e = creatures[k];
         if (Math.abs(e.x - hero.x) > W * 1.2 && !e.seen) continue;   // asleep until the Warden is near
-        AC.step(e, ctx);
-        if (e.dying === 2) { kills++; spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
-        if (e.dying > 22) creatures.splice(k, 1);
+        if (e.boss) GD.step(e, ctx); else AC.step(e, ctx);
+        if (e.dying === 2 && !e.boss) { kills++; spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
+        if (e.dying > (e.boss ? 90 : 22)) creatures.splice(k, 1);
         if (e.y > level.rows * TILE + 40) creatures.splice(k, 1);
       }
       for (k = projectiles.length - 1; k >= 0; k--) {
@@ -463,7 +514,7 @@
         if (p.seek) { var dx = hero.x - p.x, dy = hero.y - 11 - p.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)); p.vx += dx / len * p.seek; p.vy += dy / len * p.seek; }
         p.x += p.vx; p.y += p.vy; p.vy += p.gravity || 0;
         if (tick % 2 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 8, max: 8, colour: p.colour, size: 1, gravity: 0 });
-        var gone = --p.life <= 0 || tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1;
+        var gone = --p.life <= 0 || (!p.wave && tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1) || (p.wave && tileAt(Math.floor((p.x + p.vx * 3) / TILE), Math.floor(p.y / TILE)) === 1);
         if (p.from === 'enemy' && hero.alive && Math.abs(p.x - hero.x) < hero.w / 2 + p.size && p.y > hero.y - hero.h - p.size && p.y < hero.y + p.size) {
           if (hurtHero(p.x, p.damage)) afflict(p.element);
           gone = true;
@@ -477,7 +528,7 @@
     function wound(e, damage, fromX, elementName) {
       if (e.status.freeze > 0) damage += mods.frozenBonus;
       if (!AC.hurt(e, damage, fromX, ctx)) return false;
-      e.vx *= mods.knockback;
+      if (e.boss) { e.vx = 0; e.vy = Math.min(e.vy, 0); } else e.vx *= mods.knockback;
       if (mods.slowOnHit) e.status.shock = Math.max(e.status.shock || 0, mods.slowOnHit);
       hero.hits++;
       if (hero.energy < hero.maxEnergy && hero.hits % mods.hitsPerEnergy === 0) hero.energy++;
@@ -506,20 +557,21 @@
       for (k = 0; k < creatures.length; k++) {
         e = creatures[k];
         if (e.x < cam.x - 40 || e.x > cam.x + W + 40) continue;
-        var set = actorSprites[e.kind], frames = (e.dir >= 0 ? set : set.flipped)[e.anim], img = frames[Math.min(e.frame, frames.length - 1)];
-        var scale = e.elder ? 1.5 : 1, w = img.width * scale, h = img.height * scale;
+        var set = e.boss ? guardianSprites[e.kind] : actorSprites[e.kind], frames = (e.dir >= 0 ? set : set.flipped)[e.anim] || set.idle, img = frames[Math.min(e.frame, frames.length - 1)];
+        var scale = e.boss ? 1 : e.elder ? 1.5 : 1, w = img.width * scale, h = img.height * scale;
         var x = Math.round(e.x) - w / 2 - cx, y = Math.round(e.y) - h - cy + (e.spec.flying ? h / 2 : 0);
+        if (e.boss && e.kind === 'mirror') { x = Math.round(e.x) - 16 - cx; y = Math.round(e.y) - 31 - cy; w = 32; h = 32; }
         var glow = WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow;
-        if (e.dying) { var t = e.dying / 22; fpen.globalAlpha = 1 - t; fpen.drawImage(P.silhouette(img, '#ffffff'), x + w * t / 2, y + h * t / 2, w * (1 - t), h * (1 - t)); fpen.globalAlpha = 1; continue; }
+        if (e.dying) { var t = Math.min(1, e.dying / (e.boss ? 60 : 22)); fpen.globalAlpha = 1 - t; fpen.drawImage(P.silhouette(img, '#ffffff'), x + w * t / 2, y + h * t / 2, w * (1 - t), h * (1 - t)); fpen.globalAlpha = 1; continue; }
         if (e.flash > 0) fpen.drawImage(P.silhouette(img, '#ffffff'), x, y, w, h);
         else fpen.drawImage(img, x, y, w, h);
         if (e.status.freeze > 0) { fpen.globalAlpha = 0.5; fpen.drawImage(P.silhouette(img, '#d8f1ff'), x, y, w, h); fpen.globalAlpha = 1; }
         if (e.status.burn > 0 && tick % 3 === 0) ember(e.x + (random() - 0.5) * w, e.y - h / 2);
         if (e.status.poison > 0 && tick % 6 === 0) particles.push({ x: e.x + (random() - 0.5) * w, y: e.y - h / 2, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 });
-        if (e.hp < e.maxHp) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
+        if (e.hp < e.maxHp && !e.boss) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
         light(e.x, e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
-      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
       for (k = 0; k < zaps.length; k++) { var z = zaps[k]; fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
     }
 
@@ -569,18 +621,26 @@
       state = 'relic'; choosing = 0;
       return true;
     }
+    function openAltar() {
+      choice = { powers: RL.POWER_ORDER.slice(), index: RL.POWER_ORDER.indexOf(power), relics: RL.POWER_ORDER.map(function (id) { var pw = RL.POWERS[id]; return { id: id, name: pw.name, line: pw.line, element: pw.element }; }) };
+      state = 'relic'; choosing = 0;
+    }
     function stepChoice() {
       choosing++;
       if (choosing < 12) return;
       if (hit('left')) choice.index = (choice.index + choice.relics.length - 1) % choice.relics.length;
       if (hit('right')) choice.index = (choice.index + 1) % choice.relics.length;
-      if (hit('attack') || hit('jump') || hit('start') || hit('cast')) { takeRelic(choice.relics[choice.index].id); choice = null; state = 'run'; }
+      if (hit('attack') || hit('jump') || hit('start') || hit('cast')) {
+        if (choice.powers) { power = choice.powers[choice.index]; number(hero.x, hero.y - 34, RL.POWERS[power].name.toUpperCase(), RL.POWERS[power].colour); choice = null; state = 'run'; return; }
+        takeRelic(choice.relics[choice.index].id); choice = null; state = 'run';
+        if (afterChoice === 'altar') { afterChoice = null; openAltar(); }
+      }
     }
     function drawChoice() {
       if (!choice) return;
       fpen.fillStyle = 'rgba(0,0,0,0.72)'; fpen.fillRect(0, 0, W, H);
-      text('A RELIC', W / 2, 26, '#e9e6df', 2, 'center');
-      var n = choice.relics.length, cw = 104, gap = 10, x0 = Math.round(W / 2 - (n * cw + (n - 1) * gap) / 2), k;
+      text(choice.powers ? 'THE ALTAR: A POWER' : 'A RELIC', W / 2, 26, '#e9e6df', 2, 'center');
+      var n = choice.relics.length, cw = n > 3 ? 86 : 104, gap = 8, x0 = Math.round(W / 2 - (n * cw + (n - 1) * gap) / 2), k;
       for (k = 0; k < n; k++) {
         var r = choice.relics[k], x = x0 + k * (cw + gap), y = 54, chosen = k === choice.index;
         fpen.fillStyle = chosen ? '#1c1c27' : '#0e0e16'; fpen.fillRect(x, y, cw, 118);
@@ -857,7 +917,7 @@
       fpen.fillStyle = '#030306'; fpen.fillRect(dx - 7, dy - 24, 14, 24);
       fpen.fillStyle = element.top; fpen.fillRect(dx - 9, dy - 27, 18, 1); fpen.fillRect(dx - 9, dy - 26, 1, 26); fpen.fillRect(dx + 8, dy - 26, 1, 26);
       for (k = 0; k < 4; k++) { fpen.fillStyle = k % 2 ? element.stone[1] : element.stone[2]; fpen.fillRect(dx - 7, dy - 6 + k * 1.5, 14, 1); }
-      light(level.door.x, level.door.y - 12, 34, 0.6);
+      if (level.locked) { fpen.fillStyle = element.stone[2]; for (k = 0; k < 3; k++) fpen.fillRect(dx - 6 + k * 5, dy - 24, 2, 24); } else light(level.door.x, level.door.y - 12, 34, 0.6);
       for (k = 0; k < level.relics.length; k++) {
         var r = level.relics[k];
         if (r.taken) continue;
@@ -889,7 +949,7 @@
         fpen.fillStyle = '#0b0b12'; fpen.fillRect(4 + k * 9, 4, 1, 1); fpen.fillRect(7 + k * 9, 4, 1, 1); fpen.fillRect(10 + k * 9, 4, 1, 1);
       }
       for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
-      text(element.title + '  ' + run.floor + '-' + (run.section + 1), W - 4, 4, '#8f8d88', 1, 'right');
+      text(element.title + '  ' + run.floor + '-' + (run.section >= 3 ? 'GUARDIAN' : (run.section + 1)), W - 4, 4, '#8f8d88', 1, 'right');
       var pw = RL.POWERS[power];
       fpen.fillStyle = pw.colour; fpen.fillRect(4 + hero.maxEnergy * 6 + 4, 16, 4, 4);
       text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
@@ -913,8 +973,8 @@
       transition++;
       if (transition === 24) {
         run.section++;
-        if (run.section >= 3) { run.section = 0; run.floor++; }
-        if (run.floor > 5) { run.floor = 1; state = 'title'; }
+        if (run.section >= 4) { run.section = 0; run.floor++; }
+        if (run.floor > 5) { run.floor = 1; won = true; state = 'title'; }
         loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
         particles.length = 0; afterimages.length = 0; numbers.length = 0;
       }
@@ -932,6 +992,7 @@
       cam.x += sx; cam.y += sy;
       drawBackdrop();
       drawTiles();
+      drawHazards();
       drawCreatures();
       drawHero();
       drawFx();
@@ -939,6 +1000,7 @@
       drawFlash();
       drawTransition();
       drawHud();
+      drawBossBar();
       drawChoice();
       // into the stage, scaled without smoothing, letterboxed in the dark
       var ratio = canvas.width / size.w;
@@ -955,7 +1017,7 @@
     function begin() {
       state = 'run';
       run.floor = 1; run.section = 0; transition = 0;
-      held = []; casts = 0; shieldUp = 0; choice = null; applyRelics();
+      held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; applyRelics();
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
@@ -972,6 +1034,7 @@
       stepHero();
       stepAfflictions();
       stepCreatures();
+      stepHazards();
       stepFx();
       stepCamera(false);
     }
@@ -1020,7 +1083,7 @@
       still: function () { if (state === 'run') state = 'paused'; render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -1033,6 +1096,10 @@
       generate: function (seed, floor, section) { var L = WD.generate(seed, floor, section); return { cols: L.cols, reachable: WD.reachable(L), enemies: L.enemies.length, relics: L.relics.length, tries: L.tries }; },
       warp: function (x, y) { hero.x = x; hero.y = y === undefined ? level.door.y : y; hero.vy = 0; hero.vx = 0; stepCamera(true); },
       find: function (kind) { for (var ty = 0; ty < level.rows; ty++) for (var tx = 0; tx < level.cols; tx++) if (tileAt(tx, ty) === kind) return { x: tx * TILE + 8, y: ty * TILE, tx: tx, ty: ty }; return null; },
+      guardian: function () { return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y) } : null; },
+      arena: function (floor) { if (floor) run.floor = floor; run.section = 3; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
+      slay: function () { if (boss) { boss.hp = 0; } },
+      command: function (stateName, wait) { if (boss && !boss.dying) { boss.state = stateName; boss.wait = wait || 40; boss.cooldown = 0; } return boss ? boss.state : null; },
       setPower: function (name) { if (RL.POWERS[name]) power = name; return power; },
       relics: function () { return { power: power, held: held.slice(), mods: mods, choice: choice ? { index: choice.index, offered: choice.relics.map(function (r) { return r.id; }) } : null, casts: casts, shieldUp: shieldUp }; },
       take: function (id) { takeRelic(id); return held.slice(); },
