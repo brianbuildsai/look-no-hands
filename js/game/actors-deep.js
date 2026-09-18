@@ -221,4 +221,112 @@
       } }] };
 
   BY_ELEMENT.gear = ['winder', 'governor'];
+  /* ---- glass ---- */
+
+  /* The Reflection: a knight of rose glass behind a mirror. From the front nothing reaches it, and what is thrown
+     comes back; it is open from behind, and for a moment after it has lunged and the mirror has swung aside. */
+  function reflectionRig() {
+    var P = {
+      head: ['..kkkkk..', '.kpllppk.', 'kplppppqk', 'kpkkkkkqk', 'kpkwkwkqk', 'kppppppqk', '.kqqqqqk.', '..kkkkk..'],
+      body: ['.kkkkkkk.', 'kpplpppqk', 'kplpppqqk', 'kppppqqqk', 'kpppqqpqk', 'kppqqpppk', '.kqqpppk.', '.kqppppk.', '..kkkkk..'],
+      leg: ['kpk.', 'kpk.', 'kqk.', 'kpk.', 'kplk', 'kkkk'],
+      shield: ['..kkk..', '.klllk.', 'kllwllk', 'klwlllk', 'kwllllk', 'klllllk', 'kllllwk', 'klllwlk', 'kllwllk', 'klllllk', 'klllllk', '.klllk.', '.klllk.', '..klk..', '...k...'],
+      shieldGlint: ['..kkk..', '.kwwwk.', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', '.kwwwk.', '.kwwwk.', '..kwk..', '...k...'],
+      shieldSide: ['.k.', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', 'klk', '.k.'],
+      sword: ['kpk.........', 'kpkllllllllW', 'kkk.........'],
+      swordUp: ['.W.', '.l.', '.l.', '.l.', '.l.', '.l.', '.l.', '.l.', '.l.', 'kpk', 'kpk', 'kkk']
+    };
+    var walk = [], k;
+    for (k = 0; k < 4; k++) {
+      var bob = k % 2 ? 1 : 0, a = [1, 0, -1, 0][k], l1 = [0, 1, 0, 0][k], l2 = [0, 0, 0, 1][k];
+      walk.push([['swordUp', 10, 7 + bob], ['leg', 14 - a, 28 - l2], ['body', 13, 19 + bob], ['leg', 19 + a, 28 - l1], ['head', 13, 11 + bob], ['shield', 23, 14 + bob]]);
+    }
+    return rig('glass', P, 38, 34, { x: 18, y: 34 }, {
+      walk: walk,
+      windup: [
+        [['sword', 1, 22, { flip: true }], ['leg', 13, 28], ['body', 13, 19], ['leg', 20, 28], ['head', 13, 11], ['shield', 23, 14]],
+        [['sword', 0, 21, { flip: true }], ['leg', 12, 28], ['body', 12, 19], ['leg', 20, 28], ['head', 12, 11], ['shieldGlint', 22, 14]]
+      ],
+      attack: [
+        [['shieldSide', 12, 14], ['leg', 12, 28], ['body', 15, 19], ['leg', 22, 28], ['head', 16, 12], ['sword', 24, 22]],
+        [['shieldSide', 11, 14], ['leg', 11, 28], ['body', 16, 20], ['leg', 23, 28], ['head', 17, 13], ['sword', 26, 23]],
+        [['shieldSide', 11, 14], ['leg', 12, 28], ['body', 15, 20], ['leg', 22, 28], ['head', 16, 13], ['sword', 25, 24]]
+      ],
+      // after the lunge: the mirror is aside and the sword is down
+      open: [[['shieldSide', 10, 15], ['leg', 13, 28], ['body', 14, 20], ['leg', 21, 28], ['head', 15, 13], ['sword', 24, 27]]],
+      hurt: [[['swordUp', 8, 8], ['leg', 15, 28], ['body', 12, 19], ['leg', 19, 28], ['head', 11, 10], ['shield', 24, 15]]]
+    });
+  }
+  function guarding(e) { return !e.dying && !(e.status.freeze > 0 || e.status.stun > 0) && !(e.attack && e.attack.phase !== 'windup'); }
+  KINDS.reflection = { element: 'glass', flying: false, body: { w: 12, h: 22 }, hurt: { w: 16, h: 24 }, hp: 11, speed: 0.42, sight: 160, move: 'walk', keep: 30, rig: reflectionRig,
+    // one box, and the mirror decides: from the front, guarded, a blow rings off it and a missile is sent back
+    boxes: function (e, w, h) {
+      return [{ x0: e.x - w / 2, x1: e.x + w / 2, y0: e.y - h, y1: e.y, mult: 1, onHit: function (c, ctx, damage, fromX, missile) {
+        var fromFront = (fromX - c.x) * c.dir > 0;
+        if (!fromFront || !guarding(c)) { var soft = c.attack && c.attack.phase === 'recover'; return ctx.wound(c, soft ? Math.round(damage * 1.5) : damage, fromX); }
+        c.vars.glint = 8; ctx.spark(c.x + c.dir * 10, c.y - 16, '#ffffff', 6, 1.8, 10, 0.03); ctx.sfx('clink');
+        if (missile) { ctx.projectile({ x: c.x + c.dir * 14, y: c.y - 15, vx: c.dir * 3.6, vy: 0, life: 80, colour: '#ffe8f4', size: 5, damage: 1, element: 'glass', shard: true, cause: 'reflection' }); return true; }
+        if (!(c.vars.told > 0)) { ctx.number(c.x, c.y - c.h - 14, 'MIRRORED', '#ffe8f4'); c.vars.told = 240; }
+        return false;
+      } }];
+    },
+    attacks: [{ name: 'lunge', range: [0, 74], windup: 32, active: 14, recover: 56, cooldown: 70, grounded: true, moves: true,
+      start: function (e, ctx) { if (e.vars.dir !== undefined && (ctx.hero.x - e.x) * e.vars.dir < 0) { e.dir = e.vars.dir; e.attack = null; e.cooldown = 12; } },
+      telling: function (e, ctx, t, w) { e.vx = 0; if (t === 1) ctx.telegraph(e.dir > 0 ? e.x + 6 : e.x - 66, e.y - 16, 60, 8, w, '#ff9ecb'); },
+      fire: function (e, ctx) { e.vx = e.dir * 4.2; ctx.sfx('swing'); },
+      box: function (e) { return [front(e, 4, 26, 18, -6)]; },
+      during: function (e, ctx, t) { if (AC.kit.edgeAhead(e, ctx)) e.vx = 0; if (t % 2 === 0) ctx.particle({ x: e.x - e.dir * 8, y: e.y - 10, vx: -e.dir, vy: 0, life: 8, max: 8, colour: '#ffe8f4', size: 1, gravity: 0 }); },
+      resting: function (e, ctx, t) { e.vx *= 0.7; if (t < 44) { e.anim = 'open'; e.frame = 0; } } }],
+    // it is slow to turn: get behind it and for two thirds of a second its back is to you
+    always: function (e) {
+      var v = e.vars;
+      if (v.told > 0) v.told--;
+      if (v.glint > 0) { v.glint--; if (!e.attack && e.anim === 'walk') { e.anim = 'windup'; e.frame = 1; } }
+      if (v.dir === undefined) v.dir = e.dir;
+      if (e.attack) { v.dir = e.dir; v.turn = 0; return; }
+      if (e.dir !== v.dir) { v.turn = (v.turn || 0) + 1; if (v.turn < 40) { e.dir = v.dir; e.x -= e.vx; e.vx = 0; e.frame = 0; } else { v.dir = e.dir; v.turn = 0; } } else v.turn = 0;
+    } };
+
+  /* The Prism: a crystal afloat with two chips of itself in orbit. Its beam goes a marked way and there splits in three. */
+  function prismRig() {
+    var P = {
+      crystal: ['....k....', '...klk...', '..kllpk..', '..klppk..', '.kllpppk.', '.klpppqk.', 'kllpppqqk', 'klwppqqqk', 'kllpppqqk', '.klppqqk.', '.klppqqk.', '..kpqqk..', '..kpqqk..', '...kqk...', '....k....'],
+      crystalLit: ['....k....', '...kwk...', '..kwwlk..', '..kwllk..', '.kwwlllk.', '.kwllllk.', 'kwwlllllk', 'kwwllllpk', 'kwwlllllk', '.kwllllk.', '.kwlllpk.', '..kllpk..', '..kllpk..', '...klk...', '....k....'],
+      chip: ['.l.', 'lwl', '.l.']
+    };
+    var ORBIT = [[[1, 12], [22, 14]], [[4, 4], [19, 22]], [[11, 0], [12, 26]], [[19, 4], [4, 22]]], walk = [], k;
+    for (k = 0; k < 4; k++) { var bob = k % 2 ? 1 : 0; walk.push([['chip', ORBIT[k][0][0], ORBIT[k][0][1]], ['crystal', 8, 7 + bob], ['chip', ORBIT[k][1][0], ORBIT[k][1][1]]]); }
+    return rig('glass', P, 26, 30, { x: 13, y: 14 }, {
+      walk: walk,
+      windup: [[['chip', 4, 12], ['crystal', 8, 7], ['chip', 19, 14]], [['chip', 6, 13], ['crystalLit', 8, 7], ['chip', 17, 13]]],
+      attack: [[['chip', 0, 13], ['crystalLit', 8, 7], ['chip', 23, 13]], [['chip', 1, 12], ['crystalLit', 8, 8], ['chip', 22, 14]], [['chip', 2, 12], ['crystal', 8, 7], ['chip', 21, 14]]],
+      hurt: [[['chip', 2, 20], ['crystal', 9, 9], ['chip', 22, 4]]]
+    });
+  }
+  function ray(e, ctx, x0, y0, angle, max, out) {
+    var c = Math.cos(angle), s = Math.sin(angle), len = 6;
+    for (; len < max; len += 8) { var x = x0 + c * len, y = y0 + s * len; if (ctx.tileAt(Math.floor(x / 16), Math.floor(y / 16)) === 1) break; if (out) out.push({ x0: x - 4, x1: x + 4, y0: y - 4, y1: y + 4 }); }
+    return { x: x0 + c * len, y: y0 + s * len, len: len };
+  }
+  KINDS.prism = { element: 'glass', flying: true, body: { w: 10, h: 14 }, hurt: { w: 13, h: 18 }, hp: 7, speed: 0.45, sight: 190, move: 'hover', stand: 84, height: 40, rig: prismRig,
+    attacks: [{ name: 'refract', range: [44, 180], above: 90, below: 120, windup: 58, active: 40, recover: 44, cooldown: 170,
+      start: function (e, ctx) { var dx = ctx.hero.x - e.x, dy = ctx.hero.y - 11 - e.y; e.vars.angle = Math.atan2(dy, dx); e.vars.split = Math.max(36, Math.min(96, Math.sqrt(dx * dx + dy * dy) * 0.55)); },
+      telling: function (e, ctx, t, w) {
+        var v = e.vars;
+        if (t < w - 18) v.angle = turnToward(v.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.05);
+        var first = ray(e, ctx, e.x, e.y, v.angle, v.split, null);
+        ctx.telegraphLine(e.x, e.y, first.x, first.y, 2, '#ff9ecb');
+        if (first.len >= v.split) { for (var n = -1; n <= 1; n++) { var b = ray(e, ctx, first.x, first.y, v.angle + n * 0.42, 110, null); ctx.telegraphLine(first.x, first.y, b.x, b.y, 2, n ? '#c46a98' : '#ff9ecb'); } ctx.telegraphCircle(first.x, first.y, 4, 2, '#ffe8f4'); }
+        if (t % 12 === 0) ctx.sfx('select');
+      },
+      fire: function (e, ctx) { ctx.sfx('beam'); },
+      box: function (e, t, ctx) {
+        var v = e.vars, out = [], first = ray(e, ctx, e.x, e.y, v.angle, v.split, out);
+        v.rays = [[e.x, e.y, first.x, first.y]];
+        if (first.len >= v.split) for (var n = -1; n <= 1; n++) { var b = ray(e, ctx, first.x, first.y, v.angle + n * 0.42, 110, out); v.rays.push([first.x, first.y, b.x, b.y]); }
+        return out;
+      },
+      during: function (e, ctx) { var r = e.vars.rays || []; for (var k = 0; k < r.length; k++) ctx.beam(r[k][0], r[k][1], r[k][2], r[k][3], '#ff9ecb'); } }] };
+
+  BY_ELEMENT.glass = ['reflection', 'prism'];
 })();

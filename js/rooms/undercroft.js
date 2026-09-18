@@ -596,6 +596,7 @@
       sfx: function (name) { sfx(name === 'roar' && boss && ROARS[boss.kind] ? ROARS[boss.kind] : name); },
       flash: function (colour, life) { flash = { colour: colour, life: life || 8 }; },
       number: function (x, y, value, colour) { number(x, y, value, colour); },
+      wound: function (e, damage, fromX, elementName) { return wound(e, damage, fromX, elementName || null); },
       // the floor itself can change under a guardian; if stone closes on the Warden she is lifted out of it
       setTile: function (tx, ty, t) {
         level.set(tx, ty, t);
@@ -719,7 +720,7 @@
         var c = creatures[j];
         if (c.dying || seen.indexOf(c) >= 0) continue;
         var cb = boxesOf(c), touched = false;
-        for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { if (cb[q].onHit) { touched = cb[q].onHit(c, ctx, damage, fromX); break; } if (c.boss && cb.length > 1) c.struckAt = { x: (cb[q].x0 + cb[q].x1) / 2, y: (cb[q].y0 + cb[q].y1) / 2 }; wound(c, Math.max(1, Math.round(damage * (cb[q].mult || 1))), fromX, elementName); touched = true; break; }
+        for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { if (cb[q].onHit) { touched = cb[q].onHit(c, ctx, damage, fromX, true); break; } if (c.boss && cb.length > 1) c.struckAt = { x: (cb[q].x0 + cb[q].x1) / 2, y: (cb[q].y0 + cb[q].y1) / 2 }; wound(c, Math.max(1, Math.round(damage * (cb[q].mult || 1))), fromX, elementName); touched = true; break; }
         if (touched) { seen.push(c); n++; if (one) break; }
       }
       return n;
