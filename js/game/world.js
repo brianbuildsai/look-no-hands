@@ -361,7 +361,21 @@
     L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 17 * TILE, row: g };
     return L;
   }
-  var HALLS = { orrery: ['void', darkObservatory], thornmother: ['bloom', overgrownCistern], golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
+  // The Sunken Belfry: a long wet hall with the fallen bell in the middle of it, and two pairs of ledges that stay dry
+  function sunkenBelfry(element, floor) {
+    var L = new Level(34, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 34; x++) { L.column(x, g); for (k = 0; k < 3; k++) L.set(x, k, STONE); }
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(32, k, STONE); L.set(33, k, STONE); }
+    for (x = 3; x < 6; x++) { L.set(x, g - 4, LEDGE); L.set(33 - x, g - 4, LEDGE); }
+    for (x = 8; x < 11; x++) { L.set(x, g - 2, LEDGE); L.set(33 - x, g - 2, LEDGE); }
+    L.spawn = { x: 4 * TILE + 8, y: g * TILE };
+    L.door = { x: 30 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 4, y: g - 6 }, { x: 11, y: g - 6 }, { x: 22, y: g - 6 }, { x: 29, y: g - 6 });
+    L.boss = true; L.locked = true; L.title = 'The Sunken Belfry';
+    L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 20 * TILE, row: g };
+    return L;
+  }
+  var HALLS = { bellkeeper: ['tide', sunkenBelfry], orrery: ['void', darkObservatory], thornmother: ['bloom', overgrownCistern], golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
   function arena(seed, floor, kind) {
     var hall = HALLS[kind] || HALLS[['golem', 'wyrm', 'herald', 'lightless'][Math.max(0, Math.min(3, floor - 1))]];
     if (hall) return hall[1](byName(hall[0]), floor);

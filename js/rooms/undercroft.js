@@ -565,7 +565,7 @@
     var GD = window.Guardians;
     if (!GD) { env.fail('The undercroft\u2019s guardians did not load. The other rooms still run.'); return null; }
     var stepLit = { lights: [], glows: [] };
-    var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless' };
+    var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless', bellkeeper: 'roar', regulator: 'roargolem', reflected: 'roarlightless' };
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
@@ -1952,6 +1952,7 @@
     document.addEventListener('visibilitychange', function () { if (document.hidden && SND && SND.isOn()) SND.stop(); else if (!document.hidden && SND && SND.isOn() && state === 'run') SND.music(element.name); });
     window.addEventListener('pagehide', function () { if (SND) SND.stop(); });
     var LESSONS = {
+      bellkeeper: 'A bell can be rung from outside.', toll: 'Low rings are jumped. High rings are stood under.', diver: 'The harpoon goes where the line was drawn.', angler: 'When the lure goes out, move.', winder: 'It runs down. Wait for it.', governor: 'What it throws comes back.', cog: 'What it throws comes back.', reflection: 'Its back is not a mirror.', prism: 'One beam becomes three at the mark.',
       cogs: 'The works do not stop for you.', shards: 'Glass remembers being sharp.', spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
       fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', jelly: 'Never stand under a jelly whose arms have gone stiff.', puff: 'Pop it while it swells, or stand well back.', watcher: 'The line it draws is the line it burns.', toad: 'The toad\u2019s tongue is longer than you think.', shade: 'When the shade vanishes, turn round.', 
       thornmother: 'She cannot come to you. Everything she has must.', orrery: 'What orbits can be walked between.', pod: 'A pod is a bramble that has not landed yet.', pollen: 'Pollen is slow. So is forgetting it is there.',
