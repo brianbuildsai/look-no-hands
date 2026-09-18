@@ -73,6 +73,52 @@
   var BY_ID = {};
   RELICS.forEach(function (r) { BY_ID[r.id] = r; });
   BOONS.forEach(function (r) { BY_ID[r.id] = r; });
+  /* What each thing does, said plainly, with its numbers: the infobox reads these.
+     A line that begins with + is a gain and is drawn green, with - a cost and red. */
+  var DETAILS = {
+    kindling:    ['+Setting a creature alight also ignites every creature within 40 pixels of it', '+Burn deals 2 a tick instead of 1 (a tick every 0.7 s, for 3 s)'],
+    glassheart:  ['+2 maximum hearts, filled when taken', '-The dash takes twice as long to return'],
+    longstride:  ['+The dash travels 60% further, and cannot be hurt for all of it'],
+    secondwind:  ['+Once: when a blow would kill you, you stand up with 3 hearts and cannot be hurt for 2 s', 'Used up when it happens'],
+    hourglass:   ['+Every hit you land slows that creature to 40% speed for 0.75 s'],
+    tuningfork:  ['+Every stroke of every weapon takes 30% less time'],
+    aeolian:     ['+1 more jump in the air (three in all, four for the Kite)'],
+    reiter:      ['+Frost holds a creature frozen for 3 s instead of 1.5 s', '+Frozen creatures take 2 more damage from every hit'],
+    almanac:     ['+The map shows every chamber of the stage from the start', '+It marks the portal and every unopened chest'],
+    fireflies:   ['+The lantern lights 40% further', '+Every creature carries its own light, twice as large, so it shows in the dark'],
+    edge:        ['+1 damage on every stroke, bolt and finisher'],
+    thornmantle: ['+Whatever wounds you takes 2 damage back, at once'],
+    baton:       ['+Stormchain leaps to 2 more creatures (5 in all)', '+Shock lasts 2 s instead of 1 s'],
+    deepbreath:  ['+1 energy back every 2nd hit you land, instead of every 4th'],
+    luckycoin:   ['+1 maximum energy, filled when taken'],
+    soapbubble:  ['+A film takes one blow for you entirely', 'It grows back 20 s after it bursts'],
+    voidkey:     ['+Every 3rd cast of your power costs no energy'],
+    harpstring:  ['+Blows knock creatures back 80% further', '+The stop on impact is 80% longer, which holds them in place'],
+    magnet:      ['+Hearts, weapons and items within 90 pixels fly to you (normally 40)'],
+    wallgrip:    ['+Lean on a wall in the air and you slide down it slowly', '+Jump from it: a wall-jump, which gives back your air jumps and air dash'],
+    glider:      ['+Hold jump while falling and you sink at an eighth of the usual speed'],
+    greaves:     ['+Down and jump in the air: you drop like a hammer and cannot be hurt on the way', '+Landing deals 5 to everything within 32 pixels'],
+    ghostcloak:  ['+Your dash deals 2 to every creature it passes through'],
+    parry:       ['+Begin a stroke within 0.2 s of a blow landing: the blow does nothing', '+The striker is stunned for 2.3 s and its attack is broken'],
+    phoenix:     ['+Once: when a blow would kill you, you rise with every heart full', '+The burst deals 10 within 70 pixels and burns. You cannot be hurt for 2.5 s', 'Used up when it happens'],
+    chladnibell: ['+Every 5th hit you land rings the bell', '+The ring deals 3 to every creature on the screen'],
+    snowflake:   ['+Every dash leaves a flake where it began', '+It freezes every creature within 46 pixels for 2 s (guardians for 0.3 s)'],
+    sandglass:   ['+At 2 hearts or fewer, everything but you moves at half speed'],
+    heartvessel: ['+2 maximum hearts, filled when taken', 'Can be taken again'],
+    energycell:  ['+1 maximum energy, filled when taken', 'Can be taken again'],
+    whettededge: ['+1 damage on every stroke, bolt and finisher', 'Can be taken again'],
+    secondflame: ['+1 flame in the lantern: one more death before the run ends (5 at most)'],
+    quickstep:   ['+The dash returns 30% sooner', 'Can be taken again'],
+    longarm:     ['+Every melee weapon reaches 20% further', 'Can be taken again']
+  };
+  var POWER_DETAILS = {
+    emberwave:  ['A cone of flame 58 pixels long: 3 damage to everything in it', 'Sets them alight: 1 a tick for 3 s', 'Costs 1 energy'],
+    frostlance: ['A spear of ice that flies straight and passes through everything: 4 damage each', 'Freezes them for 1.5 s', 'Costs 1 energy'],
+    stormchain: ['A bolt to the nearest creature within 130 pixels, leaping to 2 more: 3 damage each', 'Shocks them: 40% speed for 1 s', 'Costs 1 energy'],
+    bloomburst: ['A ring of thorns 44 pixels around you: 2 damage and poison (5 over 4 s)', '+Heals you 1 heart if it hits anything', 'Costs 1 energy']
+  };
+  RELICS.concat(BOONS).forEach(function (r) { r.detail = DETAILS[r.id] || [r.line]; });
+  POWER_ORDER.forEach(function (id) { POWERS[id].detail = POWER_DETAILS[id]; });
   var RARITY_WEIGHT = { rare: 6, epic: 3.2, master: 1.4, legendary: 0.5 };
 
   // some items to choose from: not yet held, leaning toward the floor's element and the power's, rarer with depth

@@ -1171,7 +1171,7 @@
         drawLootIcon(p, px, py, 1);
       }
       for (k = 0; k < flakes.length; k++) drawFlake(flakes[k], cx, cy);
-      if (prompt) { var pr = rarity(prompt.rarity); text('E: ' + lootName(prompt), Math.round(prompt.x) - cx, Math.round(prompt.y) - cy - 34, pr.colour, 1, 'center'); text(pr.name, Math.round(prompt.x) - cx, Math.round(prompt.y) - cy - 27, '#8f8d88', 1, 'center'); }
+// what the near pickup is, the infobox says, over the dark
     }
     function drawLootIcon(loot, px, py, scale) {
       if (loot.kind === 'weapon') { var v = WP.views(loot.id).up.img; fpen.drawImage(v, px - Math.round(v.width * scale / 2), py - Math.round(v.height * scale / 2), v.width * scale, v.height * scale); }
@@ -1372,23 +1372,83 @@
         if (!p.gone) { light(p.x, p.y - 30 + bob, 34 + r.rank * 4, 0.9); glow(p.x, p.y - 30 + bob, 16 + r.rank * 4 + (near ? 6 : 0), r.colour, 0.3 + r.rank * 0.05 + 0.06 * Math.sin(tick * 0.12 + k)); }
       }
     }
-    // what the near one is, written over the dark so it can be read
+    // when nothing is near enough to read, a word about what is on offer
     function drawPerkLabel() {
       if ((!level.sanctuary && !perks.length) || state !== 'run') return;
-      var cx = Math.round(cam.x), cy = Math.round(cam.y);
-      if (nearPerk && !prompt) {
-        var n = nearPerk, nr = rarity(n.relic.rarity), tx = Math.max(90, Math.min(W - 90, Math.round(n.x) - cx)), ty = Math.round(n.y) - cy - 78;
-        text(n.relic.name.toUpperCase(), tx, ty, nr.colour, 2, 'center');
-        text(nr.name, tx, ty + 14, nr.colour, 1, 'center');
-        wrapText(n.relic.line.toUpperCase(), tx, ty + 23, 44);
-        text('E: TAKE IT', tx, ty + 23 + 16, '#ffffff', 1, 'center');
-      } else if (!level.taken && perks.length && !perks[0].gone) text('THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
+      if (!nearPerk && !level.taken && perks.length && !perks[0].gone && !banner) text('THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
     }
     // a line of the small type broken at spaces, two lines at most
     function wrapText(s, x, y, width) {
       if (s.length <= width) { text(s, x, y, '#c4c1ba', 1, 'center'); return; }
       var cut = s.lastIndexOf(' ', width); if (cut < 0) cut = width;
       text(s.slice(0, cut), x, y, '#c4c1ba', 1, 'center'); text(s.slice(cut + 1, cut + 1 + width + 8), x, y + 8, '#c4c1ba', 1, 'center');
+    }
+
+    /* ---- the infobox: what the thing in front of her is and exactly what it does ---- */
+
+    // everything that can be taken, described the same way: a name, a rarity, a kind, and lines that say what it does
+    function describe(kind, id) {
+      if (kind === 'weapon') {
+        var w = WP.WEAPONS[id], reach = w.reach ? 'REACH ' + Math.round(w.reach * mods.reach) : 'RANGED';
+        return { name: w.name, rarity: w.rarity, tag: 'WEAPON', icon: { kind: 'weapon', id: id }, stats: ['DAMAGE ' + w.damage.map(function (d) { return d + mods.damage; }).join(' / ') + '   ' + reach, w.strokes], lines: w.detail, foot: weaponId === id ? null : 'IN HAND: ' + WP.WEAPONS[weaponId].name };
+      }
+      if (kind === 'power') { var pw = RL.POWERS[id]; return { name: pw.name, rarity: 'epic', tag: 'POWER', colour: pw.colour, icon: { kind: 'power', colour: pw.colour }, lines: pw.detail, foot: 'REPLACES ' + RL.POWERS[power].name }; }
+      if (kind === 'heart') return { name: 'A heart', rarity: 'common', tag: 'PICKUP', icon: { kind: 'heart' }, lines: ['+Heals 1 heart'] };
+      var r = RL.BY_ID[id];
+      return { name: r.name, rarity: r.rarity, tag: r.boon ? 'BOON' : r.ability ? 'ITEM / ABILITY' : 'ITEM', icon: { kind: 'relic', id: id }, lines: r.detail, foot: !r.stack && held.indexOf(id) >= 0 ? 'ALREADY CARRIED' : null };
+    }
+    function wrapLines(s, width) {
+      var words = String(s).split(' '), out = [], line = '';
+      words.forEach(function (wd) { if ((line + ' ' + wd).trim().length > width) { out.push(line); line = wd; } else line = (line + ' ' + wd).trim(); });
+      if (line) out.push(line);
+      // no orphans: a last line of a letter or two takes the word before it for company
+      if (out.length > 1 && out[out.length - 1].length <= 3) { var prev = out[out.length - 2].split(' '); if (prev.length > 1) { out[out.length - 1] = prev.pop() + ' ' + out[out.length - 1]; out[out.length - 2] = prev.join(' '); } }
+      return out;
+    }
+    // drawn over the dark, above the thing if there is room and beside it if not, never off the picture
+    function drawInfobox(info, ax, ay, verb) {
+      var r = rarity(info.rarity), col = info.colour || r.colour, bw = 168, pad = 6, chars = Math.floor((bw - pad * 2 - 6) / 4), rows = [], k;
+      (info.stats || []).forEach(function (st) { if (st) rows.push({ t: st, c: '#e9e6df', stat: true }); });
+      info.lines.forEach(function (ln) { var good = ln[0] === '+', bad = ln[0] === '-', body = good || bad ? ln.slice(1) : ln; wrapLines(body, chars).forEach(function (piece, n) { rows.push({ t: piece, c: good ? '#9ae66e' : bad ? '#ff4f7b' : '#c4c1ba', mark: n === 0 ? (good ? '+' : bad ? '-' : null) : null }); }); });
+      if (info.foot) rows.push({ t: info.foot, c: '#8f8d88', foot: true });
+      var bh = 19 + rows.length * 8 + (info.stats && info.stats.length ? 3 : 0) + 13;
+      var x = Math.round(Math.max(3, Math.min(W - bw - 3, ax - bw / 2))), y = Math.round(ay - 44 - bh);
+      if (y < 14) { y = Math.max(14, Math.min(H - bh - 3, Math.round(ay - bh / 2))); x = ax < W / 2 ? Math.min(W - bw - 3, Math.round(ax + 22)) : Math.max(3, Math.round(ax - 22 - bw)); }
+      // the panel: a dark plate, a rim in the rarity's colour, a lit band for the name
+      fpen.globalAlpha = 0.94; fpen.fillStyle = '#07060b'; fpen.fillRect(x, y, bw, bh); fpen.globalAlpha = 1;
+      fpen.globalAlpha = 0.22 + (r.rank >= 2 ? 0.05 * Math.sin(tick * 0.1) : 0); fpen.fillStyle = col; fpen.fillRect(x + 1, y + 1, bw - 2, 15); fpen.globalAlpha = 1;
+      fpen.fillStyle = col; fpen.fillRect(x, y, bw, 1); fpen.fillRect(x, y + bh - 1, bw, 1); fpen.fillRect(x, y, 1, bh); fpen.fillRect(x + bw - 1, y, 1, bh); fpen.fillRect(x + 1, y + 16, bw - 2, 1);
+      fpen.fillStyle = '#07060b'; fpen.fillRect(x, y, 1, 1); fpen.fillRect(x + bw - 1, y, 1, 1); fpen.fillRect(x, y + bh - 1, 1, 1); fpen.fillRect(x + bw - 1, y + bh - 1, 1, 1);
+      if (r.rank >= 4) { var sh = (tick * 2) % (bw + 40) - 20; fpen.globalAlpha = 0.25; fpen.fillStyle = '#fff3b0'; fpen.fillRect(x + Math.max(1, sh), y + 1, Math.max(0, Math.min(8, bw - 1 - sh)), 15); fpen.globalAlpha = 1; }
+      // the thing, small, in a socket; its name; its rarity on a chip
+      fpen.fillStyle = '#07060b'; fpen.fillRect(x + 3, y + 3, 11, 11); fpen.fillStyle = col; fpen.fillRect(x + 3, y + 3, 11, 1); fpen.fillRect(x + 3, y + 13, 11, 1); fpen.fillRect(x + 3, y + 3, 1, 11); fpen.fillRect(x + 13, y + 3, 1, 11);
+      if (info.icon.kind === 'weapon') { var v = WP.views(info.icon.id).diag.img, sc = Math.min(1, 9 / Math.max(v.width, v.height)); fpen.drawImage(v, x + 8 - Math.round(v.width * sc / 2), y + 8 - Math.round(v.height * sc / 2), Math.round(v.width * sc), Math.round(v.height * sc)); }
+      else if (info.icon.kind === 'heart') { fpen.fillStyle = '#ff4f7b'; fpen.fillRect(x + 5, y + 6, 3, 3); fpen.fillRect(x + 9, y + 6, 3, 3); fpen.fillRect(x + 6, y + 9, 5, 2); fpen.fillRect(x + 8, y + 11, 1, 1); }
+      else { fpen.fillStyle = col; fpen.fillRect(x + 6, y + 5, 5, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(x + 7, y + 6, 2, 2); fpen.fillStyle = '#07060b'; fpen.fillRect(x + 6, y + 5, 1, 1); fpen.fillRect(x + 10, y + 5, 1, 1); fpen.fillRect(x + 6, y + 11, 1, 1); fpen.fillRect(x + 10, y + 11, 1, 1); }
+      var chip = r.name, cw = chip.length * 4 + 5, maxName = Math.floor((bw - 22 - cw - 6) / 4), nm = info.name.toUpperCase();
+      text(nm.length > maxName ? nm.slice(0, maxName - 1) + '.' : nm, x + 18, y + 4, '#ffffff', 1, 'left');
+      text(info.tag, x + 18, y + 10, col, 1, 'left');
+      fpen.fillStyle = col; fpen.fillRect(x + bw - cw - 4, y + 4, cw, 9); text(chip, x + bw - cw - 1, y + 6, '#07060b', 1, 'left');
+      // what it does, line by line
+      var ty = y + 20;
+      for (k = 0; k < rows.length; k++) {
+        var row = rows[k];
+        if (row.foot) { fpen.fillStyle = '#2b2836'; fpen.fillRect(x + pad, ty - 1, bw - pad * 2, 1); ty += 2; }
+        if (row.stat) { text(row.t, x + pad, ty, row.c, 1, 'left'); ty += 8; if (!rows[k + 1] || !rows[k + 1].stat) { fpen.fillStyle = '#2b2836'; fpen.fillRect(x + pad, ty - 1, bw - pad * 2, 1); ty += 3; } continue; }
+        if (row.mark) { fpen.fillStyle = row.c; fpen.fillRect(x + pad, ty + 2, 3, 1); if (row.mark === '+') fpen.fillRect(x + pad + 1, ty + 1, 1, 3); }
+        text(row.t, x + pad + (row.foot ? 0 : 6), ty, row.c, 1, 'left'); ty += 8;
+      }
+      // the key, on a cap
+      var label = verb || 'TAKE', kx = x + bw - pad - (label.length * 4 + 14), ky = y + bh - 11;
+      fpen.fillStyle = '#e9e6df'; fpen.fillRect(kx, ky, 9, 9); fpen.fillStyle = '#8f8d88'; fpen.fillRect(kx, ky + 8, 9, 1); text('E', kx + 3, ky + 2, '#07060b', 1, 'left'); text(label, kx + 13, ky + 2, '#ffffff', 1, 'left');
+      // a tick from the box toward the thing
+      if (y + bh < ay - 30) { fpen.fillStyle = col; var px = Math.max(x + 6, Math.min(x + bw - 7, Math.round(ax))); fpen.fillRect(px - 2, y + bh, 5, 1); fpen.fillRect(px - 1, y + bh + 1, 3, 1); fpen.fillRect(px, y + bh + 2, 1, 1); }
+    }
+    function drawInfoboxes() {
+      if (state !== 'run') return;
+      var cx = Math.round(cam.x), cy = Math.round(cam.y);
+      if (prompt) drawInfobox(describe(prompt.kind, prompt.id), Math.round(prompt.x) - cx, Math.round(prompt.y) - cy + 16, prompt.kind === 'weapon' ? 'SWAP' : 'TAKE');
+      else if (nearPerk) drawInfobox(describe(nearPerk.relic.kind === 'power' ? 'power' : nearPerk.relic.kind === 'weapon' ? 'weapon' : 'relic', nearPerk.relic.id), Math.round(nearPerk.x) - cx, Math.round(nearPerk.y) - cy - 8, nearPerk.relic.kind === 'power' || nearPerk.relic.kind === 'weapon' ? 'SWAP' : 'TAKE');
     }
 
     function drawMap() {
@@ -1514,7 +1574,7 @@
       8: ['.#.', '#.#', '.#.', '#.#', '.#.'], 9: ['.#.', '#.#', '.##', '..#', '##.'],
       '.': ['...', '...', '...', '...', '.#.'], ',': ['...', '...', '...', '.#.', '#..'], ':': ['...', '.#.', '...', '.#.', '...'], '-': ['...', '...', '###', '...', '...'],
       '/': ['..#', '..#', '.#.', '#..', '#..'], '!': ['.#.', '.#.', '.#.', '...', '.#.'], '?': ['##.', '..#', '.#.', '...', '.#.'], "'": ['.#.', '.#.', '...', '...', '...'],
-      '(': ['.#.', '#..', '#..', '#..', '.#.'], ')': ['.#.', '..#', '..#', '..#', '.#.'], '+': ['...', '.#.', '###', '.#.', '...'], '—': ['...', '...', '###', '...', '...']
+      '%': ['#..', '..#', '.#.', '#..', '..#'], '(': ['.#.', '#..', '#..', '#..', '.#.'], ')': ['.#.', '..#', '..#', '..#', '.#.'], '+': ['...', '.#.', '###', '.#.', '...'], '—': ['...', '...', '###', '...', '...']
     };
     var glyphCache = {};
     function glyph(ch, colour) {
@@ -1717,7 +1777,8 @@
       drawMap(); drawChambers(); drawPortalHint(); drawPerkLabel();
       if (nearPortal && !prompt && state === 'run') text('E: STEP THROUGH', Math.round(level.door.x - cam.x), Math.round(level.door.y - cam.y) - 46, '#ffffff', 1, 'center');
       drawBossBar();
-      drawBanner();
+      if (!(prompt || nearPerk)) drawBanner();   // a banner never covers what she is reading
+      drawInfoboxes();
       drawCeremony();
       // into the stage, scaled without smoothing, letterboxed in the dark
       var ratio = canvas.width / size.w;

@@ -87,6 +87,24 @@
     murmuration: { name: 'Murmuration', rarity: 'legendary', moveset: 'bow', damage: [2, 2, 3], reach: 0, trail: '#ffd24d', finisher: 'flock', line: 'A bow that looses a flock of lights. They wheel, and fall on what you face', grip: [4, 9],
       art: ['..kk...', '.kYyk..', '..kyk..', '...kyk.', '...kyYk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h..kyYk', '...kyk.', '..kyk..', '.kYyk..', '..kk...'] }
   };
+  /* What each weapon does, said plainly: the infobox reads these, and works out the damage and reach lines itself. */
+  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts' };
+  var DETAILS = {
+    shortsword:  ['The third stroke is a lunging thrust'],
+    forgehammer: ['+Finisher: the floor cracks both ways, 4 damage along it, through everything'],
+    lamppole:    ['+Fires bolts of light that fly 250 pixels', '+The third is a great bolt that passes through everything'],
+    daggers:     ['+Your dash deals 2 to whatever it passes through (the Kite\'s blink cuts for 3)'],
+    hammer:      ['+Finisher: the floor cracks both ways, 4 damage along it, through everything'],
+    emberbrand:  ['+Every hit sets the creature alight: 1 a tick for 3 s', '+Finisher: a wave of flame flies forward, 4 damage, through everything'],
+    frostglaive: ['+Finisher: five spikes of ice rise in a row ahead, 3 damage each, and freeze for 1.5 s'],
+    stormrapier: ['+Finisher: a bolt arcs to the 3 nearest creatures, 3 damage each, and shocks them'],
+    scythe:      ['+Every 3rd creature you kill heals 1 heart', '+Finisher: a whirl all round you, 5 damage within 42 pixels'],
+    thornwhip:   ['+Every hit poisons: 5 damage over 4 s', '+Finisher: drags every lesser creature within 100 pixels to you and breaks its attack'],
+    dawnbreaker: ['+Finisher: a pillar of light from vault to floor, 12 damage', '+and a wave of gold each way along the floor, 5 damage, through everything'],
+    quicksilver: ['+The blade leaves a ribbon where its tip has been', '+Finisher: 8 drops orbit you, then seek the nearest creatures, 3 damage each'],
+    murmuration: ['+Each shot looses 5 lights that wheel and home on what you face', '+Finisher: a flock of 16']
+  };
+  Object.keys(WEAPONS).forEach(function (id) { WEAPONS[id].detail = DETAILS[id] || [WEAPONS[id].line]; WEAPONS[id].strokes = STROKES[WEAPONS[id].moveset] || ''; });
   var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'daggers', 'hammer', 'emberbrand', 'frostglaive', 'stormrapier', 'scythe', 'thornwhip', 'dawnbreaker', 'quicksilver', 'murmuration'];
 
   // a weapon by chance: deeper floors and bosses lean toward the rarer
