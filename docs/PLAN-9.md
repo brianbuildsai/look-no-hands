@@ -78,3 +78,48 @@ a file and never committed.
 7. `sound.js` plays samples with synth fallback; new sound events wired in.
 8. Balance by scripted fights, then the final pass (copy that no longer says
    nothing is loaded, README, plan status, audits, consoles).
+
+## Status
+
+All eight tasks done on `feat/undercroft-depths`, one commit each, every one
+verified in the browser with a clean console in a fresh tab.
+
+Decided along the way:
+
+- A guardian always leaves a boon among its three rewards; the other two come
+  from a power not held, a weapon of master rarity or better, an item of
+  master rarity or better, or a second boon. What has been offered before in
+  the run is avoided while anything else is left. The hall's door stays barred
+  until one is taken. The post-guardian sanctuary is an ordinary one now,
+  since the reward is the guardian's.
+- Descriptions live beside the things they describe (`relics.js`,
+  `weapons.js`) as lines; a leading + or - colours the line. The numbers were
+  read from the code that acts on them. The pixel font gained a percent sign.
+- Floors: one element and one guardian each (Kilns/Golem, Cellars/Wyrm,
+  Cisterns/Thornmother, Galleries/Herald, Vault approach/Orrery, Vault/
+  Lightless). Twenty-one stages. Stages grow with depth (4x3, 4x3, 5x3, 5x3,
+  5x4 chambers) rather than doubling up. Creature life grows 22% a floor.
+- The two new guardians are worked out rather than drawn: the Thornmother's
+  bulb and seven-petalled flower and the Orrery's core, cracks and moons are
+  computed pixel by pixel when the page opens; vines and orbits are drawn live.
+- Sound: 58 recordings, 1.4 MB, made once with the key given in the chat,
+  which was only ever passed in the environment of one command and is in no
+  file and no commit. It should be rotated, since it was pasted into a chat.
+  The key turned out to be scoped to sound generation only, so the credit
+  balance could not be read; about 81 seconds of audio were asked for in all.
+  Three files came back nearly silent and were asked for again. I cannot
+  listen: every file was checked for length, peak and loudness, not for
+  taste. `tools/sounds.js` holds the words; change a prompt, delete its file,
+  run `tools/make-sounds.js`.
+- The site's claim that nothing is loaded is now false for this one room with
+  sound on, and the copy says so plainly.
+
+Balance, by the scripted fighter with the short sword who never dodges
+(seconds to win, hits taken): Golem 31 s, 8; Wyrm 77 s, 11; Thornmother 42 s,
+8; Herald 48 s, 6; Orrery 78 s, 14 (then trimmed from 180 to 160 life, its
+moons from 12 to 10); Lightless 43 s, 3.
+
+Audits: static audit clean; all 32 pages at 1440 and 375 with no overflow,
+errors or fallbacks; every one of the 21 stages loads for every class; a
+whole loop (stage, portal, sanctuary, perk, portal, guardian, reward, door,
+sanctuary) runs.

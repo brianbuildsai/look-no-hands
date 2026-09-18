@@ -157,7 +157,7 @@
     return ATTACKS[want];
   }
 
-  function start(e, arena) { var v = e.vars, k; e.x = (arena.left + arena.right) / 2; e.y = arena.groundY - 74; v.spread = 1; v.spreadTo = 1; v.spin = 1; v.live = false; v.cracked = 0; v.winded = false; v.moons = []; for (k = 0; k < 3; k++) v.moons.push({ ring: k, a: k * 2.1, hp: 12, maxHp: 12, broken: 0, flash: 0, away: false, hot: false, x: e.x, y: e.y }); }
+  function start(e, arena) { var v = e.vars, k; e.x = (arena.left + arena.right) / 2; e.y = arena.groundY - 74; v.spread = 1; v.spreadTo = 1; v.spin = 1; v.live = false; v.cracked = 0; v.winded = false; v.moons = []; for (k = 0; k < 3; k++) v.moons.push({ ring: k, a: k * 2.1, hp: 10, maxHp: 10, broken: 0, flash: 0, away: false, hot: false, x: e.x, y: e.y }); }
   function waking(e, ctx, t) { if (t === 1) ctx.sfx('freeze'); if (t === 80) { ctx.sfx('roar'); ctx.shake(4); dustOf(ctx, e.x, e.y, 40, 3, false); } e.vars.spread = Math.min(1, t / 90); e.vars.spreadTo = 1; }
 
   function always(e, ctx) {
@@ -185,7 +185,7 @@
 
   GD.register('orrery', {
     name: 'The Orrery', title: 'WHAT WAS UNDER THE ROOM OF PLANETS', element: 'void', flying: true, ownBody: true,
-    hp: 180, body: { w: 30, h: 30 }, phases: [0.5], wake: 130, reel: 70,
+    hp: 160, body: { w: 30, h: 30 }, phases: [0.5], wake: 130, reel: 70,
     rig: buildRig, draw: draw, attacks: ATTACKS, think: think, always: always, onPhase: onPhase, fall: fall, waking: waking, start: start, dyingStep: dyingStep,
     tempo: function (e) { return e.phase ? 0.7 : 1; },
     hurtBoxes: function (e) {

@@ -66,16 +66,20 @@ js/rooms/undercroft.js    room 36  the game's engine: fixed step, tiles, camera,
 js/game/pixels.js         room 36  the sprite compiler (text art to canvases), part-based rigs, the Warden's frames per weapon
 js/game/classes.js        room 36  the four who go down: skins for the shared skeleton, numbers, what a dash is
 js/game/weapons.js        room 36  thirteen weapons in five rarities: movesets, grips, finishers
-js/game/world.js          room 36  five elements, levels of any height, the flood fill, four guardians' halls (and the old corridor grammar)
+js/game/world.js          room 36  five elements, levels of any height, the flood fill, six guardians' halls (and the old corridor grammar)
 js/game/explore.js        room 36  stages of chambers: the maze walk, doorways, ladders, furniture, the portal; the sanctuary hall
 js/game/actors.js         room 36  ten creatures as rigs: hurt boxes, attack boxes, the wind-up/active/recover clock
 js/game/relics.js         room 36  four powers, twenty-eight items in four rarities
 js/game/guardians.js      room 36  what the guardians share: registry, rig, turned pieces, attack clock, phases, soft boxes
 js/game/boss-golem.js     room 36  the Kiln Golem: slam and wave, coals, furnace breath, leap, the vent on its back
 js/game/boss-wyrm.js      room 36  the Rime Wyrm: eleven pieces on a rope; breach, beach, icicle rain, gust, coil and nova, lash
+js/game/boss-thornmother.js room 36  the Thornmother: rooted; lashes low and high, walking roots, pods and brambles, pollen, a flower that opens
+js/game/boss-orrery.js    room 36  the Orrery: a core and three moons on rings; lit orbits, a flung moon, the pull, the eclipse
 js/game/boss-herald.js    room 36  the Storm Herald: rhythm bolts, the live rail, blink, the waltzing balls, the turning pylons
 js/game/boss-lightless.js room 36  the Lightless: your double, then the mask and hands, then the dark and three braziers
-js/game/sound.js          room 36  synthesised effects and floor music
+js/game/samples.js        room 36  written by tools/make-sounds.js: the recorded effects sound.js may load
+js/game/sound.js          room 36  plays the recordings (with the synthesised effect under each as a fallback) and the synthesised floor music
+audio/undercroft/         room 36  about sixty short mp3 effects made by ElevenLabs from the prompts in tools/sounds.js
 tools/                authoring tools (Node): rooms.js is the copy, make-rooms.js stamps the pages
 docs/                 design and task plans
 ```
@@ -128,8 +132,9 @@ Gallery.inspect('undercroft').state()   // rooms/undercroft.html: the Warden, th
 Gallery.inspect('undercroft').press('right jump', 12)  // hold keys for so many steps (left right up down jump attack dash cast start pause)
 Gallery.inspect('undercroft').generate(seed, floor, section)  // a floor: columns, reachable, enemies, relics
 Gallery.inspect('undercroft').begin(seed, 'kite'); .pick(who); .classes(); .choose(index)  // who goes down
-Gallery.inspect('undercroft').portal(); .perks()  // where the portal is and the chamber grid; what the sanctuary offers
-Gallery.inspect('undercroft').stage(n)  // any of the seventeen stages of the way down; .arena(floor) goes straight to a guardian (1 to 4)
+Gallery.inspect('undercroft').portal(); .perks(); .reward()  // where the portal is and the chamber grid; what is offered (a sanctuary's perks or a guardian's rewards)
+Sound.recorded()  // rooms/undercroft.html: how many recorded effects are listed and loaded
+Gallery.inspect('undercroft').stage(n)  // any of the twenty-one stages of the way down; .arena(floor) goes straight to a guardian (1 to 4)
 Gallery.inspect('undercroft').guardian(); .command('slam'); .slay()  // watch it (attack, phase, hurt-box targets), make it begin an attack by name, end it
 Gallery.inspect('undercroft').boxes(true)  // draw every hurt box, attack box and strike over the game
 Gallery.inspect('undercroft').summon('hound', 40, true); .equip('scythe'); .setPower('frostlance'); .take('aeolian'); .offer(3); .drop('weapon', 'dawnbreaker')
@@ -142,6 +147,10 @@ Gallery.inspect('undercroft').sheet(true, 3, 'idle,slamUp', 'golem')  // sprite 
   control) and shows each work's resting state.
 - Works that need WebGL, WebGL 2 float targets or Web Audio say so plainly in
   place of the work if the browser lacks them; the rest of the page carries on.
+- Room 36's sound effects are the only files the site loads besides its own pages, styles and scripts. They are
+  fetched only when sound is asked for; without them every effect is still synthesised. To make them again:
+  `ELEVENLABS_API_KEY=... node tools/make-sounds.js` (every missing one) or `... make-sounds.js hit roar` (these,
+  again). The key is read from the environment and never written down.
 - Rooms 5, 14, 23, 27 and 36 make sound only after the visitor asks for it,
   and pausing motion silences them (rooms 23, 27 and 36 also hush when the tab
   is hidden). Room 35 speaks, with the Web Speech API, only when asked.
