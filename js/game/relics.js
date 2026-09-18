@@ -26,7 +26,7 @@
       maxHp: 0, maxEnergy: 0, damage: 0, comboSpeed: 1, dashLength: 1, dashCooldown: 1, airJumps: 1, secondWind: 0,
       lantern: 1, hitsPerEnergy: 4, burnSpread: false, burnDamage: 1, freezeTime: 1, frozenBonus: 0, chainMore: 0, shockTime: 1,
       thorns: 0, shield: 0, freeCast: 0, knockback: 1, hitstop: 1, slowOnHit: 0, map: false, glowFar: false, lifeOnKill: 0, speed: 1,
-      wallgrip: false, glider: false, pound: false, ghost: false, parry: false, magnet: false, phoenix: 0, bell: false, snowflake: false, sandglass: false, breaker: false
+      wallgrip: false, glider: false, pound: false, ghost: false, parry: false, magnet: false, phoenix: 0, bell: false, snowflake: false, sandglass: false, breaker: false, reach: 1
     };
   }
 
@@ -61,8 +61,18 @@
     { id: 'snowflake', rarity: 'legendary', name: "Reiter's Snowflake", element: 'frost', ability: true, line: 'Every dash leaves a six-fold flake that freezes what is near', apply: function (m) { m.snowflake = true; } },
     { id: 'sandglass', rarity: 'legendary', name: 'Hourglass of Sand', element: null, ability: true, line: 'At two hearts or fewer, time runs slow for everything but you', apply: function (m) { m.sandglass = true; } }
   ];
+  // what only a guardian gives: plain, strong, and taken as often as they are offered
+  var BOONS = [
+    { id: 'heartvessel', boon: true, stack: true, rarity: 'master', name: 'Heart Vessel', element: null, line: 'Two more hearts', apply: function (m) { m.maxHp += 2; } },
+    { id: 'energycell', boon: true, stack: true, rarity: 'master', name: 'Energy Cell', element: null, line: 'One more point of energy', apply: function (m) { m.maxEnergy += 1; } },
+    { id: 'whettededge', boon: true, stack: true, rarity: 'master', name: 'Whetted Edge', element: null, line: 'One more damage on every stroke', apply: function (m) { m.damage += 1; } },
+    { id: 'secondflame', boon: true, stack: true, flame: true, rarity: 'legendary', name: 'A Flame for the Lantern', element: null, line: 'One more life', apply: function (m) {} },
+    { id: 'quickstep', boon: true, stack: true, rarity: 'master', name: 'Quickstep', element: null, line: 'The dash returns a third sooner', apply: function (m) { m.dashCooldown *= 0.7; } },
+    { id: 'longarm', boon: true, stack: true, rarity: 'master', name: 'Long Arm', element: null, line: 'Every weapon reaches a fifth further', apply: function (m) { m.reach *= 1.2; } }
+  ];
   var BY_ID = {};
   RELICS.forEach(function (r) { BY_ID[r.id] = r; });
+  BOONS.forEach(function (r) { BY_ID[r.id] = r; });
   var RARITY_WEIGHT = { rare: 6, epic: 3.2, master: 1.4, legendary: 0.5 };
 
   // some items to choose from: not yet held, leaning toward the floor's element and the power's, rarer with depth
@@ -94,5 +104,5 @@
     return m;
   }
 
-  window.Relics = { POWERS: POWERS, POWER_ORDER: POWER_ORDER, RELICS: RELICS, BY_ID: BY_ID, offer: offer, mods: mods, baseMods: baseMods };
+  window.Relics = { POWERS: POWERS, POWER_ORDER: POWER_ORDER, RELICS: RELICS, BOONS: BOONS, BY_ID: BY_ID, offer: offer, mods: mods, baseMods: baseMods };
 })();
