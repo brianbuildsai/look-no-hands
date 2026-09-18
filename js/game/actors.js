@@ -181,7 +181,7 @@
     if (e.flash > 0) e.flash--;
     if (e.cooldown > 0) e.cooldown--;
     // statuses laid on the creature by the Warden's powers
-    if (e.status.burn > 0) { e.status.burn--; if (e.status.burn % 40 === 0) { e.hp -= 1; ctx.spark(e.x, e.y - e.h / 2, '#ff8c42', 4, 1, 16, -0.02); if (e.hp <= 0) { e.hp = 0; e.dying = 1; return; } } }
+    if (e.status.burn > 0) { e.status.burn--; if (e.status.burn % 40 === 0) { e.hp -= (e.status.burnDamage || 1); ctx.spark(e.x, e.y - e.h / 2, '#ff8c42', 4, 1, 16, -0.02); if (e.hp <= 0) { e.hp = 0; e.dying = 1; return; } } }
     if (e.status.poison > 0) { e.status.poison--; if (e.status.poison % 50 === 0) { e.hp -= 1; ctx.spark(e.x, e.y - e.h / 2, '#9ae66e', 3, 0.8, 16, -0.01); if (e.hp <= 0) { e.hp = 0; e.dying = 1; return; } } }
     var frozen = e.status.freeze > 0, shocked = e.status.shock > 0;
     if (frozen) e.status.freeze--;
@@ -195,7 +195,7 @@
     else stepWalker(e, ctx, sees, d, slow);
     // touching the Warden
     if (hero.alive && e.state !== 'hurt' && Math.abs(e.x - hero.x) < (e.w + hero.w) / 2 && hero.y > e.y - e.h && hero.y - hero.h < e.y) {
-      if (ctx.hurtHero(e.x, e.damage)) ctx.afflict(e.element);
+      if (ctx.hurtHero(e.x, e.damage, e)) ctx.afflict(e.element);
     }
     // the animation
     var rate = e.state === 'charge' || e.state === 'dive' ? 4 : spec.flying ? 6 : 9;

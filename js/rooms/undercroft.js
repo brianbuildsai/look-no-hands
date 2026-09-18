@@ -198,7 +198,7 @@
       { anim: 'attack2', frames: [3, 3, 3, 4], active: [1, 2], reach: 22, damage: 2, lunge: 0.5, next: 8, lift: true },
       { anim: 'attack3', frames: [4, 2, 3, 3, 5], active: [1, 2, 3], reach: 34, damage: 4, lunge: 2.2, next: 0 }
     ];
-    var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22;
+    var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22, doubleJumped = false;
 
     var hero = {
       x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
@@ -268,17 +268,18 @@
       hero.act = { kind: 'dash', ticks: 0 };
       hero.anim = 'dash'; hero.frame = 0; hero.clock = 0;
       hero.vx = hero.dir * DASH_SPEED; hero.vy = 0;
-      hero.dashCd = DASH_COOLDOWN; hero.invuln = Math.max(hero.invuln, DASH_FRAMES + 2);
+      hero.dashCd = Math.round(DASH_COOLDOWN * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, Math.round(DASH_FRAMES * mods.dashLength) + 2);
       if (!hero.onGround) hero.airDash = false;
       dust(hero.x, hero.y, -hero.dir, 6);
     }
     function startCast() {
       hero.act = { kind: 'cast', ticks: 0, done: false };
       hero.anim = 'cast'; hero.frame = 0; hero.clock = 0;
-      hero.energy--;
+      if (!(mods.freeCast && (casts + 1) % mods.freeCast === 0)) hero.energy--;
     }
     function hurtHero(fromX, damage) {
       if (!hero.alive || hero.invuln > 0) return false;
+      if (mods.shield && shieldUp <= 0) { shieldUp = mods.shield; hero.invuln = 30; spark(hero.x, hero.y - 12, '#ffdc9a', 16, 1.6, 20, 0); number(hero.x, hero.y - 32, 'BUBBLE', '#ffdc9a'); return false; }
       hero.hp -= damage;
       hero.invuln = 60; hero.flash = 6;
       hero.vx = (hero.x < fromX ? -1 : 1) * 2.2; hero.vy = -2.6;
@@ -286,6 +287,7 @@
       hero.anim = 'hurt'; hero.frame = 0; hero.clock = 0; hero.combo = 0; hero.queued = false;
       hitstop(5); shake(3);
       spark(hero.x, hero.y - 12, '#ff4f7b', 10, 1.4, 20, 0.05);
+      if (hero.hp <= 0 && mods.secondWind > 0) { mods.secondWind--; held = held.filter(function (id) { return id !== 'secondwind'; }); hero.hp = 3; hero.invuln = 120; spark(hero.x, hero.y - 12, '#ffdc9a', 40, 2.4, 40, -0.02); number(hero.x, hero.y - 34, 'SECOND WIND', '#ffdc9a'); }
       if (hero.hp <= 0) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 0 }; hero.anim = 'death'; hero.frame = 0; hero.clock = 0; hero.invuln = 9999; }
       return true;
     }
@@ -302,10 +304,10 @@
         var spec = a.spec, frames = spec.frames;
         hero.vx *= hero.onGround ? 0.86 : 0.96;
         a.clock++;
-        if (a.clock >= frames[a.frame]) { a.clock = 0; a.frame++; }
+        if (a.clock >= Math.max(1, Math.round(frames[a.frame] * mods.comboSpeed))) { a.clock = 0; a.frame++; }
         if (a.frame >= frames.length) { hero.act = null; hero.anim = 'idle'; hero.frame = 0; if (hero.combo >= 3) hero.combo = 0; return; }
         hero.frame = a.frame;
-        if (!a.hitDone && spec.active.indexOf(a.frame) >= 0) { if (strike(swingBox(spec), spec.damage, a.n, null)) a.hitDone = true; }
+        if (!a.hitDone && spec.active.indexOf(a.frame) >= 0) { if (strike(swingBox(spec), spec.damage + mods.damage, a.n, null)) a.hitDone = true; }
         if (hit('attack') && a.frame >= 1 && hero.combo < 3) hero.queued = true;
         if (hero.queued && a.frame >= frames.length - 1) startAttack();
         if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
@@ -315,7 +317,7 @@
         hero.vx = hero.dir * DASH_SPEED; hero.vy = 0;
         hero.frame = a.ticks % 6 < 3 ? 0 : 1;
         if (a.ticks % 2 === 0) afterimage(sprites.warden.dash[hero.frame], hero.x, hero.y, hero.dir);
-        if (a.ticks >= DASH_FRAMES) { hero.act = null; hero.vx = hero.dir * RUN_MAX; hero.anim = 'idle'; }
+        if (a.ticks >= Math.round(DASH_FRAMES * mods.dashLength)) { hero.act = null; hero.vx = hero.dir * RUN_MAX; hero.anim = 'idle'; }
         if (hit('attack')) { hero.act = null; hero.combo = 0; startAttack(); }
         return;
       }
@@ -337,13 +339,6 @@
         hero.deadFor = a.ticks;
         return;
       }
-    }
-
-    // the placeholder power until the relics arrive: a burst of lantern light
-    function castPower() {
-      spark(hero.x + hero.dir * 4, hero.y - 26, '#ffb347', 40, 2.4, 30, 0.02);
-      shake(2);
-      strike({ x0: hero.x - 40, x1: hero.x + 40, y0: hero.y - 44, y1: hero.y + 4 }, 3, 3, null);
     }
 
     function stepHero() {
@@ -370,6 +365,10 @@
       // jumping, with a little forgiveness either side of the edge
       var mayJump = !hero.act || hero.act.kind === 'attack';
       if (hit('jump')) hero.buffer = BUFFER;
+      if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && mods.doubleJump && !doubleJumped && hero.vy > -2) {
+        hero.vy = JUMP_V * 0.9; hero.jumping = true; doubleJumped = true; hero.buffer = 0;
+        spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02);
+      }
       if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
         if (down('down') && hero.onGround && standingOnLedge()) hero.drop = 8;
         else { hero.vy = JUMP_V; hero.jumping = true; hero.onGround = false; hero.coyote = 0; dust(hero.x, hero.y, -hero.dir, 3); }
@@ -383,11 +382,12 @@
       var wasGround = hero.onGround;
       var touched = moveBody(hero);
       hero.onGround = touched.floor;
-      if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; } else if (hero.coyote > 0) hero.coyote--;
+      if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; doubleJumped = false; } else if (hero.coyote > 0) hero.coyote--;
       if (hero.onGround && !wasGround) { hero.landed = 8; dust(hero.x, hero.y, 1, 2); dust(hero.x, hero.y, -1, 2); }
       if (hero.landed > 0) hero.landed--;
       if (hero.alive) touchHazards();
-      for (var rk = 0; rk < level.relics.length; rk++) { var rl = level.relics[rk]; if (!rl.taken && Math.abs(hero.x - (rl.x * TILE + 8)) < 10 && Math.abs(hero.y - rl.y * TILE) < 20) { rl.taken = true; hero.energy = hero.maxEnergy; spark(hero.x, hero.y - 14, '#ffdc9a', 24, 1.8, 30, -0.01); number(hero.x, hero.y - 30, 'RELIC', '#ffdc9a'); } }
+      for (var rk = 0; rk < level.relics.length; rk++) { var rl = level.relics[rk]; if (!rl.taken && Math.abs(hero.x - (rl.x * TILE + 8)) < 10 && Math.abs(hero.y - rl.y * TILE) < 20) { rl.taken = true; spark(hero.x, hero.y - 14, '#ffdc9a', 24, 1.8, 30, -0.01); openChoice(1); } }
+      if (shieldUp > 0) shieldUp--;
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; }
       if (hero.alive && hero.onGround && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) transition = 1;
       if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) begin();
@@ -438,7 +438,7 @@
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build();
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
-      hurtHero: function (fromX, damage) { return hurtHero(fromX, damage); },
+      hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); },
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); }
@@ -475,14 +475,17 @@
     }
     // a wound on a creature, with the Warden's element laid on it
     function wound(e, damage, fromX, elementName) {
+      if (e.status.freeze > 0) damage += mods.frozenBonus;
       if (!AC.hurt(e, damage, fromX, ctx)) return false;
+      e.vx *= mods.knockback;
+      if (mods.slowOnHit) e.status.shock = Math.max(e.status.shock || 0, mods.slowOnHit);
       hero.hits++;
-      if (hero.energy < hero.maxEnergy && hero.hits % 4 === 0) hero.energy++;
+      if (hero.energy < hero.maxEnergy && hero.hits % mods.hitsPerEnergy === 0) hero.energy++;
       spark(e.x, e.y - e.h / 2, '#ffffff', 8, 1.6, 16, 0.06);
       number(e.x, e.y - e.h - 6, damage, elementName ? AC.STATUS[elementName].colour : '#e9e6df');
-      if (elementName === 'ember') e.status.burn = 180;
-      else if (elementName === 'frost') e.status.freeze = 90;
-      else if (elementName === 'storm') e.status.shock = 60;
+      if (elementName === 'ember') { e.status.burn = 180; e.status.burnDamage = mods.burnDamage; if (mods.burnSpread) for (var n = 0; n < creatures.length; n++) { var o = creatures[n]; if (o !== e && !o.dying && Math.abs(o.x - e.x) < 40 && Math.abs(o.y - e.y) < 30) { o.status.burn = 120; o.status.burnDamage = mods.burnDamage; } } }
+      else if (elementName === 'frost') e.status.freeze = Math.round(90 * mods.freezeTime);
+      else if (elementName === 'storm') e.status.shock = Math.round(60 * mods.shockTime);
       else if (elementName === 'bloom') e.status.poison = 250;
       return true;
     }
@@ -495,7 +498,7 @@
         if (e.x + e.w / 2 < box.x0 || e.x - e.w / 2 > box.x1 || e.y < box.y0 || e.y - e.h > box.y1) continue;
         if (wound(e, damage, hero.x, elementName)) any = true;
       }
-      if (any) { hitstop(kind === 2 ? 5 : 3); shake(kind === 2 ? 3 : 1.5); }
+      if (any) { hitstop(Math.round((kind === 2 ? 5 : 3) * mods.hitstop)); shake(kind === 2 ? 3 : 1.5); }
       return any;
     }
     function drawCreatures() {
@@ -514,9 +517,9 @@
         if (e.status.burn > 0 && tick % 3 === 0) ember(e.x + (random() - 0.5) * w, e.y - h / 2);
         if (e.status.poison > 0 && tick % 6 === 0) particles.push({ x: e.x + (random() - 0.5) * w, y: e.y - h / 2, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 });
         if (e.hp < e.maxHp) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
-        light(e.x, e.y - h / 2, e.elder ? 30 : 18, 0.55);
+        light(e.x, e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
-      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
       for (k = 0; k < zaps.length; k++) { var z = zaps[k]; fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
     }
 
@@ -535,6 +538,107 @@
       if (afflictions.poison > 0) { afflictions.poison--; if (afflictions.poison % 120 === 60) { hero.invuln = 0; hurtHero(hero.x + 1, 1); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 5 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 16, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 }); }
       if (afflictions.chill > 0) afflictions.chill--;
       if (element.hazard === 'ice' && onIce && tick % 6 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y, vx: -hero.vx * 0.3, vy: -0.4, life: 14, max: 14, colour: '#d8f1ff', size: 1, gravity: 0.02 });
+    }
+
+    /* ---- the powers, the relics, and the choosing of them ---- */
+
+    var RL = window.Relics;
+    if (!RL) { env.fail('The undercroft’s relics did not load. The other rooms still run.'); return null; }
+    var power = 'emberwave', held = [], mods = RL.baseMods(), casts = 0, shieldUp = 0, choice = null, choosing = 0;
+
+    function applyRelics() {
+      var wasMax = hero.maxHp, wasEnergy = hero.maxEnergy;
+      mods = RL.mods(held);
+      hero.maxHp = 5 + mods.maxHp; hero.maxEnergy = 3 + mods.maxEnergy;
+      if (hero.maxHp > wasMax) hero.hp += hero.maxHp - wasMax;
+      if (hero.maxEnergy > wasEnergy) hero.energy += hero.maxEnergy - wasEnergy;
+      hero.hp = Math.min(hero.hp, hero.maxHp); hero.energy = Math.min(hero.energy, hero.maxEnergy);
+    }
+    function takeRelic(id) {
+      if (held.indexOf(id) < 0) held.push(id);
+      applyRelics();
+      number(hero.x, hero.y - 34, RL.BY_ID[id].name.toUpperCase(), '#ffdc9a');
+      spark(hero.x, hero.y - 14, '#ffdc9a', 30, 2, 36, -0.01);
+    }
+    // three relics laid out to choose from; arrows to look, attack or jump to take
+    function openChoice(count) {
+      var rnd = WD.makeRandom(run.seed * 977 + run.floor * 31 + run.section * 7 + held.length * 3 + tick);
+      var offered = RL.offer(held, element.name, RL.POWERS[power].element, rnd, count || 3);
+      if (!offered.length) return false;
+      choice = { relics: offered, index: 0 };
+      state = 'relic'; choosing = 0;
+      return true;
+    }
+    function stepChoice() {
+      choosing++;
+      if (choosing < 12) return;
+      if (hit('left')) choice.index = (choice.index + choice.relics.length - 1) % choice.relics.length;
+      if (hit('right')) choice.index = (choice.index + 1) % choice.relics.length;
+      if (hit('attack') || hit('jump') || hit('start') || hit('cast')) { takeRelic(choice.relics[choice.index].id); choice = null; state = 'run'; }
+    }
+    function drawChoice() {
+      if (!choice) return;
+      fpen.fillStyle = 'rgba(0,0,0,0.72)'; fpen.fillRect(0, 0, W, H);
+      text('A RELIC', W / 2, 26, '#e9e6df', 2, 'center');
+      var n = choice.relics.length, cw = 104, gap = 10, x0 = Math.round(W / 2 - (n * cw + (n - 1) * gap) / 2), k;
+      for (k = 0; k < n; k++) {
+        var r = choice.relics[k], x = x0 + k * (cw + gap), y = 54, chosen = k === choice.index;
+        fpen.fillStyle = chosen ? '#1c1c27' : '#0e0e16'; fpen.fillRect(x, y, cw, 118);
+        fpen.fillStyle = chosen ? '#ffb347' : '#3a3936'; fpen.fillRect(x, y, cw, 1); fpen.fillRect(x, y + 117, cw, 1); fpen.fillRect(x, y, 1, 118); fpen.fillRect(x + cw - 1, y, 1, 118);
+        var glow = r.element ? WD.ELEMENTS.filter(function (el) { return el.name === r.element; })[0].glow : '#e9e6df';
+        fpen.fillStyle = glow; fpen.fillRect(x + cw / 2 - 5, y + 10, 10, 10); fpen.fillStyle = '#ffffff'; fpen.fillRect(x + cw / 2 - 2, y + 13, 3, 3);
+        text(r.name, x + cw / 2, y + 28, chosen ? '#ffdc9a' : '#e9e6df', 1, 'center');
+        // the line, wrapped to the card
+        var words = r.line.toUpperCase().split(' '), line = '', ly = y + 44;
+        for (var w = 0; w < words.length; w++) {
+          var test = line ? line + ' ' + words[w] : words[w];
+          if (textWidth(test, 1) > cw - 10) { text(line, x + cw / 2, ly, '#8f8d88', 1, 'center'); line = words[w]; ly += 8; } else line = test;
+        }
+        if (line) text(line, x + cw / 2, ly, '#8f8d88', 1, 'center');
+        if (r.element) text(r.element, x + cw / 2, y + 104, glow, 1, 'center');
+      }
+      text('LEFT AND RIGHT TO LOOK   Z OR X TO TAKE', W / 2, 186, '#8f8d88', 1, 'center');
+    }
+
+    // the cast: each power has its own shape, sound and colour
+    function castPower() {
+      var spec = RL.POWERS[power], el = spec.element;
+      casts++;
+      if (power === 'emberwave') {
+        var box = { x0: hero.dir > 0 ? hero.x : hero.x - 58, x1: hero.dir > 0 ? hero.x + 58 : hero.x, y0: hero.y - 46, y1: hero.y + 4 };
+        strike(box, 3 + mods.damage, 3, 'ember');
+        for (var k = 0; k < 40; k++) { var a = (random() - 0.5) * 0.9, v = 2 + random() * 2.5; particles.push({ x: hero.x + hero.dir * 6, y: hero.y - 14, vx: Math.cos(a) * v * hero.dir, vy: Math.sin(a) * v - 0.4, life: 18 + random() * 16, max: 30, colour: random() < 0.5 ? '#ff8c42' : random() < 0.5 ? '#ffb347' : '#ffdc9a', size: random() < 0.4 ? 2 : 1, gravity: -0.02 }); }
+        flash = { colour: '#ff8c42', life: 8 };
+        shake(3);
+      } else if (power === 'frostlance') {
+        projectiles.push({ x: hero.x + hero.dir * 8, y: hero.y - 9, vx: hero.dir * 5, vy: 0, life: 60, colour: '#d8f1ff', size: 6, damage: 4 + mods.damage, element: 'frost', gravity: 0, from: 'hero', pierce: true, lance: true });
+        spark(hero.x + hero.dir * 8, hero.y - 14, '#9fd8ff', 12, 1.5, 16, 0);
+        flash = { colour: '#9fd8ff', life: 6 };
+      } else if (power === 'stormchain') {
+        var hits = 0, from = { x: hero.x, y: hero.y - 14 }, done = [], k2;
+        for (k2 = 0; k2 < 3 + mods.chainMore; k2++) {
+          var best = null, bestD = k2 === 0 ? 130 : 80;
+          for (var j = 0; j < creatures.length; j++) { var c = creatures[j]; if (c.dying || done.indexOf(c) >= 0) continue; var dx = c.x - from.x, dy = (c.y - c.h / 2) - from.y, d = Math.sqrt(dx * dx + dy * dy); if (d < bestD) { bestD = d; best = c; } }
+          if (!best) break;
+          zaps.push({ x0: from.x, y0: from.y, x1: best.x, y1: best.y - best.h / 2, colour: '#ffffff', life: 10 });
+          wound(best, 3 + mods.damage, from.x, 'storm'); done.push(best); hits++;
+          from = { x: best.x, y: best.y - best.h / 2 };
+        }
+        if (!hits) zaps.push({ x0: hero.x, y0: hero.y - 14, x1: hero.x + hero.dir * 60, y1: hero.y - 20, colour: '#8fa3ff', life: 8 });
+        else { hitstop(4); shake(2); }
+        flash = { colour: '#8fa3ff', life: 6 };
+      } else if (power === 'bloomburst') {
+        var any = strike({ x0: hero.x - 44, x1: hero.x + 44, y0: hero.y - 40, y1: hero.y + 6 }, 2 + mods.damage, 3, 'bloom');
+        for (var k3 = 0; k3 < 36; k3++) { var a3 = k3 / 36 * Math.PI * 2; particles.push({ x: hero.x, y: hero.y - 12, vx: Math.cos(a3) * 2.4, vy: Math.sin(a3) * 2.4, life: 22, max: 22, colour: k3 % 3 ? '#9ae66e' : '#c5ff9a', size: 2, gravity: 0 }); }
+        if (any && hero.hp < hero.maxHp) { hero.hp++; number(hero.x, hero.y - 34, '+1', '#9ae66e'); }
+        flash = { colour: '#9ae66e', life: 6 };
+      }
+    }
+    var flash = null;
+    function drawFlash() {
+      if (!flash) return;
+      fpen.fillStyle = flash.colour; fpen.globalAlpha = 0.12 * flash.life / 8; fpen.fillRect(0, 0, W, H); fpen.globalAlpha = 1;
+      if (--flash.life <= 0) flash = null;
     }
 
     /* ---- effects: particles, hit-stop, shaking, light ---- */
@@ -774,7 +878,7 @@
       if (afflictions.chill > 0) { fpen.globalAlpha = 0.45; fpen.drawImage(P.silhouette(img, '#9fd8ff'), x, y); fpen.globalAlpha = 1; }
       fpen.globalAlpha = 1;
       // the lantern's light travels with the hand
-      if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, 78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0), 1);
+      if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, Math.round((78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0)) * mods.lantern), 1);
     }
 
     function drawHud() {
@@ -786,6 +890,11 @@
       }
       for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
       text(element.title + '  ' + run.floor + '-' + (run.section + 1), W - 4, 4, '#8f8d88', 1, 'right');
+      var pw = RL.POWERS[power];
+      fpen.fillStyle = pw.colour; fpen.fillRect(4 + hero.maxEnergy * 6 + 4, 16, 4, 4);
+      text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
+      if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 23, 8, 2); }
+      for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
       if (state === 'title') {
         fpen.fillStyle = 'rgba(0,0,0,0.55)'; fpen.fillRect(0, 0, W, H);
         text('UNDERCROFT', W / 2, 70, '#e9e6df', 3, 'center');
@@ -827,8 +936,10 @@
       drawHero();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
+      drawFlash();
       drawTransition();
       drawHud();
+      drawChoice();
       // into the stage, scaled without smoothing, letterboxed in the dark
       var ratio = canvas.width / size.w;
       pen.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -844,6 +955,7 @@
     function begin() {
       state = 'run';
       run.floor = 1; run.section = 0; transition = 0;
+      held = []; casts = 0; shieldUp = 0; choice = null; applyRelics();
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
@@ -852,6 +964,7 @@
       poll();
       tick++;
       if (state === 'title') { if (hit('start') || hit('jump') || hit('attack')) begin(); return; }
+      if (state === 'relic') { stepChoice(); return; }
       if (hit('pause')) state = state === 'paused' ? 'run' : 'paused';
       if (state !== 'run') return;
       if (stepTransition()) { stepFx(); return; }
@@ -907,7 +1020,7 @@
       still: function () { if (state === 'run') state = 'paused'; render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -920,6 +1033,10 @@
       generate: function (seed, floor, section) { var L = WD.generate(seed, floor, section); return { cols: L.cols, reachable: WD.reachable(L), enemies: L.enemies.length, relics: L.relics.length, tries: L.tries }; },
       warp: function (x, y) { hero.x = x; hero.y = y === undefined ? level.door.y : y; hero.vy = 0; hero.vx = 0; stepCamera(true); },
       find: function (kind) { for (var ty = 0; ty < level.rows; ty++) for (var tx = 0; tx < level.cols; tx++) if (tileAt(tx, ty) === kind) return { x: tx * TILE + 8, y: ty * TILE, tx: tx, ty: ty }; return null; },
+      setPower: function (name) { if (RL.POWERS[name]) power = name; return power; },
+      relics: function () { return { power: power, held: held.slice(), mods: mods, choice: choice ? { index: choice.index, offered: choice.relics.map(function (r) { return r.id; }) } : null, casts: casts, shieldUp: shieldUp }; },
+      take: function (id) { takeRelic(id); return held.slice(); },
+      offer: function (n) { return openChoice(n || 3); },
       begin: function (seed) { if (seed !== undefined) run.seed = seed; begin(); kills = 0; return run; },
       hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
       sprites: function () {
