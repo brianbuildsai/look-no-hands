@@ -123,68 +123,69 @@
     function down(name) { return !!held[name]; }
     function hit(name) { return !!pressed[name]; }
 
-    /* ---- the world (a test floor, until the generator arrives) ----
-       Tiles: 0 air, 1 stone, 2 a ledge you can stand on and jump up through. */
+    /* ---- the world ----
+       Floors come from world.js: a grid of tiles (0 air, 1 stone, 2 a ledge
+       you can jump up through, 3 spikes, 4 the element's hazard) with a
+       spawn, a door, and places for enemies, relics and lamps. */
 
-    var level = { cols: 0, rows: 0, tiles: null, spawn: { x: 40, y: 0 } };
-    var TEST = [
-      '........................................................................',
-      '........................................................................',
-      '........................................................................',
-      '..........................................#####.........................',
-      '.............................................................###........',
-      '..................................###...................................',
-      '........................==============..................................',
-      '.....................................................#####..............',
-      '..............###.......................................................',
-      '......................................#####.............................',
-      '..........####.....................................................#####',
-      '###########......########.......########........###########.....########',
-      '###########......########.......########........###########.....########',
-      '########################################################################'
-    ];
-    function loadTest() {
-      level.rows = TEST.length; level.cols = TEST[0].length;
-      level.tiles = new Uint8Array(level.cols * level.rows);
-      for (var y = 0; y < level.rows; y++) for (var x = 0; x < level.cols; x++) {
-        var ch = TEST[y][x];
-        level.tiles[y * level.cols + x] = ch === '#' ? 1 : ch === '=' ? 2 : 0;
-      }
-      level.spawn = { x: 40, y: 11 * TILE };
+    var WD = window.World;
+    if (!WD) { env.fail('The undercroft’s floors did not load. The other rooms still run.'); return null; }
+    var level = null, run = { seed: 36, floor: 1, section: 0 };
+    var element = WD.ELEMENTS[0];
+
+    function loadSection() {
+      level = WD.generate(run.seed, run.floor, run.section);
+      element = level.element;
+      makeTiles(element);
+      env.live('floor', run.floor);
+      env.live('seed', run.seed);
     }
-    function tileAt(tx, ty) {
-      if (tx < 0 || tx >= level.cols) return 1;
-      if (ty < 0) return 0;
-      if (ty >= level.rows) return 1;
-      return level.tiles[ty * level.cols + tx];
-    }
+    function tileAt(tx, ty) { return level.get(tx, ty); }
     function solidAt(tx, ty) { return tileAt(tx, ty) === 1; }
 
-    // stone tiles, drawn once: a brick course with a lit top edge, in three variants
-    var TILES = (function () {
+    // the element's stone, drawn once per floor: a brick course in the floor's colours, with a lit top edge
+    var TILES = null;
+    function makeTiles(el) {
       var out = [], v;
       for (v = 0; v < 3; v++) {
         var c = P.blank(TILE, TILE), g = c.getContext('2d');
-        g.fillStyle = '#3a3936'; g.fillRect(0, 0, TILE, TILE);
-        g.fillStyle = '#5c5a56';
+        g.fillStyle = el.stone[0]; g.fillRect(0, 0, TILE, TILE);
+        g.fillStyle = el.stone[1];
         g.fillRect(1, 1, 6, 6); g.fillRect(9, 1, 6, 6); g.fillRect(1, 9, 3 + v, 6); g.fillRect(6 + v, 9, 9 - v, 6);
-        g.fillStyle = '#8f8d88';
+        g.fillStyle = el.stone[2];
         g.fillRect(1, 1, 6, 1); g.fillRect(9, 1, 6, 1); g.fillRect(1, 9, 3 + v, 1); g.fillRect(6 + v, 9, 9 - v, 1);
-        g.fillStyle = '#2a2927';
-        g.fillRect(v * 3, 4, 1, 1); g.fillRect(12 - v, 12, 1, 1);
+        g.fillStyle = el.stone[3];
+        g.fillRect(v * 3, 4, 1, 1); g.fillRect(12 - v, 12, 1, 1); g.fillRect(3 + v * 2, 13, 2, 1);
         out.push(c);
       }
-      // the top of a course: a bone-lit edge
       var top = P.blank(TILE, 2), t = top.getContext('2d');
-      t.fillStyle = '#c4c1ba'; t.fillRect(0, 0, TILE, 1);
-      t.fillStyle = '#8f8d88'; t.fillRect(0, 1, TILE, 1);
-      // a ledge: a thin slab
+      t.fillStyle = el.top; t.fillRect(0, 0, TILE, 1);
+      t.fillStyle = el.stone[2]; t.fillRect(0, 1, TILE, 1);
       var ledge = P.blank(TILE, TILE), l = ledge.getContext('2d');
-      l.fillStyle = '#c4c1ba'; l.fillRect(0, 0, TILE, 1);
-      l.fillStyle = '#5c5a56'; l.fillRect(0, 1, TILE, 3);
-      l.fillStyle = '#3a3936'; l.fillRect(0, 4, TILE, 1);
-      return { stone: out, top: top, ledge: ledge };
-    })();
+      l.fillStyle = el.top; l.fillRect(0, 0, TILE, 1);
+      l.fillStyle = el.stone[1]; l.fillRect(0, 1, TILE, 3);
+      l.fillStyle = el.stone[3]; l.fillRect(0, 4, TILE, 1); l.fillRect(2, 2, 1, 1); l.fillRect(11, 2, 1, 1);
+      var spikes = P.blank(TILE, TILE), sp = spikes.getContext('2d');
+      sp.fillStyle = el.stone[0]; sp.fillRect(0, 10, TILE, 6);
+      sp.fillStyle = '#c4c1ba';
+      for (var k = 0; k < 4; k++) { sp.fillRect(k * 4 + 1, 4, 2, 6); sp.fillRect(k * 4 + 1, 3, 1, 1); sp.fillRect(k * 4 + 1, 2, 1, 1); }
+      sp.fillStyle = '#e9e6df';
+      for (k = 0; k < 4; k++) sp.fillRect(k * 4 + 1, 2, 1, 1);
+      // the element's hazard, in three frames: lava boils, ice glints, rails pulse, spores drift, the void breathes
+      var hz = [];
+      for (v = 0; v < 3; v++) {
+        var h = P.blank(TILE, TILE), hp = h.getContext('2d');
+        hp.fillStyle = el.hazardColours[0]; hp.fillRect(0, 4, TILE, 12);
+        hp.fillStyle = el.hazardColours[1];
+        for (k = 0; k < 4; k++) hp.fillRect((k * 4 + v * 2) % 16, 4 + ((k + v) % 3), 3, 1);
+        hp.fillStyle = el.hazardColours[2];
+        hp.fillRect((3 + v * 5) % 16, 6 + v, 1, 1); hp.fillRect((11 + v * 3) % 16, 9 - v, 1, 1);
+        if (el.hazard === 'ice') { hp.fillStyle = el.hazardColours[1]; hp.fillRect(0, 4, TILE, 12); hp.fillStyle = el.hazardColours[2]; hp.fillRect(2 + v * 4, 5, 3, 1); hp.fillRect(9 - v * 2, 8, 2, 1); hp.fillStyle = el.hazardColours[0]; hp.fillRect(0, 14, TILE, 2); }
+        if (el.hazard === 'rail') { hp.clearRect(0, 0, TILE, TILE); hp.fillStyle = el.stone[1]; hp.fillRect(0, 10, TILE, 6); hp.fillStyle = v === 1 ? el.hazardColours[2] : el.hazardColours[0]; hp.fillRect(0, 8, TILE, 2); hp.fillStyle = el.hazardColours[1]; hp.fillRect(v * 5, 6, 2, 2); hp.fillRect(12 - v * 3, 5, 1, 3); }
+        hz.push(h);
+      }
+      TILES = { stone: out, top: top, ledge: ledge, spikes: spikes, hazard: hz };
+    }
 
     /* ---- the Warden ----
        Position is the feet's middle. The body is a box 10 wide and 22 tall
@@ -353,11 +354,11 @@
       if (free) {
         var accel = hero.onGround ? ACCEL : AIR_ACCEL;
         if (move !== 0) {
-          hero.vx += move * accel;
+          hero.vx += move * (onIce ? accel * 0.35 : accel);
           if (Math.abs(hero.vx) > RUN_MAX) hero.vx = move * RUN_MAX;
           hero.dir = move;
         } else {
-          hero.vx *= hero.onGround ? FRICTION : AIR_FRICTION;
+          hero.vx *= hero.onGround ? (onIce ? 0.975 : FRICTION) : AIR_FRICTION;
           if (Math.abs(hero.vx) < 0.05) hero.vx = 0;
         }
         if (hit('attack')) { if (hero.combo >= 3) hero.combo = 0; startAttack(); }
@@ -383,11 +384,34 @@
       if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; } else if (hero.coyote > 0) hero.coyote--;
       if (hero.onGround && !wasGround) { hero.landed = 8; dust(hero.x, hero.y, 1, 2); dust(hero.x, hero.y, -1, 2); }
       if (hero.landed > 0) hero.landed--;
+      if (hero.alive) touchHazards();
+      for (var rk = 0; rk < level.relics.length; rk++) { var rl = level.relics[rk]; if (!rl.taken && Math.abs(hero.x - (rl.x * TILE + 8)) < 10 && Math.abs(hero.y - rl.y * TILE) < 20) { rl.taken = true; hero.energy = hero.maxEnergy; spark(hero.x, hero.y - 14, '#ffdc9a', 24, 1.8, 30, -0.01); number(hero.x, hero.y - 30, 'RELIC', '#ffdc9a'); } }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; }
+      if (hero.alive && hero.onGround && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) transition = 1;
       if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) begin();
       if (!hero.act) animateHero();
       if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
     }
+
+    // spikes and the element's hazard, where the body touches them
+    var onIce = false;
+    function touchHazards() {
+      var half = hero.w / 2, tx0 = Math.floor((hero.x - half) / TILE), tx1 = Math.floor((hero.x + half - 0.001) / TILE);
+      var ty0 = Math.floor((hero.y - hero.h) / TILE), ty1 = Math.floor((hero.y - 0.001) / TILE), under = Math.floor((hero.y + 1) / TILE);
+      onIce = false;
+      for (var ty = ty0; ty <= ty1 + 1; ty++) for (var tx = tx0; tx <= tx1; tx++) {
+        var t = tileAt(tx, ty), inBody = ty <= ty1, underfoot = ty === under;
+        if (t === 3 && (inBody || underfoot && hero.onGround)) { if (hurtHero(tx * TILE + 8, 1)) { hero.vy = -3.2; } return; }
+        if (t === 4 && (inBody || underfoot)) {
+          if (element.hazard === 'ice') { onIce = true; continue; }
+          if (element.hazard === 'rail' && tick % 150 >= 75) continue;
+          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1)) { hero.vy = -3.2; status(element.name); }
+          return;
+        }
+      }
+    }
+    // an elemental touch: burning, poison and the rest arrive with the enemies; for now, sparks in the element's colour
+    function status(name) { spark(hero.x, hero.y - 12, element.glow, 12, 1.6, 24, 0.03); }
 
     // which animation, and how fast it runs, when the Warden is free
     function animateHero() {
@@ -409,7 +433,7 @@
 
     var dummies = [];
     function placeDummies() {
-      dummies = [{ x: 130, y: 11 * TILE, hp: 12, wobble: 0, dir: 1 }, { x: 330, y: 11 * TILE, hp: 12, wobble: 0, dir: 1 }, { x: 560, y: 11 * TILE, hp: 12, wobble: 0, dir: 1 }];
+      dummies = level.enemies.map(function (e) { return { x: e.x * TILE + 8, y: e.y * TILE, hp: 12, wobble: 0, dir: 1 }; });
     }
     function stepDummies() {
       for (var k = 0; k < dummies.length; k++) {
@@ -514,7 +538,7 @@
     function light(x, y, radius, strength) { lights.push({ x: x, y: y, r: radius, s: strength || 1 }); }
     function drawDark(flicker) {
       dpen.globalCompositeOperation = 'source-over';
-      dpen.fillStyle = 'rgba(2,2,8,0.82)';
+      dpen.fillStyle = 'rgba(2,2,8,0.74)';
       dpen.fillRect(0, 0, W, H);
       dpen.globalCompositeOperation = 'destination-out';
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, r;
@@ -583,23 +607,47 @@
       }
     }
 
-    // the backdrop: a dark vault with arches that slide slower than the floor
+    // the backdrop: the vault in the floor's colours, its arches sliding slower than the floor, and the element's own furniture behind
     function drawBackdrop() {
       var grad = fpen.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, '#07070c'); grad.addColorStop(1, '#101018');
+      grad.addColorStop(0, element.sky[0]); grad.addColorStop(1, element.sky[1]);
       fpen.fillStyle = grad; fpen.fillRect(0, 0, W, H);
-      var ox = Math.round(cam.x * 0.35) % 96, k;
-      fpen.fillStyle = '#15151f';
+      var ox = Math.round(cam.x * 0.35) % 96, oy = Math.round(cam.y * 0.2), k, ax;
+      fpen.fillStyle = element.stone[3];
       for (k = -1; k < W / 96 + 1; k++) {
-        var ax = k * 96 - ox;
-        fpen.fillRect(ax, 40, 10, H);
-        fpen.beginPath(); fpen.arc(ax + 48, 64, 43, Math.PI, 0); fpen.fill();
+        ax = k * 96 - ox;
+        fpen.fillRect(ax, 40 - oy, 10, H);
+        fpen.beginPath(); fpen.arc(ax + 48, 64 - oy, 43, Math.PI, 0); fpen.fill();
       }
-      fpen.fillStyle = '#0b0b12';
-      for (k = -1; k < W / 96 + 1; k++) { var bx = k * 96 - ox; fpen.beginPath(); fpen.arc(bx + 48, 64, 38, Math.PI, 0); fpen.fill(); }
-      var oy = Math.round(cam.x * 0.6) % 48;
-      fpen.fillStyle = '#1c1c27';
-      for (k = -1; k < W / 48 + 1; k++) fpen.fillRect(k * 48 - oy, 120, 6, H);
+      fpen.fillStyle = element.sky[0];
+      for (k = -1; k < W / 96 + 1; k++) { ax = k * 96 - ox; fpen.beginPath(); fpen.arc(ax + 48, 64 - oy, 38, Math.PI, 0); fpen.fill(); }
+      // what hangs, glows or grows in the arches
+      var name = element.hazard;
+      for (k = -1; k < W / 96 + 1; k++) {
+        ax = k * 96 - ox + 48;
+        var seed = ((k + Math.floor(cam.x * 0.35 / 96)) * 31 + 7) % 5;
+        if (name === 'lava') {
+          fpen.fillStyle = element.hazardColours[0]; fpen.fillRect(ax - 14, 118 - oy, 28, 5);
+          fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 10 + ((tick >> 3) + seed) % 6, 119 - oy, 4, 2);
+          fpen.fillStyle = 'rgba(255,106,43,0.08)'; fpen.fillRect(ax - 30, 70 - oy, 60, 50);
+        } else if (name === 'ice') {
+          fpen.fillStyle = element.hazardColours[1];
+          for (var i = 0; i < 4; i++) { var ih = 6 + ((seed + i * 3) % 4) * 4; fpen.fillRect(ax - 20 + i * 12, 26 - oy, 2, ih); fpen.fillRect(ax - 20 + i * 12, 26 - oy + ih, 1, 2); }
+        } else if (name === 'rail') {
+          fpen.fillStyle = (tick + k * 17) % 90 < 4 ? element.hazardColours[2] : element.hazardColours[0];
+          fpen.fillRect(ax - 40, 100 - oy, 80, 1);
+          fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 1, 100 - oy, 2, 12); fpen.fillRect(ax - 3, 111 - oy, 6, 2);
+        } else if (name === 'spores') {
+          fpen.fillStyle = element.hazardColours[0];
+          for (var v = 0; v < 3; v++) { var vh = 20 + ((seed + v * 5) % 5) * 8, vx = ax - 24 + v * 20; fpen.fillRect(vx, 30 - oy, 1, vh); fpen.fillRect(vx - 1, 30 - oy + vh - 4, 3, 2); if (v === 1) fpen.fillRect(vx + 1, 30 - oy + (vh >> 1), 2, 1); }
+        } else {
+          fpen.fillStyle = element.hazardColours[1];
+          for (var st = 0; st < 5; st++) { var sx = ax - 40 + ((seed * 7 + st * 19) % 80), sy = 20 + ((seed * 13 + st * 23) % 90) - oy; if ((tick + st * 11 + seed) % 120 < 90) fpen.fillRect(sx, sy, 1, 1); }
+        }
+      }
+      var oy2 = Math.round(cam.x * 0.6) % 48;
+      fpen.fillStyle = element.stone[3];
+      for (k = -1; k < W / 48 + 1; k++) fpen.fillRect(k * 48 - oy2, 120 - oy, 6, H);
     }
 
     function drawTiles() {
@@ -612,6 +660,41 @@
           fpen.drawImage(TILES.stone[((tx * 7 + ty * 13) % 3 + 3) % 3], px, py);
           if (tileAt(tx, ty - 1) !== 1) fpen.drawImage(TILES.top, px, py);
         } else if (t === 2) fpen.drawImage(TILES.ledge, px, py);
+        else if (t === 3) fpen.drawImage(TILES.spikes, px, py);
+        else if (t === 4) {
+          var hf = element.hazard === 'rail' ? (tick % 150 < 75 ? 1 : 0) : (Math.floor(tick / 12) + tx) % 3;
+          fpen.drawImage(TILES.hazard[hf], px, py);
+          if (element.hazard !== 'ice') light(tx * TILE + 8, ty * TILE + 8, 22, 0.5);
+        }
+      }
+      drawFurniture();
+    }
+
+    // lamps on the walls, the door down, and the relics waiting in their alcoves
+    function drawFurniture() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k;
+      for (k = 0; k < level.lights.length; k++) {
+        var lamp = level.lights[k], lx = lamp.x * TILE + 8, ly = lamp.y * TILE + 8;
+        if (lx < cam.x - 40 || lx > cam.x + W + 40) continue;
+        fpen.fillStyle = '#4a3b2a'; fpen.fillRect(lx - 2 - cx, ly - 4 - cy, 4, 7);
+        fpen.fillStyle = '#ffb347'; fpen.fillRect(lx - 1 - cx, ly - 3 - cy, 2, 4);
+        fpen.fillStyle = '#ffdc9a'; fpen.fillRect(lx - 1 - cx, ly - 3 - cy, 1, 2);
+        light(lx, ly, 46, 0.7);
+        if (tick % 4 === 0 && random() < 0.5) ember(lx, ly - 4);
+      }
+      var dx = Math.round(level.door.x) - cx, dy = Math.round(level.door.y) - cy;
+      fpen.fillStyle = element.stone[3]; fpen.fillRect(dx - 9, dy - 26, 18, 26);
+      fpen.fillStyle = '#030306'; fpen.fillRect(dx - 7, dy - 24, 14, 24);
+      fpen.fillStyle = element.top; fpen.fillRect(dx - 9, dy - 27, 18, 1); fpen.fillRect(dx - 9, dy - 26, 1, 26); fpen.fillRect(dx + 8, dy - 26, 1, 26);
+      for (k = 0; k < 4; k++) { fpen.fillStyle = k % 2 ? element.stone[1] : element.stone[2]; fpen.fillRect(dx - 7, dy - 6 + k * 1.5, 14, 1); }
+      light(level.door.x, level.door.y - 12, 34, 0.6);
+      for (k = 0; k < level.relics.length; k++) {
+        var r = level.relics[k];
+        if (r.taken) continue;
+        var rx = r.x * TILE + 8 - cx, ry = r.y * TILE - 6 - cy + Math.round(Math.sin(tick * 0.08 + k) * 2);
+        fpen.fillStyle = '#ffdc9a'; fpen.fillRect(rx - 1, ry - 3, 2, 6); fpen.fillRect(rx - 3, ry - 1, 6, 2);
+        fpen.fillStyle = '#ffffff'; fpen.fillRect(rx - 1, ry - 1, 1, 1);
+        light(r.x * TILE + 8, r.y * TILE - 6, 28, 0.8);
       }
     }
 
@@ -635,6 +718,7 @@
         fpen.fillStyle = '#0b0b12'; fpen.fillRect(4 + k * 9, 4, 1, 1); fpen.fillRect(7 + k * 9, 4, 1, 1); fpen.fillRect(10 + k * 9, 4, 1, 1);
       }
       for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
+      text(element.title + '  ' + run.floor + '-' + (run.section + 1), W - 4, 4, '#8f8d88', 1, 'right');
       if (state === 'title') {
         fpen.fillStyle = 'rgba(0,0,0,0.55)'; fpen.fillRect(0, 0, W, H);
         text('UNDERCROFT', W / 2, 70, '#e9e6df', 3, 'center');
@@ -647,6 +731,25 @@
       }
     }
 
+    var transition = 0;
+    function stepTransition() {
+      if (transition === 0) return false;
+      transition++;
+      if (transition === 24) {
+        run.section++;
+        if (run.section >= 3) { run.section = 0; run.floor++; }
+        if (run.floor > 5) { run.floor = 1; state = 'title'; }
+        loadSection(); placeDummies(); spawnHero(); stepCamera(true);
+        particles.length = 0; afterimages.length = 0; numbers.length = 0;
+      }
+      if (transition >= 48) transition = 0;
+      return true;
+    }
+    function drawTransition() {
+      if (transition === 0) return;
+      var a = transition < 24 ? transition / 24 : (48 - transition) / 24;
+      fpen.fillStyle = 'rgba(0,0,0,' + a.toFixed(2) + ')'; fpen.fillRect(0, 0, W, H);
+    }
     function render() {
       if (sheetMode) return;
       var sx = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0, sy = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0;
@@ -657,6 +760,7 @@
       drawHero();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
+      drawTransition();
       drawHud();
       // into the stage, scaled without smoothing, letterboxed in the dark
       var ratio = canvas.width / size.w;
@@ -672,8 +776,9 @@
 
     function begin() {
       state = 'run';
-      spawnHero();
-      stepCamera(true);
+      run.floor = 1; run.section = 0; transition = 0;
+      loadSection(); placeDummies(); spawnHero(); stepCamera(true);
+      particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
 
     function step() {
@@ -682,6 +787,7 @@
       if (state === 'title') { if (hit('start') || hit('jump') || hit('attack')) begin(); return; }
       if (hit('pause')) state = state === 'paused' ? 'run' : 'paused';
       if (state !== 'run') return;
+      if (stepTransition()) { stepFx(); return; }
       if (freeze > 0) { freeze--; return; }
       stepHero();
       stepDummies();
@@ -704,7 +810,7 @@
       });
     }
 
-    loadTest();
+    loadSection();
     placeDummies();
     spawnHero();
     stepCamera(true);
@@ -715,7 +821,9 @@
         canvas.width = Math.max(1, Math.round(size.w * ratio));
         canvas.height = Math.max(1, Math.round(size.h * ratio));
         var wide = size.w >= 900 && !document.fullscreenElement;
-        var x0 = wide ? Math.round(size.w * 0.34) : 0, vw = size.w - x0, vh = size.h;
+        // beside the wall label on wide screens: never under it
+        var label = env.room.querySelector('.label'), labelRight = label ? label.getBoundingClientRect().right - canvas.getBoundingClientRect().left : 0;
+        var x0 = wide ? Math.max(Math.round(size.w * 0.34), Math.round(labelRight) + 12) : 0, vw = size.w - x0, vh = size.h;
         view.scale = Math.max(0.5, Math.min(vw / W, vh / H));
         view.w = Math.round(W * view.scale); view.h = Math.round(H * view.scale);
         view.x = x0 + Math.round((vw - view.w) / 2); view.y = Math.round((vh - view.h) / 2);
@@ -731,7 +839,7 @@
       still: function () { if (state === 'run') state = 'paused'; render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, dummies: dummies.map(function (d) { return d.hp; }), particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows }, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, dummies: dummies.map(function (d) { return d.hp; }), particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -741,6 +849,9 @@
         for (k = 0; k < list.length; k++) held[list[k]] = false;
         render();
       },
+      generate: function (seed, floor, section) { var L = WD.generate(seed, floor, section); return { cols: L.cols, reachable: WD.reachable(L), enemies: L.enemies.length, relics: L.relics.length, tries: L.tries }; },
+      warp: function (x, y) { hero.x = x; hero.y = y === undefined ? level.door.y : y; hero.vy = 0; hero.vx = 0; stepCamera(true); },
+      find: function (kind) { for (var ty = 0; ty < level.rows; ty++) for (var tx = 0; tx < level.cols; tx++) if (tileAt(tx, ty) === kind) return { x: tx * TILE + 8, y: ty * TILE, tx: tx, ty: ty }; return null; },
       hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
       sprites: function () {
         var out = {};
