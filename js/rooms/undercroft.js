@@ -68,7 +68,7 @@
       x: 'jump', X: 'jump', k: 'jump', K: 'jump', ' ': 'jump',
       z: 'attack', Z: 'attack', j: 'attack', J: 'attack',
       c: 'dash', C: 'dash', l: 'dash', L: 'dash', Shift: 'dash',
-      v: 'cast', V: 'cast', i: 'cast', I: 'cast',
+      v: 'cast', V: 'cast', i: 'cast', I: 'cast', q: 'swap', Q: 'swap',
       Enter: 'start', Escape: 'pause', p: 'pause', P: 'pause'
     };
     var keysDown = {}, queued = {}, pressed = {}, touches = {};
@@ -102,6 +102,7 @@
       var rx = size.w - pad - b;
       ZONES.push({ name: 'jump', x: rx, y: y0 + b + gap, w: b, h: b, label: 'JUMP' }, { name: 'attack', x: rx - b - gap, y: y0 + b + gap, w: b, h: b, label: 'HIT' });
       ZONES.push({ name: 'dash', x: rx, y: y0, w: b, h: b, label: 'DASH' }, { name: 'cast', x: rx - b - gap, y: y0, w: b, h: b, label: 'CAST' });
+      ZONES.push({ name: 'swap', x: Math.round(size.w / 2) - 24, y: y0, w: 48, h: 30, label: 'SWAP' });
       ZONES.push({ name: 'pause', x: Math.round(size.w / 2) - 20, y: y0 + b + gap + b - 22, w: 40, h: 22, label: 'II' });
     }
     function zoneAt(px, py) {
@@ -454,6 +455,7 @@
         if (hit('attack')) { if (hero.combo >= swings.length) hero.combo = 0; startAttack(); }
         else if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
         else if (hit('cast') && hero.energy > 0) startCast();
+        else if (hit('swap')) changeHands();
       } else stepAct();
       // jumping, with a little forgiveness either side of the edge
       var mayJump = !hero.act || hero.act.kind === 'attack';
@@ -917,16 +919,35 @@
     var WP = window.Weapons;
     if (!WP) { env.fail('The undercroft’s weapons did not load. The other rooms still run.'); return null; }
     var weaponId = 'shortsword', weapon = WP.WEAPONS.shortsword, swings = WP.MOVESETS.sword;
+    // two hands: what each holds, which is in use, and how long ago they changed (for the flourish in the corner)
+    var hands = ['shortsword', null], handIn = 0, swapT = 0;
     var flares = [], ribbon = [], droplets = [], flock = [], pillars = [], rings = [], spikes = [], lash = null, delayed = [], reaped = 0;
 
     function equip(id) {
       if (!WP.WEAPONS[id]) return false;
-      weaponId = id; weapon = WP.WEAPONS[id]; swings = WP.MOVESETS[weapon.moveset];
+      weaponId = id; weapon = WP.WEAPONS[id]; swings = WP.MOVESETS[weapon.moveset]; hands[handIn] = id;
       sprites.warden = P.hero.build(classId, id, WP.views(id));
       hero.combo = 0; hero.queued = false; ribbon = [];
       return true;
     }
     function rarityOf(w) { return WP.RARITY[w.rarity]; }
+    function freeHand() { return hands[0] === null ? 0 : hands[1] === null ? 1 : -1; }
+    // the other weapon comes to hand: nothing is lost but the combo
+    function changeHands() {
+      var other = 1 - handIn;
+      if (!hands[other]) { number(hero.x, hero.y - 32, 'ONE WEAPON', '#8f8d88'); sfx('select'); return false; }
+      handIn = other; equip(hands[other]); swapT = 12; sfx('swingquick');
+      var col = rarityOf(weapon).colour; spark(hero.x + hero.dir * 6, hero.y - 14, col, 8, 1.4, 14, 0);
+      return true;
+    }
+    // a weapon found: into the free hand if there is one, else in place of the one in use, which falls (a common one is simply left)
+    function takeWeapon(id) {
+      var free = freeHand();
+      if (hands[0] === id || hands[1] === id) { if (weaponId !== id) changeHands(); return; }
+      if (free >= 0) handIn = free;
+      else if (WP.WEAPONS[weaponId].rarity !== 'common') dropPickup({ kind: 'weapon', id: weaponId }, hero.x - hero.dir * 10, hero.y - 8);
+      equip(id); swapT = 12;
+    }
 
     // where a swing strikes, by its shape
     function swingBox(sw) {
@@ -1082,9 +1103,9 @@
 
     // what a chest or an elder gives: a weapon or an item she does not have, rarer with depth
     function rollLoot(rnd, boost) {
-      if (rnd() < 0.45) return { kind: 'weapon', id: WP.roll(rnd, run.floor, boost, weaponId) };
+      if (rnd() < 0.45) return { kind: 'weapon', id: WP.roll(rnd, run.floor, boost, hands) };
       var offered = RL.offer(held.concat(pickups.filter(function (p) { return p.kind === 'relic'; }).map(function (p) { return p.id; })), element.name, RL.POWERS[power].element, rnd, 1, run.floor, boost);
-      return offered.length ? { kind: 'relic', id: offered[0].id } : { kind: 'weapon', id: WP.roll(rnd, run.floor, boost, weaponId) };
+      return offered.length ? { kind: 'relic', id: offered[0].id } : { kind: 'weapon', id: WP.roll(rnd, run.floor, boost, hands) };
     }
     function lootRarity(loot) { return loot.kind === 'weapon' ? WP.WEAPONS[loot.id].rarity : loot.kind === 'relic' ? RL.BY_ID[loot.id].rarity : 'common'; }
     function lootName(loot) { return loot.kind === 'weapon' ? WP.WEAPONS[loot.id].name : loot.kind === 'relic' ? RL.BY_ID[loot.id].name : 'Heart'; }
@@ -1107,7 +1128,7 @@
     // taking a thing: a weapon changes hands (the old one falls), an item joins the others; the rarer, the more is made of it
     function takePickup(p) {
       var r = rarity(p.rarity), loot = { kind: p.kind, id: p.id };
-      if (p.kind === 'weapon') { if (WP.WEAPONS[weaponId].rarity !== 'common') dropPickup({ kind: 'weapon', id: weaponId }, hero.x - hero.dir * 10, hero.y - 8); equip(p.id); sfx('pickup'); }
+      if (p.kind === 'weapon') { takeWeapon(p.id); sfx('pickup'); }
       else if (p.kind === 'relic') takeRelic(p.id);
       if (r.rank >= 4) { ceremony = { t: 0, loot: loot, colour: r.colour }; state = 'ceremony'; sfx('legend'); }
       else if (r.rank >= 2) { banner = { t: 0, text: lootName(loot), sub: r.name, colour: r.colour }; flash = { colour: r.colour, life: 8 }; spark(hero.x, hero.y - 14, r.colour, 40, 2.4, 36, -0.01); }
@@ -1318,7 +1339,7 @@
       for (k = 0; k < 5; k++) rnd();
       var pw = pick(fresh(RL.POWER_ORDER.filter(function (id) { return id !== power; }).map(function (id) { var q = RL.POWERS[id]; return { kind: 'power', id: id, name: q.name, rarity: 'epic', line: q.line }; })));
       var boons = shuffled(fresh(RL.BOONS.filter(function (q) { return !(q.flame && flames >= 5); })));
-      var wid = null; for (k = 0; k < 8 && !wid; k++) { var cand = WP.roll(rnd, run.floor + 2, true, weaponId); if (WP.RARITY[WP.WEAPONS[cand].rarity].rank >= 3 && !rewarded[cand]) wid = cand; }
+      var wid = null; for (k = 0; k < 8 && !wid; k++) { var cand = WP.roll(rnd, run.floor + 2, true, hands); if (WP.RARITY[WP.WEAPONS[cand].rarity].rank >= 3 && !rewarded[cand]) wid = cand; }
       var high = RL.offer(held, element.name, RL.POWERS[power].element, rnd, 8, run.floor + 2, true).filter(function (q) { return rarity(q.rarity).rank >= 3; })[0];
       if (boons[0]) pool.push({ kind: 'boon', id: boons[0].id, name: boons[0].name, rarity: boons[0].rarity, line: boons[0].line });
       var others = [pw, wid ? { kind: 'weapon', id: wid, name: WP.WEAPONS[wid].name, rarity: WP.WEAPONS[wid].rarity, line: WP.WEAPONS[wid].line } : null, high ? { kind: 'relic', id: high.id, name: high.name, rarity: high.rarity, line: high.line } : null, boons[1] ? { kind: 'boon', id: boons[1].id, name: boons[1].name, rarity: boons[1].rarity, line: boons[1].line } : null].filter(Boolean);
@@ -1403,7 +1424,7 @@
     function describe(kind, id) {
       if (kind === 'weapon') {
         var w = WP.WEAPONS[id], reach = w.reach ? 'REACH ' + Math.round(w.reach * mods.reach) : 'RANGED';
-        return { name: w.name, rarity: w.rarity, tag: 'WEAPON', icon: { kind: 'weapon', id: id }, stats: ['DAMAGE ' + w.damage.map(function (d) { return d + mods.damage; }).join(' / ') + '   ' + reach, w.strokes], lines: w.detail, foot: weaponId === id ? null : 'IN HAND: ' + WP.WEAPONS[weaponId].name };
+        return { name: w.name, rarity: w.rarity, tag: 'WEAPON', icon: { kind: 'weapon', id: id }, stats: ['DAMAGE ' + w.damage.map(function (d) { return d + mods.damage; }).join(' / ') + '   ' + reach, w.strokes], lines: w.detail, foot: hands.indexOf(id) >= 0 ? 'ALREADY CARRIED' : freeHand() >= 0 ? 'GOES TO YOUR FREE HAND' : 'REPLACES ' + WP.WEAPONS[weaponId].name };
       }
       if (kind === 'power') { var pw = RL.POWERS[id]; return { name: pw.name, rarity: 'epic', tag: 'POWER', colour: pw.colour, icon: { kind: 'power', colour: pw.colour }, lines: pw.detail, foot: 'REPLACES ' + RL.POWERS[power].name }; }
       if (kind === 'heart') return { name: 'A heart', rarity: 'common', tag: 'PICKUP', icon: { kind: 'heart' }, lines: ['+Heals 1 heart'] };
@@ -1460,7 +1481,7 @@
     function drawInfoboxes() {
       if (state !== 'run') return;
       var cx = Math.round(cam.x), cy = Math.round(cam.y);
-      if (prompt) drawInfobox(describe(prompt.kind, prompt.id), Math.round(prompt.x) - cx, Math.round(prompt.y) - cy + 16, prompt.kind === 'weapon' ? 'SWAP' : 'TAKE');
+      if (prompt) drawInfobox(describe(prompt.kind, prompt.id), Math.round(prompt.x) - cx, Math.round(prompt.y) - cy + 16, prompt.kind === 'weapon' && freeHand() < 0 ? 'SWAP' : 'TAKE');
       else if (nearPerk) drawInfobox(describe(nearPerk.relic.kind === 'power' ? 'power' : nearPerk.relic.kind === 'weapon' ? 'weapon' : 'relic', nearPerk.relic.id), Math.round(nearPerk.x) - cx, Math.round(nearPerk.y) - cy - 8, nearPerk.relic.kind === 'power' || nearPerk.relic.kind === 'weapon' ? 'SWAP' : 'TAKE');
     }
 
@@ -1579,7 +1600,7 @@
       E: ['###', '#..', '##.', '#..', '###'], F: ['###', '#..', '##.', '#..', '#..'], G: ['.##', '#..', '#.#', '#.#', '.##'], H: ['#.#', '#.#', '###', '#.#', '#.#'],
       I: ['###', '.#.', '.#.', '.#.', '###'], J: ['..#', '..#', '..#', '#.#', '.#.'], K: ['#.#', '#.#', '##.', '#.#', '#.#'], L: ['#..', '#..', '#..', '#..', '###'],
       M: ['#.#', '###', '###', '#.#', '#.#'], N: ['##.', '#.#', '#.#', '#.#', '#.#'], O: ['.#.', '#.#', '#.#', '#.#', '.#.'], P: ['##.', '#.#', '##.', '#..', '#..'],
-      Q: ['.#.', '#.#', '#.#', '.#.', '..#'], R: ['##.', '#.#', '##.', '#.#', '#.#'], S: ['.##', '#..', '.#.', '..#', '##.'], T: ['###', '.#.', '.#.', '.#.', '.#.'],
+      Q: ['###', '#.#', '#.#', '##.', '.##'], R: ['##.', '#.#', '##.', '#.#', '#.#'], S: ['.##', '#..', '.#.', '..#', '##.'], T: ['###', '.#.', '.#.', '.#.', '.#.'],
       U: ['#.#', '#.#', '#.#', '#.#', '.#.'], V: ['#.#', '#.#', '#.#', '.#.', '.#.'], W: ['#.#', '#.#', '###', '###', '#.#'], X: ['#.#', '#.#', '.#.', '#.#', '#.#'],
       Y: ['#.#', '#.#', '.#.', '.#.', '.#.'], Z: ['###', '..#', '.#.', '#..', '###'],
       0: ['.#.', '#.#', '#.#', '#.#', '.#.'], 1: ['.#.', '##.', '.#.', '.#.', '###'], 2: ['##.', '..#', '.#.', '#..', '###'], 3: ['##.', '..#', '.#.', '..#', '##.'],
@@ -1723,6 +1744,34 @@
       if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, Math.round((78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0)) * mods.lantern), 1, true);
     }
 
+    /* the two hands, bottom left: the weapon in use in the larger frame, the other beside it, each in its rarity's colour.
+       When they change, the frames trade places over a few steps. */
+    var SLOT_A = { x: 4, y: H - 31, s: 27 }, SLOT_B = { x: 34, y: H - 22, s: 18 };
+    function drawSlot(id, x, y, s, lit) {
+      var w = id ? WP.WEAPONS[id] : null, r = w ? rarityOf(w) : null, col = w ? r.colour : '#3a3936', k;
+      fpen.fillStyle = 'rgba(8,8,14,0.78)'; fpen.fillRect(x, y, s, s);
+      if (w && r.rank > 0) { fpen.globalAlpha = (lit ? 0.16 : 0.07) + (lit ? 0.06 * Math.sin(tick * 0.08) : 0); fpen.fillStyle = col; fpen.fillRect(x + 1, y + 1, s - 2, s - 2); fpen.globalAlpha = 1; }
+      fpen.globalAlpha = lit ? 1 : 0.55; fpen.fillStyle = col;
+      fpen.fillRect(x, y, s, 1); fpen.fillRect(x, y + s - 1, s, 1); fpen.fillRect(x, y, 1, s); fpen.fillRect(x + s - 1, y, 1, s);
+      fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y, 1, 1); fpen.fillRect(x + s - 1, y, 1, 1); fpen.fillRect(x, y + s - 1, 1, 1); fpen.fillRect(x + s - 1, y + s - 1, 1, 1);
+      if (w) {
+        var v = WP.views(id).diag.img, room = s - 4, sc = Math.min(1, room / Math.max(v.width, v.height)), vw = Math.max(1, Math.round(v.width * sc)), vh = Math.max(1, Math.round(v.height * sc));
+        fpen.drawImage(v, x + Math.round((s - vw) / 2), y + Math.round((s - vh) / 2), vw, vh);
+        // a legendary thing does not sit still in its frame: a mote runs round the edge
+        if (r.rank >= 4 && lit) { var per = (s - 1) * 4, at = (tick * 0.6) % per; for (k = 0; k < 3; k++) { var a = (at - k * 2 + per) % per, mx = a < s - 1 ? a : a < 2 * (s - 1) ? s - 1 : a < 3 * (s - 1) ? 3 * (s - 1) - a : 0, my = a < s - 1 ? 0 : a < 2 * (s - 1) ? a - (s - 1) : a < 3 * (s - 1) ? s - 1 : per - a; fpen.globalAlpha = 1 - k * 0.3; fpen.fillStyle = '#ffffff'; fpen.fillRect(x + Math.round(mx), y + Math.round(my), 1, 1); } }
+      }
+      fpen.globalAlpha = 1;
+    }
+    function drawHands() {
+      if (swapT > 0 && state === 'run') swapT--;
+      var f = swapT / 12, e = f * f, other = 1 - handIn;
+      function between(a, b) { return { x: Math.round(a.x + (b.x - a.x) * e), y: Math.round(a.y + (b.y - a.y) * e), s: Math.round(a.s + (b.s - a.s) * e) }; }
+      var back = between(SLOT_B, SLOT_A), fore = between(SLOT_A, SLOT_B);
+      drawSlot(hands[other], back.x, back.y, back.s, false);
+      drawSlot(hands[handIn], fore.x, fore.y, fore.s, true);
+      text(weapon.name, 4, H - 40, rarityOf(weapon).colour);
+      if (hands[other]) text(touchy ? 'SWAP' : 'Q', SLOT_B.x + SLOT_B.s + 3, H - 10, '#8f8d88');
+    }
     function drawHud() {
       var k;
       for (k = 0; k < hero.maxHp; k++) {
@@ -1737,8 +1786,8 @@
       var pw = RL.POWERS[power];
       fpen.fillStyle = pw.colour; fpen.fillRect(4 + hero.maxEnergy * 6 + 4, 16, 4, 4);
       text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
-      text(weapon.name, 4, 24, rarityOf(weapon).colour);
-      if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 32, 8, 2); }
+      if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 24, 8, 2); }
+      if (state === 'run' || state === 'paused') drawHands();
       for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
       if (state === 'title') drawTitle();
       if (state === 'choose') drawChoose();
@@ -1964,7 +2013,8 @@
       if (n > 1) text('LEFT AND RIGHT TO CHOOSE A POWER', W / 2, 134, '#8f8d88', 1, 'center');
       else text('MORE POWERS UNLOCK AS YOU GO DEEPER', W / 2, 134, '#8f8d88', 1, 'center');
       text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
-      text('C OR L DASH   V OR I CAST   E OR UP TAKES   ENTER TO CHOOSE WHO GOES', W / 2, 170, '#8f8d88', 1, 'center');
+      text('C OR L DASH   V OR I CAST   E OR UP TAKES   Q CHANGES WEAPON', W / 2, 170, '#8f8d88', 1, 'center');
+      text('ENTER TO CHOOSE WHO GOES', W / 2, 180, '#8f8d88', 1, 'center');
     }
 
     /* ---- the loop and the room's wiring ---- */
@@ -1974,7 +2024,7 @@
       state = 'run';
       run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; won = false; visited = {}; rewarded = {}; applyRelics();
-      equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
+      hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
@@ -2079,6 +2129,9 @@
       command: function (stateName, wait) { if (boss && !boss.dying) return GD.command(boss, stateName, ctx); return null; },
       drop: function (kind, id, dx) { dropPickup({ kind: kind, id: id }, hero.x + (dx === undefined ? 0 : dx), hero.y - 12); return pickups.length; },
       finds: function () { return { chests: chests.map(function (c) { return { x: c.x, y: c.y, open: c.open, rarity: c.rarity, loot: c.loot }; }), pickups: pickups.map(function (q) { return { kind: q.kind, id: q.id, rarity: q.rarity, x: Math.round(q.x), y: Math.round(q.y), ground: q.ground }; }), prompt: prompt ? prompt.id : null, ceremony: ceremony ? ceremony.loot.id : null, banner: banner ? banner.text : null, slowmo: slowmo, bell: !!bell, flakes: flakes.length }; },
+      hands: function () { return { hands: hands.slice(), inUse: handIn, weapon: weaponId }; },
+      swap: function () { return changeHands(); },
+      wield: function (id) { takeWeapon(id); return { hands: hands.slice(), inUse: handIn }; },
       equip: function (id) { return equip(id) ? { id: weaponId, name: weapon.name, rarity: weapon.rarity, swings: swings.length } : null; },
       weapons: function () { return WP.ORDER.slice(); },
       setPower: function (name) { if (RL.POWERS[name]) power = name; return power; },

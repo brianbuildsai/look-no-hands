@@ -111,7 +111,8 @@
   function roll(rnd, floor, boost, exclude) {
     var weights = { common: 0, rare: 6, epic: 3 + floor, master: 0.6 + floor * 0.9, legendary: 0.15 + floor * 0.45 };
     if (boost) { weights.rare = 1; weights.epic += 3; weights.master += 2; weights.legendary += 1.2; }
-    var pool = ORDER.filter(function (id) { return WEAPONS[id].rarity !== 'common' && id !== exclude; }), total = 0, k;
+    var not = exclude instanceof Array ? exclude : [exclude];
+    var pool = ORDER.filter(function (id) { return WEAPONS[id].rarity !== 'common' && not.indexOf(id) < 0; }), total = 0, k;
     for (k = 0; k < pool.length; k++) total += weights[WEAPONS[pool[k]].rarity];
     var pick = rnd() * total;
     for (k = 0; k < pool.length; k++) { pick -= weights[WEAPONS[pool[k]].rarity]; if (pick <= 0) return pool[k]; }
