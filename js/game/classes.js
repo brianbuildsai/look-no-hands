@@ -57,7 +57,35 @@
   };
   ORDER.push('smith');
 
-  /* [lamplighter] */
+  /* ---- the Lamplighter ----
+     Tall under a pointed hat with a wide brim and a brass band, a long teal
+     coat whose skirt swings over her boots, a satchel of oil on her back, an
+     amber scarf, and the lantern on its pole, which is what she fights with. */
+
+  P.addSkin('lamplighter', {
+    parts: {
+      head: ['.......kk.....', '......khHk....', '.....khhHk....', '.....khhhhk...', '....khhhhhk...', '....krrRrrk...', '.kkkkhhhhhkkkk', 'khhHhhhhhhhhdk', '.kkkkssssskkk.', '....ksssesk...', '....kssSssk...', '.....ksSsk....', '......kkk.....'],
+      torso: ['.kkkkkk.', 'khhhhhhk', 'khhHrhhk', 'khhhrhdk', 'khHhrhdk', 'kbbbrbbk', 'khhhhhdk', 'khhhhddk', '.kkkkkk.'],
+      skirt: ['kkkkkkkkkk', 'khhhdhhhdk', 'khhHdhhhdk', 'khhhdhhddk', 'khHhdhhhdk', 'khhhdhhddk', '.kkkkkkkk.'],
+      cloak: ['.kkkkkk.', 'kbBBBBbk', 'kbBrrBbk', 'kbBBBBbk', 'kbbBBbbk', 'kbBBBBbk', '.kkkkkk.'],
+      arm: ['kkk', 'khk', 'khk', 'khk', 'kdk', 'ksk', 'kkk'],
+      leg: ['kkkk', 'kNNk', 'kNNk', 'kNNk', 'kNNk', 'kbbk', 'kBbk', 'kbbk', 'kkkk'],
+      legBent: ['kkkk', 'kNNk', 'kNNk', 'kbbk', 'kBbk', 'kkkk'],
+      scarf: ['kaAaAk.', '.kaaAak', '..kkkk.'],
+      scarfUp: ['....kak', '..kaAak', 'kaAakk.', '.kkk...'],
+      lantern: ['..kk..', '.kook.', 'kaAAak', 'kaAAak', 'kaaaak', 'kaaaak', '.kook.', '..kk..']
+    },
+    at: { cloak: [7, 13], backLeg: [11, 21], backArm: [10, 13], lantern: [7, 19], torso: [11, 12], frontLeg: [15, 21], skirt: [10, 19], head: [8, 0], scarf: [4, 11], frontArm: [17, 13] },
+    hand: { down: [1, 5], reach: [6, 1] },
+    palette: { h: '#1f6f6a', H: '#3aa39b', d: '#134a47' }
+  });
+  CLASSES.lamplighter = {
+    id: 'lamplighter', name: 'The Lamplighter', line: 'Far off, and hard to pin down',
+    hp: 4, energy: 5, run: 1, weapon: 'lamppole', dash: 'flicker', colour: '#ffb347',
+    traits: ['Four hearts, five energy, and it comes back twice as fast', 'The lantern on its pole throws bolts of light', 'Hold jump in the air: the coat carries her', 'The dash is a flicker backward that leaves a flare'],
+    apply: function (m) { m.glider = true; m.hitsPerEnergy = Math.max(1, Math.round(m.hitsPerEnergy / 2)); }
+  };
+  ORDER.push('lamplighter');
 
   /* [kite] */
 

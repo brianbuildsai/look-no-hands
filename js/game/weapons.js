@@ -46,6 +46,12 @@
       { anim: 'attack2', seq: [0, 1, 2, 3], ticks: [5, 3, 5, 4], active: [1, 2], shape: 'lash', reach: 1.05, lunge: 0.2 },
       { anim: 'attack3', seq: [0, 1, 2, 3, 4], ticks: [6, 3, 4, 4, 5], active: [1, 2, 3], shape: 'lash', reach: 1.2, lunge: 0.4, finisher: true }
     ],
+    // the lantern on its pole: held out upright, and a bolt of its light goes where she faces; the third goes through
+    pole: [
+      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [4, 5, 3, 5], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
+      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [4, 5, 3, 5], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
+      { anim: 'bow', seq: [0, 1, 1, 2, 2], ticks: [5, 7, 7, 3, 8], active: [3], shape: 'bolt', reach: 1, lunge: -1.2, finisher: true }
+    ],
     bow: [
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
@@ -54,6 +60,8 @@
   };
 
   var WEAPONS = {
+    lamppole: { name: 'Lantern Pole', rarity: 'common', moveset: 'pole', damage: [2, 2, 5], reach: 0, trail: '#ffdc9a', line: 'Three bolts of lantern light, the third straight through', grip: [3, 15],
+      art: ['..kkk..', '.krRrk.', 'kaAAAak', 'kaAFAak', 'kaAAAak', '.krrrk.', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..krk..', '..kkk..'] },
     shortsword: { name: 'Short Sword', rarity: 'common', moveset: 'sword', damage: [2, 2, 4], reach: 24, trail: '#e9e6df', line: 'Three swings, the last a thrust', grip: [1, 11], handDrawn: true,
       art: ['.W.', 'kWk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'rrr', 'krk', 'kbk', 'kkk'] },
     daggers: { name: 'Twin Daggers', rarity: 'rare', moveset: 'quick', damage: [1, 1, 1, 3], reach: 19, trail: '#6ec6ff', ability: 'dashslash', line: 'Four quick cuts; your dash cuts through what it passes', grip: [1, 7],
@@ -77,13 +85,13 @@
     murmuration: { name: 'Murmuration', rarity: 'legendary', moveset: 'bow', damage: [2, 2, 3], reach: 0, trail: '#ffd24d', finisher: 'flock', line: 'A bow that looses a flock of lights. They wheel, and fall on what you face', grip: [4, 9],
       art: ['..kk...', '.kYyk..', '..kyk..', '...kyk.', '...kyYk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h..kyYk', '...kyk.', '..kyk..', '.kYyk..', '..kk...'] }
   };
-  var ORDER = ['shortsword', 'daggers', 'hammer', 'emberbrand', 'frostglaive', 'stormrapier', 'scythe', 'thornwhip', 'dawnbreaker', 'quicksilver', 'murmuration'];
+  var ORDER = ['shortsword', 'lamppole', 'daggers', 'hammer', 'emberbrand', 'frostglaive', 'stormrapier', 'scythe', 'thornwhip', 'dawnbreaker', 'quicksilver', 'murmuration'];
 
   // a weapon by chance: deeper floors and bosses lean toward the rarer
   function roll(rnd, floor, boost, exclude) {
     var weights = { common: 0, rare: 6, epic: 3 + floor, master: 0.6 + floor * 0.9, legendary: 0.15 + floor * 0.45 };
     if (boost) { weights.rare = 1; weights.epic += 3; weights.master += 2; weights.legendary += 1.2; }
-    var pool = ORDER.filter(function (id) { return id !== 'shortsword' && id !== exclude; }), total = 0, k;
+    var pool = ORDER.filter(function (id) { return WEAPONS[id].rarity !== 'common' && id !== exclude; }), total = 0, k;
     for (k = 0; k < pool.length; k++) total += weights[WEAPONS[pool[k]].rarity];
     var pick = rnd() * total;
     for (k = 0; k < pool.length; k++) { pick -= weights[WEAPONS[pool[k]].rarity]; if (pick <= 0) return pool[k]; }
