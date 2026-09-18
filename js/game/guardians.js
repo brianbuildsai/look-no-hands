@@ -89,10 +89,10 @@
     heart:  { element: 'bloom', name: 'The Bramble Heart', w: 26, h: 18, hp: 70, flying: false, damage: 1 },
     mirror: { element: 'void',  name: 'The Void Mirror',  w: 10, h: 22, hp: 55, flying: false, damage: 2 }
   };
-  var BY_FLOOR = ['golem', 'wyrm', 'herald', 'heart', 'mirror'];
+  var BY_FLOOR = ['golem', 'wyrm', 'herald', 'mirror'];
 
   function spawn(floor, arena, rnd) {
-    var kind = BY_FLOOR[Math.max(0, Math.min(4, floor - 1))], spec = KINDS[kind];
+    var kind = BY_FLOOR[Math.max(0, Math.min(3, floor - 1))], spec = KINDS[kind];
     var scale = 1 + (floor - 1) * 0.15;
     return {
       boss: true, kind: kind, spec: spec, element: spec.element, name: spec.name,

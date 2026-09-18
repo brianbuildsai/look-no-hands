@@ -488,10 +488,10 @@
      attack; an elder does not. */
 
   var STATUS = {
-    ember: { name: 'burn', time: 180, colour: '#ff8c42' },
+    ember: { name: 'burn', time: 70, colour: '#ff8c42' },
     frost: { name: 'chill', time: 200, colour: '#9fd8ff' },
     storm: { name: 'shock', time: 90, colour: '#8fa3ff' },
-    bloom: { name: 'poison', time: 360, colour: '#9ae66e' },
+    bloom: { name: 'poison', time: 130, colour: '#9ae66e' },
     void:  { name: 'drain', time: 1, colour: '#a48cff' }
   };
   function statusName(element) { return STATUS[element].name; }

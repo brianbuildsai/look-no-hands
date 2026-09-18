@@ -155,8 +155,9 @@
     alcove: ['flat', 'gap', 'steps']
   };
 
-  function generate(seed, floor, section) {
-    var element = ELEMENTS[Math.max(0, Math.min(4, floor - 1))];
+  function byName(name) { for (var k = 0; k < ELEMENTS.length; k++) if (ELEMENTS[k].name === name) return ELEMENTS[k]; return null; }
+  function generate(seed, floor, section, elementName, fountain) {
+    var element = byName(elementName) || ELEMENTS[Math.max(0, Math.min(4, floor - 1))];
     var rnd = makeRandom(hashSeed(seed, floor, section));
     var difficulty = floor - 1 + section * 0.34;
     var target = 90 + floor * 10 + section * 8, tries = 0, L;
@@ -181,7 +182,11 @@
       L.lights.push({ x: x + 6, y: g - 2 });
       L.trim(x + 9);
       for (var y = 0; y < ROWS; y++) L.set(L.cols - 1, y, STONE);
-      L.enemies = L.enemies.filter(function (e) { return e.x < x - 2 && e.x > 8; });
+      L.enemies = L.enemies.filter(function (e) { return e.x < x - 2 && e.x > 10; });
+      // not a crowd: a handful on the first floor, a few more with each
+      var cap = 5 + Math.min(floor, 3) * 2 - (floor > 3 ? 1 : 0);
+      if (L.enemies.length > cap) { var stride = L.enemies.length / cap, kept = []; for (k = 0; k < cap; k++) kept.push(L.enemies[Math.floor(k * stride)]); L.enemies = kept; }
+      if (fountain) { L.fountain = { x: (x + 2) * TILE + 8, y: g * TILE }; L.lights.push({ x: x + 2, y: g - 3 }); }
       // every section holds at least one chest
       var free = L.spots.filter(function (sp) { return sp.x > 16 && L.get(sp.x, sp.y) === STONE && L.get(sp.x, sp.y - 1) === AIR; });
       if (!L.chests.length && free.length) L.chests.push(free[Math.floor(rnd() * free.length)]);
@@ -263,8 +268,9 @@
   }
 
   // the guardian's arena: a hall with walls at both ends, two ledges, and a door that opens when it is over
+  var ARENA_ELEMENT = ['ember', 'frost', 'storm', 'void'];
   function arena(seed, floor) {
-    var element = ELEMENTS[Math.max(0, Math.min(4, floor - 1))];
+    var element = byName(ARENA_ELEMENT[Math.max(0, Math.min(3, floor - 1))]);
     var L = new Level(46, element, floor, 3), g = 11, x, k;
     for (x = 0; x < 46; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }

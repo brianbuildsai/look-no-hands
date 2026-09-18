@@ -162,11 +162,21 @@
 
     var WD = window.World;
     if (!WD) { env.fail('The undercroft’s floors did not load. The other rooms still run.'); return null; }
-    var level = null, run = { seed: 36, floor: 1, section: 0 };
+    var level = null, run = { seed: 36, floor: 1, section: 0, stage: 0 }, flames = 3;
+    // the way down: two sections and a guardian on each of three floors, then the vault
+    var STAGES = [
+      { floor: 1, section: 0, element: 'ember' }, { floor: 1, section: 1, element: 'ember', fountain: true }, { floor: 1, boss: true },
+      { floor: 2, section: 0, element: 'frost' }, { floor: 2, section: 1, element: 'bloom', fountain: true }, { floor: 2, boss: true },
+      { floor: 3, section: 0, element: 'storm' }, { floor: 3, section: 1, element: 'void', fountain: true }, { floor: 3, boss: true },
+      { floor: 4, section: 0, element: 'void', fountain: true }, { floor: 4, boss: true }
+    ];
+    function syncStage() { var st = STAGES[run.stage]; run.floor = st.floor; run.section = st.boss ? 3 : st.section; }
     var element = WD.ELEMENTS[0];
 
     function loadSection() {
-      level = run.section >= 3 ? WD.arena(run.seed, run.floor) : WD.generate(run.seed, run.floor, run.section);
+      syncStage();
+      var st = STAGES[run.stage];
+      level = st.boss ? WD.arena(run.seed, st.floor) : WD.generate(run.seed, st.floor, st.section, st.element, st.fountain);
       element = level.element;
       if (SND && SND.isOn()) { SND.music(element.name); SND.tension(run.section >= 3 ? 0.4 : 0); }
       makeTiles(element);
@@ -232,7 +242,7 @@
       x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
       onGround: false, coyote: 0, buffer: 0, drop: 0, jumping: false,
       anim: 'idle', frame: 0, clock: 0, landed: 0,
-      hp: 5, maxHp: 5, energy: 3, maxEnergy: 3,
+      hp: 6, maxHp: 6, energy: 3, maxEnergy: 3,
       act: null, combo: 0, queued: false, dashCd: 0, airDash: true, invuln: 0, flash: 0, alive: true, deadFor: 0, hits: 0
     };
 
@@ -440,9 +450,18 @@
       if (hero.landed > 0) hero.landed--;
       if (hero.alive) touchHazards();
       if (shieldUp > 0) shieldUp--;
+      if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('pickup'); }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
       if (hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
-      if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) endRun(false);
+      if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) {
+        if (flames > 1) {
+          flames--;
+          while (run.stage > 0 && STAGES[run.stage - 1].floor === STAGES[run.stage].floor) run.stage--;
+          loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
+          particles.length = 0; afterimages.length = 0; numbers.length = 0; hero.invuln = 120;
+          banner = { t: 0, text: flames === 1 ? 'The last flame' : 'A flame goes out', sub: 'YOU RISE AT THE HEAD OF THE FLOOR', colour: '#ffb347' };
+        } else endRun(false);
+      }
       if (!hero.act) animateHero();
       if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
     }
@@ -539,6 +558,7 @@
       if (boss && !boss.dying && SND) SND.tension(0.4 + 0.6 * (1 - boss.hp / boss.maxHp));
       if (boss && boss.dying === 60) {
         level.locked = false; kills++; sfx('boom'); if (SND) SND.tension(0);
+        hero.hp = hero.maxHp;
         spark(boss.x, boss.y - boss.h / 2, '#ffffff', 60, 3, 50, 0.02); spark(boss.x, boss.y - boss.h / 2, element.glow, 40, 2.4, 60, -0.01); shake(6);
         dropPickup({ kind: 'weapon', id: WP.roll(random, run.floor + 1, true, weaponId) }, boss.x, boss.y - 20);
         for (var hk = 0; hk < 3; hk++) dropPickup({ kind: 'heart', id: 'heart' }, boss.x + (hk - 1) * 14, boss.y - 24);
@@ -740,7 +760,7 @@
     function applyRelics() {
       var wasMax = hero.maxHp, wasEnergy = hero.maxEnergy;
       mods = RL.mods(held);
-      hero.maxHp = 5 + mods.maxHp; hero.maxEnergy = 3 + mods.maxEnergy;
+      hero.maxHp = 6 + mods.maxHp; hero.maxEnergy = 3 + mods.maxEnergy;
       if (hero.maxHp > wasMax) hero.hp += hero.maxHp - wasMax;
       if (hero.maxEnergy > wasEnergy) hero.energy += hero.maxEnergy - wasEnergy;
       hero.hp = Math.min(hero.hp, hero.maxHp); hero.energy = Math.min(hero.energy, hero.maxEnergy);
@@ -1381,9 +1401,16 @@
       drawFurniture();
     }
 
-    // lamps on the walls, the door down, and the relics waiting in their alcoves
+    // lamps on the walls, the fountain, and the door down
     function drawFurniture() {
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k;
+      if (level.fountain) {
+        var fx = Math.round(level.fountain.x) - cx, fy = Math.round(level.fountain.y) - cy, full = !level.fountain.used;
+        fpen.fillStyle = element.stone[3]; fpen.fillRect(fx - 11, fy - 6, 22, 6);
+        fpen.fillStyle = element.stone[2]; fpen.fillRect(fx - 12, fy - 8, 24, 2); fpen.fillRect(fx - 2, fy - 16, 4, 8);
+        fpen.fillStyle = full ? '#ffdc9a' : element.stone[1]; fpen.fillRect(fx - 10, fy - 7, 20, 1);
+        if (full) { fpen.fillStyle = '#ffb347'; fpen.fillRect(fx - 1, fy - 19 - ((tick >> 3) % 2), 2, 3); light(level.fountain.x, level.fountain.y - 10, 40, 0.8); glow(level.fountain.x, level.fountain.y - 8, 26, '#ffb347', 0.22); if (tick % 6 === 0) particles.push({ x: level.fountain.x + (random() - 0.5) * 16, y: level.fountain.y - 8, vx: 0, vy: -0.4, life: 26, max: 26, colour: '#ffdc9a', size: 1, gravity: -0.004 }); }
+      }
       for (k = 0; k < level.lights.length; k++) {
         var lamp = level.lights[k], lx = lamp.x * TILE + 8, ly = lamp.y * TILE + 8;
         if (lx < cam.x - 40 || lx > cam.x + W + 40) continue;
@@ -1421,6 +1448,7 @@
         fpen.fillRect(4 + k * 9, 4, 7, 6); fpen.fillRect(5 + k * 9, 10, 5, 1); fpen.fillRect(6 + k * 9, 11, 3, 1); fpen.fillRect(7 + k * 9, 12, 1, 1);
         fpen.fillStyle = '#0b0b12'; fpen.fillRect(4 + k * 9, 4, 1, 1); fpen.fillRect(7 + k * 9, 4, 1, 1); fpen.fillRect(10 + k * 9, 4, 1, 1);
       }
+      for (k = 0; k < 3; k++) { var flx = 8 + hero.maxHp * 9 + k * 7; fpen.fillStyle = k < flames ? '#ffb347' : '#3a3936'; fpen.fillRect(flx, 7, 3, 5); fpen.fillRect(flx + 1, 5, 1, 2); if (k < flames) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(flx + 1, 9, 1, 2); } }
       for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
       text(element.title + '  ' + run.floor + '-' + (run.section >= 3 ? 'GUARDIAN' : (run.section + 1)), W - 4, 4, '#8f8d88', 1, 'right');
       text(timeText(Math.floor(clockSeconds)) + '  SEED ' + run.seed, W - 4, 12, '#5c5a56', 1, 'right');
@@ -1443,9 +1471,8 @@
       if (transition === 0) return false;
       transition++;
       if (transition === 24) {
-        run.section++;
-        if (run.section >= 4) { run.section = 0; run.floor++; }
-        if (run.floor > 5) { run.floor = 5; run.section = 3; won = true; endRun(true); return true; }
+        run.stage++;
+        if (run.stage >= STAGES.length) { run.stage = STAGES.length - 1; won = true; endRun(true); return true; }
         loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
         particles.length = 0; afterimages.length = 0; numbers.length = 0;
       }
@@ -1542,7 +1569,7 @@
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };
     function endRun(wonRun) {
-      var floorsDown = wonRun ? 5 : run.floor;
+      var floorsDown = wonRun ? 4 : run.floor;
       kept.runs++;
       var unlocked = [];
       if (floorsDown >= 2 && kept.unlocked.indexOf('frostlance') < 0) { kept.unlocked.push('frostlance'); unlocked.push('Frostlance'); }
@@ -1563,9 +1590,9 @@
       if (!summary) return;
       fpen.fillStyle = 'rgba(0,0,0,0.8)'; fpen.fillRect(0, 0, W, H);
       var y = 34;
-      text(summary.won ? 'YOU CAME BACK UP' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
+      text(summary.won ? 'YOU CAME BACK UP' : summary.floor === 4 ? 'YOU FELL IN THE VAULT' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
       text(summary.lesson, W / 2, y, '#e9e6df', 1, 'center'); y += 18;
-      text((summary.won ? 'FIVE FLOORS' : 'FLOOR ' + summary.floor + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
+      text((summary.won ? 'THREE FLOORS AND THE VAULT' : (summary.floor === 4 ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
       text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
       if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
       if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }
@@ -1604,7 +1631,7 @@
 
     function begin() {
       state = 'run';
-      run.floor = 1; run.section = 0; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
+      run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; applyRelics();
       equip('shortsword'); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
@@ -1703,7 +1730,8 @@
       kept: function (reset) { if (reset) { kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false }; save(); } return kept; },
       lastHurtBy: function () { return lastHurtBy; },
       guardian: function () { return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y) } : null; },
-      arena: function (floor) { if (floor) run.floor = floor; run.section = 3; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
+      stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
+      arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
       command: function (stateName, wait) { if (boss && !boss.dying) { boss.state = stateName; boss.wait = wait || 40; boss.cooldown = 0; } return boss ? boss.state : null; },
       drop: function (kind, id, dx) { dropPickup({ kind: kind, id: id }, hero.x + (dx === undefined ? 0 : dx), hero.y - 12); return pickups.length; },
