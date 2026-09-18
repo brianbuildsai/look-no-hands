@@ -125,10 +125,6 @@
     moth:    { element: 'frost', art: 'moth', flying: true, body: { w: 10, h: 9 }, hurt: { w: 14, h: 10 }, hp: 4, speed: 0.7, sight: 150, move: 'hover',
       attacks: [{ name: 'shard', range: [20, 130], below: 100, windup: 26, active: 4, recover: 24, cooldown: 110,
         fire: function (e, ctx) { var a = aim(e, ctx, 2.2); ctx.projectile({ x: e.x, y: e.y, vx: a.vx, vy: a.vy, life: 120, colour: '#d8f1ff', size: 3, damage: 1, element: 'frost', gravity: 0 }); } }] },
-    hound:   { element: 'storm', art: 'hound', flying: false, body: { w: 14, h: 9 }, hurt: { w: 16, h: 10 }, hp: 7, speed: 0.9, sight: 140, move: 'walk', keep: 40,
-      attacks: [{ name: 'leap', range: [24, 80], windup: 26, active: 22, recover: 30, cooldown: 80, grounded: true, moves: true,
-        fire: function (e, ctx) { e.vx = e.dir * 3; e.vy = -2.6; ctx.spark(e.x, e.y - 4, '#8fa3ff', 8, 1.4, 14, 0); },
-        box: function (e) { return [front(e, 0, 12, 10, 0)]; } }] },
     bat:     { element: 'storm', art: 'bat', flying: true, body: { w: 12, h: 7 }, hurt: { w: 14, h: 8 }, hp: 4, speed: 1.0, sight: 120, move: 'hover',
       attacks: [{ name: 'zap', range: [0, 70], below: 80, windup: 30, active: 5, recover: 30, cooldown: 110,
         telling: function (e, ctx, t) { if (t % 4 === 0) ctx.spark(e.x, e.y, '#8fa3ff', 2, 1, 10, 0); },
@@ -143,6 +139,239 @@
         fire: function (e, ctx) { var a = aim(e, ctx, 1.4); ctx.projectile({ x: e.x, y: e.y, vx: a.vx, vy: a.vy, life: 200, colour: '#a48cff', size: 3, damage: 1, element: 'void', gravity: 0, seek: 0.03 }); } }] }
   };
   var BY_ELEMENT = { ember: ['cinder', 'wisp'], frost: ['crawler', 'moth'], storm: ['hound', 'bat'], bloom: ['toad', 'spore'], void: ['shade', 'eye'] };
+
+  /* ---- rigs ----
+     A creature is drawn from parts placed by poses, as the Warden is: one set
+     of parts gives every frame, so it stays the same creature while it walks,
+     winds up and strikes. A frame is a list of [part, x, y, options]. */
+
+  function paletteOf(element) {
+    var pal = {}, base = window.Pixels.PALETTE, over = PALETTES[element], key;
+    for (key in base) pal[key] = base[key];
+    for (key in over) pal[key] = over[key];
+    return pal;
+  }
+  function rig(element, parts, w, h, anchor, anims) {
+    var pal = paletteOf(element), A = window.Pixels.art, C = window.Pixels.compose, imgs = {}, frames = {};
+    Object.keys(parts).forEach(function (n) { imgs[n] = A(parts[n], pal); });
+    Object.keys(anims).forEach(function (anim) {
+      frames[anim] = anims[anim].map(function (layers) {
+        return C(w, h, layers.filter(Boolean).map(function (L) { return { img: imgs[L[0]], x: L[1], y: L[2], flip: L[3] && L[3].flip, rot: L[3] && L[3].rot }; }));
+      });
+    });
+    return { frames: frames, anchor: anchor };
+  }
+
+  /* The Bellows Imp: a squat kiln imp with a bellows strapped to its back. It swells the bellows, then breathes. */
+  function impRig() {
+    var P = {
+      head: ['.k.......k.', 'kqk.....kqk', 'kqkkkkkkkqk', '.kpppppppk.', 'kppeppepplk', 'kpppppppllk', 'kppkkkkpppk', '.kpppppppk.', '..kkkkkkk..'],
+      headOpen: ['.k.......k.', 'kqk.....kqk', 'kqkkkkkkkqk', '.kpppppppk.', 'kppeppepplk', 'kppppkkkkkk', 'kppkwwwwwlk', '.kpkkkkkkk.', '..kkk......'],
+      body: ['.kkkkkkk.', 'kpppppppk', 'kppplllpk', 'kpppllllk', 'kqppllllk', 'kqppplllk', '.kqppppk.', '..kkkkk..'],
+      bellows: ['..kkkk..', '.krRRrk.', 'kbBbBbBk', 'kBbBbBbk', 'kbBbBbBk', 'kBbBbBbk', 'kbBbBbBk', '.krrrrk.', '..kkkk..'],
+      bellowsBig: ['...kkkk...', '..krRRrk..', '.kbBbBbBk.', 'kBbBbBbBbk', 'kbBbBbBbBk', 'kBbBbBbBbk', 'kbBbBbBbBk', 'kBbBbBbBbk', '.kbBbBbBk.', '..krrrrk..', '...kkkk...'],
+      bellowsFlat: ['..kkkk..', '.krRRrk.', 'kbBbBbBk', 'kBbBbBbk', '.krrrrk.', '..kkkk..'],
+      leg: ['kqk.', 'kqk.', 'kqk.', 'kppk', 'kkkk'],
+      arm: ['kpk', 'kpk', 'kpk', 'klk', 'kkk'],
+      armUp: ['kkk', 'klk', 'kpk', 'kpk', 'kpk']
+    };
+    var walk = [], k;
+    for (k = 0; k < 4; k++) {
+      var bob = k % 2 ? -1 : 0, a = [1, 0, -1, 0][k], lift = [0, 1, 0, 0][k], lift2 = [0, 0, 0, 1][k];
+      walk.push([['bellows', 5, 12 + bob], ['leg', 12 - a, 25 - lift2], ['body', 11, 17 + bob], ['leg', 18 + a, 25 - lift], ['head', 13, 8 + bob], ['arm', 19, 18 + bob + (k === 1 ? -1 : 0)]]);
+    }
+    return rig('ember', P, 34, 30, { x: 17, y: 30 }, {
+      walk: walk,
+      windup: [
+        [['bellowsBig', 3, 11], ['leg', 12, 25], ['body', 11, 17], ['leg', 18, 25], ['head', 12, 7], ['armUp', 19, 15]],
+        [['bellowsBig', 3, 10], ['leg', 11, 25], ['body', 11, 16], ['leg', 19, 25], ['head', 11, 6], ['armUp', 19, 14]]
+      ],
+      attack: [
+        [['bellows', 5, 12], ['leg', 11, 25], ['body', 12, 17], ['leg', 19, 25], ['headOpen', 15, 9], ['arm', 20, 18]],
+        [['bellowsFlat', 6, 15], ['leg', 11, 25], ['body', 12, 17], ['leg', 19, 25], ['headOpen', 16, 9], ['arm', 20, 18]],
+        [['bellowsFlat', 6, 16], ['leg', 11, 25], ['body', 12, 18], ['leg', 19, 25], ['headOpen', 16, 10], ['arm', 20, 19]]
+      ],
+      hurt: [[['bellows', 4, 13], ['leg', 13, 25], ['body', 10, 17], ['leg', 17, 25], ['head', 10, 7], ['armUp', 18, 15]]]
+    });
+  }
+
+  /* The Coal Lantern: a cracked iron lantern with a face in its flame, afloat, a chain and a lump of coal hanging under it. */
+  function lanternRig() {
+    var P = {
+      ring: ['.rrr.', 'r...r', 'r...r', '.rrr.'],
+      lid: ['...kkkkk...', '..knnnnnk..', '.knNNNNNnk.'],
+      cage: ['kkkkkkkkkkk', 'knlllllllnk', 'knlwwlwwlnk', 'knlwkwkwlnk', 'knllwwwllnk', 'knlwkkkwlnk', 'kknllwlllnk', 'knkkllllnnk', 'knnnknnnnnk', '.kNNNNNNNk.', '..kkkkkkk..'],
+      cageHot: ['kkkkkkkkkkk', 'knwwwwwwwnk', 'knwwwwwwwnk', 'knwwkwkwwnk', 'knwwwwwwwnk', 'knwkkkkkwnk', 'kknwwwwwwnk', 'knkkwwwwnnk', 'knnnknnnnnk', '.kNNNNNNNk.', '..kkkkkkk..'],
+      link: ['.g.', 'g.g', '.g.'],
+      coal: ['.kkk.', 'kqqqk', 'kqlqk', 'kqqqk', '.kkk.'],
+      flare: ['..kk...', '.kllk..', 'klwwlk.', 'kwwwwlk', 'klwwwwk', 'kwwwwlk', 'klwwlk.', '.kllk..', '..kk...']
+    };
+    function hang(sway, lift) { return [['link', 13 + Math.round(sway * 0.3), 19 + lift], ['link', 13 + Math.round(sway * 0.6), 22 + lift], ['link', 13 + sway, 25 + lift], ['coal', 12 + sway, 28 + lift]]; }
+    var walk = [], k;
+    for (k = 0; k < 4; k++) { var sway = [-2, 0, 2, 0][k], bob = k % 2 ? 1 : 0; walk.push(hang(sway, bob).concat([['ring', 12, 2 + bob], ['lid', 9, 5 + bob], [k % 2 ? 'cageHot' : 'cage', 9, 8 + bob]])); }
+    return rig('ember', P, 30, 36, { x: 15, y: 14 }, {
+      walk: walk,
+      windup: [
+        hang(-3, 0).concat([['ring', 11, 1], ['lid', 8, 3], ['cageHot', 9, 8]]),
+        hang(-4, -1).concat([['ring', 10, 0], ['lid', 7, 2], ['cageHot', 9, 8]])
+      ],
+      attack: [
+        hang(3, 0).concat([['ring', 8, 0], ['lid', 5, 1], ['cageHot', 9, 8], ['flare', 20, 9]]),
+        hang(4, 1).concat([['ring', 7, 0], ['lid', 4, 1], ['cageHot', 10, 8], ['flare', 22, 9]]),
+        hang(2, 1).concat([['ring', 9, 1], ['lid', 6, 2], ['cage', 9, 8]])
+      ],
+      hurt: [hang(4, -1).concat([['ring', 13, 3], ['lid', 10, 6], ['cage', 8, 9]])]
+    });
+  }
+
+  /* The Glacier Crab: a crab under a berg. It snaps; struck, it shuts itself in, and bursts a ring of ice. */
+  function crabRig() {
+    var P = {
+      shell: ['......kk....kk......', '.....kwlk..klwk.....', '...kkwllkkkkllwkk...', '..kwlllllllllllllk..', '.kwllpllllplllllplk.', '.klllpplllpplllpplk.', 'kllpppplpppplppppplk', 'kpppppppppppppppqqqk', 'kppqpppqppppqpppqqqk', '.kqqqqqqqqqqqqqqqqk.', '..kkkkkkkkkkkkkkkk..'],
+      body: ['.kkkkkkkkkkkkkk.', 'kqppppppppppppqk', 'kqpppppppppppppk', '.kqqppppppppqqk.', '..kkkkkkkkkkkk..'],
+      eyes: ['kek.kek', 'kpk.kpk', 'kpk.kpk'],
+      clawOpen: ['..kkkk..', '.kpppplk', 'kpplkkk.', 'kppk....', 'kpplkkk.', '.kpppplk', '..kkkk..'],
+      clawShut: ['..kkkkk.', '.kpppplk', 'kppkkkkk', '.kpppplk', '..kkkkk.'],
+      legA: ['.kk', 'kpk', 'kpk', 'kk.'],
+      legB: ['kk.', 'kpk', '.kpk', '..kk'],
+      spikeUp: ['..k..', '.kwk.', '.kwk.', '.klk.', 'kwllk', 'kwllk', 'kllpk', 'kllpk', 'klppk', 'klppk', 'kpppk', 'kkkkk'],
+      spikeUpS: ['..k..', '.kwk.', 'kwllk', 'kllpk', 'klppk', 'kkkkk'],
+      spikeSide: ['kkkkkkkk....', 'kpplllwwkk..', 'kppplllwwwkk', 'kpplllwwkk..', 'kkkkkkkk....'],
+      spikeSideS: ['kkkkk..', 'kpllwkk', 'kkkkk..'],
+      spikeDiag: ['......kk.', '.....kwk.', '....kwlk.', '...kwlk..', '..kllk...', '.kllpk...', 'kllpk....', 'kppk.....', 'kkk......']
+    };
+    function legs(k) { var a = k % 2; return [[a ? 'legA' : 'legB', 23, 35 - (a ? 1 : 0)], [a ? 'legB' : 'legA', 27, 35 - (a ? 0 : 1)], [a ? 'legA' : 'legB', 31, 35 - (a ? 1 : 0), { flip: true }], [a ? 'legB' : 'legA', 35, 35 - (a ? 0 : 1), { flip: true }]]; }
+    var walk = [], k;
+    for (k = 0; k < 4; k++) { var bob = k % 2 ? -1 : 0; walk.push(legs(k).concat([['clawShut', 13, 31 + bob, { flip: true }], ['body', 22, 31 + bob], ['shell', 20, 22 + bob], ['eyes', 35, 27 + bob], ['clawOpen', 38, 29 + (k === 1 ? -1 : 0)]])); }
+    var shut = [[['shell', 20, 28]], [['shell', 21, 28]], [['shell', 19, 28]]];
+    return rig('frost', P, 60, 40, { x: 30, y: 40 }, {
+      walk: walk,
+      windup: [
+        legs(0).concat([['clawShut', 13, 31, { flip: true }], ['body', 22, 31], ['shell', 20, 22], ['eyes', 35, 27], ['clawOpen', 34, 24]]),
+        legs(0).concat([['clawShut', 13, 31, { flip: true }], ['body', 21, 31], ['shell', 19, 22], ['eyes', 34, 27], ['clawOpen', 31, 21]])
+      ],
+      attack: [
+        legs(1).concat([['clawShut', 14, 31, { flip: true }], ['body', 23, 31], ['shell', 21, 22], ['eyes', 36, 27], ['clawOpen', 42, 28]]),
+        legs(1).concat([['clawShut', 15, 31, { flip: true }], ['body', 24, 31], ['shell', 22, 22], ['eyes', 37, 27], ['clawShut', 46, 29]]),
+        legs(0).concat([['clawShut', 14, 31, { flip: true }], ['body', 23, 31], ['shell', 21, 22], ['eyes', 36, 27], ['clawShut', 43, 29]])
+      ],
+      hurt: [legs(0).concat([['clawOpen', 12, 28, { flip: true }], ['body', 21, 31], ['shell', 19, 23], ['eyes', 33, 28], ['clawOpen', 37, 27]])],
+      shut: shut,
+      burst: [
+        [['spikeUpS', 28, 22], ['spikeSideS', 41, 32], ['spikeSideS', 12, 32, { flip: true }], ['shell', 20, 28]],
+        [['spikeUp', 28, 16], ['spikeDiag', 38, 19], ['spikeDiag', 13, 19, { flip: true }], ['spikeSide', 41, 31], ['spikeSide', 7, 31, { flip: true }], ['shell', 20, 28]],
+        [['spikeUp', 28, 17], ['spikeDiag', 38, 20], ['spikeDiag', 13, 20, { flip: true }], ['spikeSide', 40, 31], ['spikeSide', 8, 31, { flip: true }], ['shell', 20, 28]]
+      ]
+    });
+  }
+
+  /* The Snow Owl: drops an icicle from above, then shows the line it will fly and flies it. */
+  function owlRig() {
+    var P = {
+      body: ['...kkkkk...', '..klllllk..', '.klwwlwwlk.', '.klwewlewk.', '.kllwklwllk', '.kllllkllk.', 'kplllllllpk', 'kpplllllppk', 'kppplllpppk', '.kpppppppk.', '..kqqkqqk..', '..kk.k.kk..'],
+      bodyAngry: ['...kkkkk...', '..klllllk..', '.kkklllkkk.', '.klkewlekk.', '.kllwklwllk', '.kllllkllk.', 'kplllllllpk', 'kpplllllppk', 'kppplllpppk', '.kpppppppk.', '..kqqkqqk..', '..kk.k.kk..'],
+      wingUp: ['k..........', 'kk.........', 'kpk........', 'kppkk......', 'kplppkk....', '.kplpppkk..', '..kpplpppk.', '...kkkkkkk.'],
+      wingMid: ['.kkkkkkkkk.', 'kpplpplpppk', '.kkpplpppk.', '...kkkkkk..'],
+      wingDown: ['...kkkkkkk.', '..kpplpppk.', '.kplpppkk..', 'kplppkk....', 'kppkk......', 'kpk........', 'kk.........', 'k..........'],
+      icicle: ['kkk', 'kwk', 'kwk', 'klk', 'klk', 'klk', '.k.', '.k.'],
+      talons: ['k.k.k', 'kkkkk']
+    };
+    function bird(wing, wy, body, by, extra) { return [[wing, 3, wy], [wing, 22, wy, { flip: true }], [body, 13, by], ['talons', 16, by + 12]].concat(extra || []); }
+    return rig('frost', P, 36, 32, { x: 18, y: 15 }, {
+      walk: [bird('wingUp', 3, 'body', 8), bird('wingMid', 10, 'body', 9), bird('wingDown', 13, 'body', 8), bird('wingMid', 10, 'body', 7)],
+      windup: [bird('wingUp', 2, 'bodyAngry', 8, [['icicle', 17, 21]]), bird('wingUp', 1, 'bodyAngry', 7, [['icicle', 17, 21]])],
+      attack: [bird('wingDown', 12, 'bodyAngry', 9), bird('wingMid', 10, 'bodyAngry', 9), bird('wingDown', 13, 'bodyAngry', 10)],
+      hurt: [bird('wingDown', 14, 'body', 10)]
+    });
+  }
+
+  /* The Spark Hound: lean, a lightning rod for a tail. It crouches, leaps, and bites at the end of the leap. */
+  function houndRig() {
+    var P = {
+      body: ['....kkkkkkkkkkkk..', '..kkpplpplppppppkk', '.kpppppppppppppppk', 'kpppppppppppppppqk', 'kqpppppppppppppqqk', '.kqqqppppppppqqqk.', '..kkkqqqqqqqqkkk..', '.....kkkkkkkk.....'],
+      head: ['.kk...kk.', 'kplk.kplk', 'kppkkkppk', 'kppppppek', 'kpppppppkk', 'kqpppplllk', '.kqqkkkkk.', '..kk.....'],
+      headOpen: ['.kk...kk.', 'kplk.kplk', 'kppkkkppk', 'kppppppek', 'kppppkkkkk', 'kqppkwxwxk', '.kqpkkkkk.', '..kqplllk.', '...kkkkk..'],
+      leg: ['kpk', 'kpk', 'kpk', 'kpk', 'kqk', 'kqk', 'kkk'],
+      legBent: ['kpk', 'kppk', '.kqk', '.kqk', '.kkk'],
+      legFwd: ['kkkkkkk', 'kppppqk', 'kkkkkkk'],
+      tail: ['.kwk.', 'kwwwk', '.kwk.', '..g..', '..g..', '..g..', '..g..', '..g..'],
+      tailSpark: ['w.w.w', '.www.', 'wwwww', '.www.', 'w.g.w', '..g..', '..g..', '..g..'],
+      mane: ['.w..w.', 'kwkkwk', '.kk.k.']
+    };
+    var walk = [], k;
+    for (k = 0; k < 4; k++) {
+      var bob = k % 2 ? -1 : 0, f = [0, 1, 0, -1][k], b = [0, -1, 0, 1][k];
+      walk.push([['tail', 8, 3 + bob], ['leg', 9 + b, 19], ['leg', 22 + f, 19], ['body', 8, 11 + bob], ['leg', 12 - b, 19 - (k === 1 ? 1 : 0)], ['leg', 25 - f, 19 - (k === 3 ? 1 : 0)], ['mane', 19, 8 + bob], ['head', 24, 5 + bob]]);
+    }
+    return rig('storm', P, 42, 26, { x: 20, y: 26 }, {
+      walk: walk,
+      windup: [
+        [['tailSpark', 7, 4], ['legBent', 9, 21], ['legBent', 22, 21], ['body', 8, 13], ['legBent', 12, 21], ['legBent', 25, 21], ['mane', 19, 10], ['head', 24, 9]],
+        [['tailSpark', 6, 5], ['legBent', 8, 21], ['legBent', 21, 21], ['body', 7, 14], ['legBent', 11, 21], ['legBent', 24, 21], ['mane', 18, 11], ['head', 23, 11]]
+      ],
+      attack: [
+        [['tail', 8, 1], ['legFwd', 3, 16, { flip: true }], ['body', 9, 9], ['legFwd', 25, 16], ['mane', 20, 6], ['headOpen', 26, 3]],
+        [['tail', 8, 2], ['legFwd', 3, 17, { flip: true }], ['body', 9, 10], ['legFwd', 26, 17], ['mane', 20, 7], ['headOpen', 27, 4]],
+        [['tail', 8, 4], ['leg', 9, 19], ['body', 8, 12], ['leg', 25, 19], ['legBent', 12, 21], ['legBent', 22, 21], ['mane', 19, 9], ['head', 24, 7]]
+      ],
+      hurt: [[['tail', 9, 2], ['leg', 10, 19], ['leg', 21, 19], ['body', 7, 10], ['leg', 13, 19], ['leg', 24, 19], ['head', 22, 3]]]
+    });
+  }
+
+  /* ---- the first five, redrawn ---- */
+
+  function flameJet(e, ctx, reach) {
+    for (var n = 0; n < 3; n++) ctx.particle({ x: e.x + e.dir * 13 * e.size, y: e.y - 14 * e.size + (ctx.random() - 0.5) * 3, vx: e.dir * (1.4 + ctx.random() * 2.2) * (reach / 40), vy: (ctx.random() - 0.5) * 0.9, life: 12 + ctx.random() * 12, max: 24, colour: ctx.random() < 0.4 ? '#ffdc9a' : ctx.random() < 0.6 ? '#ffb347' : '#ff6a2b', size: ctx.random() < 0.5 ? 2 : 1, gravity: -0.015 });
+    ctx.light(e.x + e.dir * 24, e.y - 12, 34, 0.7);
+  }
+
+  KINDS.imp = { element: 'ember', flying: false, body: { w: 12, h: 16 }, hurt: { w: 16, h: 21 }, hp: 8, speed: 0.45, sight: 120, move: 'walk', keep: 30, rig: impRig,
+    attacks: [{ name: 'breath', range: [8, 48], windup: 36, active: 28, recover: 44, cooldown: 70, grounded: true,
+      telling: function (e, ctx, t) { if (t % 6 === 0) ctx.particle({ x: e.x - e.dir * 10, y: e.y - 18, vx: -e.dir * 0.3, vy: -0.5, life: 22, max: 22, colour: '#8f8d88', size: 2, gravity: -0.01 }); },
+      box: function (e, t) { return [front(e, 10, 14 + Math.min(34, t * 4), 19, -3)]; },
+      during: function (e, ctx, t) { flameJet(e, ctx, 14 + Math.min(34, t * 4)); } }] };
+
+  KINDS.lantern = { element: 'ember', flying: true, body: { w: 10, h: 12 }, hurt: { w: 13, h: 16 }, hp: 6, speed: 0.6, sight: 150, move: 'hover', stand: 62, height: 50, rig: lanternRig,
+    attacks: [{ name: 'embers', range: [30, 130], above: 30, below: 120, windup: 32, active: 6, recover: 34, cooldown: 110,
+      telling: function (e, ctx, t) { if (t % 5 === 0) ctx.spark(e.x, e.y, '#ffb347', 2, 0.8, 12, -0.02); },
+      fire: function (e, ctx) {
+        var a = aim(e, ctx, 2.4), base = Math.atan2(a.vy - 0.5, a.vx);
+        for (var n = -1; n <= 1; n++) ctx.projectile({ x: e.x + e.dir * 8, y: e.y, vx: Math.cos(base + n * 0.3) * 2.4, vy: Math.sin(base + n * 0.3) * 2.4, life: 150, colour: '#ffb347', size: 3, damage: 1, element: 'ember', gravity: 0.035, ember: true });
+      } }] };
+
+  var CRAB_BURST = { name: 'burst', range: [-2, -1], steady: true, anims: { windup: 'shut', attack: 'burst' }, windup: 50, active: 12, recover: 46, cooldown: 80,
+    start: function (e) { e.vars.shelled = true; },
+    telling: function (e, ctx, t) { if (t % 5 === 0) ctx.spark(e.x + (ctx.random() - 0.5) * 20, e.y - 8, '#d8f1ff', 2, 0.8, 12, -0.02); },
+    fire: function (e, ctx) { ctx.shake(2); ctx.spark(e.x, e.y - 10, '#d8f1ff', 24, 2.4, 22, 0.04); },
+    box: function (e) { return [{ x0: e.x - 27 * e.size, x1: e.x + 27 * e.size, y0: e.y - 25 * e.size, y1: e.y }]; },
+    resting: function (e) { e.vars.shelled = false; },
+    end: function (e) { e.vars.shelled = false; } };
+  KINDS.crab = { element: 'frost', flying: false, body: { w: 22, h: 12 }, hurt: { w: 28, h: 17 }, hp: 12, speed: 0.3, sight: 110, move: 'walk', keep: 28, rig: crabRig,
+    attacks: [{ name: 'snap', range: [6, 38], windup: 28, active: 8, recover: 34, cooldown: 60, grounded: true,
+      box: function (e) { return [front(e, 8, 26, 13, -2)]; } }, CRAB_BURST],
+    struck: function (e, ctx) { if (e.hp > 0 && !(e.vars.shellCd > 0) && !(e.attack && e.attack.def === CRAB_BURST)) { e.vars.shellCd = 360; beginAttack(e, CRAB_BURST, ctx); } },
+    always: function (e) { if (e.vars.shellCd > 0) e.vars.shellCd--; } };
+
+  KINDS.owl = { element: 'frost', flying: true, body: { w: 10, h: 12 }, hurt: { w: 15, h: 15 }, hp: 6, speed: 0.8, sight: 160, move: 'hover', stand: 0, height: 66, rig: owlRig,
+    attacks: [
+      { name: 'icicle', range: [0, 20], minBelow: 34, below: 130, windup: 26, active: 4, recover: 30, cooldown: 90,
+        fire: function (e, ctx) { ctx.projectile({ x: e.x, y: e.y + 10, vx: 0, vy: 1, life: 130, colour: '#d8f1ff', size: 4, damage: 1, element: 'frost', gravity: 0.12, icicle: true }); } },
+      { name: 'swoop', range: [40, 130], below: 110, windup: 40, active: 34, recover: 36, cooldown: 140, moves: true,
+        start: function (e, ctx) { e.vars.ty = ctx.hero.y - 12; },
+        telling: function (e, ctx, t, w) { e.vy = (e.vars.ty - e.y) * 0.1; e.vx *= 0.8; if (t === 10) ctx.telegraph(e.dir > 0 ? e.x : e.x - 150, e.vars.ty - 6, 150, 12, w - 10, '#9fd8ff'); },
+        fire: function (e) { e.vx = e.dir * 4.2; e.vy = 0; },
+        box: function (e) { return [{ x0: e.x - 8, x1: e.x + 8, y0: e.y - 7, y1: e.y + 7 }]; },
+        resting: function (e) { e.vy -= 0.12; e.vx *= 0.9; } }] };
+
+  KINDS.hound = { element: 'storm', flying: false, body: { w: 18, h: 12 }, hurt: { w: 26, h: 15 }, hp: 9, speed: 0.85, sight: 150, move: 'walk', keep: 46, rig: houndRig,
+    attacks: [{ name: 'leap', range: [26, 86], windup: 30, active: 24, recover: 34, cooldown: 80, grounded: true, moves: true,
+      telling: function (e, ctx, t) { if (t % 5 === 0) ctx.spark(e.x - e.dir * 15, e.y - 20, '#ffffff', 2, 1, 10, 0); },
+      fire: function (e, ctx) { e.vx = e.dir * 3.1; e.vy = -2.8; ctx.spark(e.x, e.y - 4, '#8fa3ff', 8, 1.4, 14, 0); },
+      box: function (e) { return [front(e, 8, 23, 16, -3)]; },
+      resting: function (e) { e.vx *= 0.85; } }] };
+
+  ['cinder', 'wisp', 'crawler', 'moth'].forEach(function (old) { delete KINDS[old]; });
+  BY_ELEMENT.ember = ['imp', 'lantern']; BY_ELEMENT.frost = ['crab', 'owl'];
 
   // compile a kind's frames: the old flat art gives walk frames and one attack frame, used for wind-up and blow alike
   var SPRITES = null;
@@ -243,18 +472,19 @@
   function stepAttack(e, ctx) {
     var a = e.attack, A = a.def, F = e.spec.frames;
     var w = Math.round(A.windup * (e.elder ? 0.85 : 1)), act = A.active, rec = A.recover;
+    var wn = (A.anims && A.anims.windup) || 'windup', an = (A.anims && A.anims.attack) || 'attack';
     a.t++;
     if (a.t <= w) {
-      a.phase = 'windup'; e.anim = 'windup'; e.frame = Math.min(F.windup.length - 1, Math.floor((a.t - 1) / w * F.windup.length));
+      a.phase = 'windup'; e.anim = wn; e.frame = wn === 'windup' ? Math.min(F[wn].length - 1, Math.floor((a.t - 1) / w * F[wn].length)) : Math.floor(a.t / 4) % F[wn].length;
       if (A.telling) A.telling(e, ctx, a.t, w);
     } else if (a.t <= w + act) {
       if (a.phase !== 'active') { a.phase = 'active'; if (A.fire) A.fire(e, ctx); }
-      e.anim = 'attack'; e.frame = Math.min(F.attack.length - 1, Math.floor((a.t - w - 1) / act * F.attack.length));
+      e.anim = an; e.frame = Math.min(F[an].length - 1, Math.floor((a.t - w - 1) / act * F[an].length));
       e.boxes = A.box ? A.box(e, a.t - w, ctx) : [];
       if (A.during) A.during(e, ctx, a.t - w);
     } else if (a.t <= w + act + rec) {
       a.phase = 'recover'; e.boxes = [];
-      e.anim = a.t - w - act < rec * 0.4 ? 'attack' : 'walk'; e.frame = e.anim === 'attack' ? F.attack.length - 1 : 0;
+      e.anim = a.t - w - act < rec * 0.4 ? an : 'walk'; e.frame = e.anim === an ? F[an].length - 1 : 0;
       if (A.resting) A.resting(e, ctx, a.t - w - act);
     } else {
       e.attack = null; e.boxes = []; e.cooldown = Math.round(A.cooldown * (e.elder ? 0.75 : 1));
@@ -271,6 +501,7 @@
       if (dx >= A.range[0] * e.size && dx <= A.range[1] * e.size && dy >= (A.above === undefined ? -28 : -A.above) && dy <= (A.below === undefined ? 28 : A.below)) {
         if (A.chance && ctx.random() > A.chance) continue;
         if (A.grounded && !e.onGround) continue;
+        if (A.minBelow && dy < A.minBelow) continue;
         return A;
       }
     }
@@ -296,7 +527,12 @@
     if (e.attack) {
       stepAttack(e, ctx);
       if (!K.flying) { e.vy = Math.min(5, e.vy + 0.32); if (!(e.attack && e.attack.def.moves)) e.vx *= 0.8; var t = ctx.moveBody(e); e.onGround = t.floor; if (t.wall && e.attack && e.attack.def.moves) e.vx = 0; }
-      else { e.x += e.vx; e.y += e.vy; if (!(e.attack && e.attack.def.moves)) { e.vx *= 0.85; e.vy *= 0.85; } }
+      else {
+        if (ctx.tileAt(Math.floor((e.x + e.vx * 2) / 16), Math.floor(e.y / 16)) === 1) e.vx = 0;
+        if (ctx.tileAt(Math.floor(e.x / 16), Math.floor((e.y + e.vy * 2 + (e.vy > 0 ? 6 : -6)) / 16)) === 1) e.vy = 0;
+        e.x += e.vx; e.y += e.vy;
+        if (!(e.attack && e.attack.def.moves)) { e.vx *= 0.85; e.vy *= 0.85; }
+      }
     } else {
       var A = chooseAttack(e, ctx, sees);
       if (A) beginAttack(e, A, ctx);

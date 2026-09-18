@@ -477,6 +477,7 @@
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null, afterChoice = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
+      particle: function (q) { particles.push(q); }, light: function (x, y, r, str) { light(x, y, r, str); },
       hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage, e ? e.kind : ''); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (Math.abs(p.x - hero.x) < W) sfx('shot'); },
@@ -614,6 +615,7 @@
         var e = creatures[k];
         if (e.dying) continue;
         var boxes = boxesOf(e);
+        if (!boxes.length && e.vars && e.vars.shelled && overlaps(box, { x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y })) { spark(e.x, e.y - e.h, '#ffffff', 5, 1.6, 10, 0.04); sfx('select'); }
         for (var j = 0; j < boxes.length; j++) {
           if (!overlaps(box, boxes[j])) continue;
           if (wound(e, Math.max(1, Math.round(damage * (boxes[j].mult || 1))), hero.x, elementName)) any = true;
@@ -666,7 +668,7 @@
         if (e.hp < e.maxHp && !e.boss) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
         light(e.x, e.spec.flying && !e.boss ? e.y : e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
-      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.icicle) { fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 5 - cy, 3, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - 4 - cy, 1, 4); fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) + 2 - cy, 1, 2); } else if (p.ember) { fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 2 - cy, 4, 4); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 1 - cy, 2, 2); } else if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
       for (k = 0; k < zaps.length; k++) { var z = zaps[k]; fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
     }
 
@@ -1152,7 +1154,7 @@
     window.addEventListener('pagehide', function () { if (SND) SND.stop(); });
     var LESSONS = {
       spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
-      fall: 'The floor is optional. So is the bottom.', cinder: 'Beetles hop.', wisp: 'Wisps dive.', crawler: 'Slugs have a cold touch.', moth: 'Moths throw hail.', hound: 'Hounds charge; jump.', bat: 'Bats zap what stands still.', toad: 'Toads carry poison.', spore: 'Look up in the cisterns.', shade: 'Shades are nearer than they were.', eye: 'The eye follows.',
+      fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', bat: 'Bats zap what stands still.', toad: 'Toads carry poison.', spore: 'Look up in the cisterns.', shade: 'Shades are nearer than they were.', eye: 'The eye follows.',
       golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', heart: 'The heart reaches for your feet.', mirror: 'It was you.',
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };
