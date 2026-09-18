@@ -315,11 +315,27 @@
     L.arena = { left: 2 * TILE, right: 30 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 21 * TILE, row: g };
     return L;
   }
+  // The Vault: a roofed hall with a ledge at either end and a small one in the middle for the third brazier
+  function theVault(element, floor) {
+    var L = new Level(34, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 34; x++) { L.column(x, g); for (k = 0; k < 3; k++) L.set(x, k, STONE); }
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(32, k, STONE); L.set(33, k, STONE); }
+    for (x = 6; x < 9; x++) L.set(x, g - 2, LEDGE);
+    for (x = 16; x < 18; x++) L.set(x, g - 2, LEDGE);
+    for (x = 25; x < 28; x++) L.set(x, g - 2, LEDGE);
+    L.spawn = { x: 4 * TILE + 8, y: g * TILE };
+    L.door = { x: 30 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 4, y: g - 4 }, { x: 11, y: g - 6 }, { x: 22, y: g - 6 }, { x: 29, y: g - 4 });
+    L.boss = true; L.locked = true; L.title = 'The Vault';
+    L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 22 * TILE, row: g };
+    return L;
+  }
   function arena(seed, floor) {
     var element = byName(ARENA_ELEMENT[Math.max(0, Math.min(3, floor - 1))]);
     if (floor === 1) return greatKiln(element, floor);
     if (floor === 2) return frozenCistern(element, floor);
     if (floor === 3) return galleryOfRails(element, floor);
+    if (floor >= 4) return theVault(element, floor);
     var L = new Level(46, element, floor, 3), g = 11, x, k;
     for (x = 0; x < 46; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }

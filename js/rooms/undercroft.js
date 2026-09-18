@@ -508,10 +508,13 @@
     if (!AC) { env.fail('The undercroft’s creatures did not load. The other rooms still run.'); return null; }
     var GD = window.Guardians;
     if (!GD) { env.fail('The undercroft\u2019s guardians did not load. The other rooms still run.'); return null; }
+    var stepLit = { lights: [], glows: [] };
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null, afterChoice = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
-      particle: function (q) { particles.push(q); }, light: function (x, y, r, str) { light(x, y, r, str); },
+      particle: function (q) { particles.push(q); },
+      // what a guardian lights while it is stepped is held until it is stepped again, however many pictures are drawn between
+      light: function (x, y, r, str) { stepLit.lights.push({ x: x, y: y, r: r, s: str || 1 }); },
       hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage, e ? e.kind : ''); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (Math.abs(p.x - hero.x) < W) sfx('shot'); },
@@ -526,9 +529,9 @@
       shake: shake,
       count: function () { return creatures.length; },
       summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
-      afterimage: function (e) { var set = guardianSprites.mirror, frames = (e.dir >= 0 ? set : set.flipped).dash; afterimages.push({ img: P.silhouette(frames[0], '#5b3fa0'), x: e.x, y: e.y, dir: 1, life: 12 }); },
-      mirrorCast: function (e) { mirrorCast(e); },
-      glow: function (x, y, r, colour, alpha) { glow(x, y, r, colour, alpha); },
+      weaponId: function () { return weaponId; }, powerName: function () { return power; },
+      blackout: function (on) { blackout = !!on; },
+      glow: function (x, y, r, colour, alpha) { stepLit.glows.push({ x: x, y: y, r: r, colour: colour, alpha: alpha }); },
       // a guardian has fallen: whatever it had in the air is gone with it
       calm: function () { telegraphs.length = 0; hazards.length = 0; projectiles = projectiles.filter(function (p) { return p.from !== 'enemy'; }); },
       sfx: function (name) { sfx(name); },
@@ -540,20 +543,11 @@
         if (t === 1 && hero.x + hero.w / 2 > tx * TILE && hero.x - hero.w / 2 < (tx + 1) * TILE && hero.y > ty * TILE && hero.y - hero.h < (ty + 1) * TILE) { hero.y = ty * TILE - 0.001; hero.vy = 0; }
       }
     };
-    // the mirror casts the Warden's own power back at her
-    function mirrorCast(e) {
-      var dir = hero.x > e.x ? 1 : -1;
-      flash = { colour: '#a48cff', life: 8 };
-      if (power === 'emberwave') { hazards.push({ x0: dir > 0 ? e.x : e.x - 58, x1: dir > 0 ? e.x + 58 : e.x, y0: e.y - 46, y1: e.y + 4, life: 6, damage: 2, element: 'ember', colour: '#ff8c42' }); for (var k = 0; k < 30; k++) { var a = (random() - 0.5) * 0.9, v = 2 + random() * 2.5; particles.push({ x: e.x + dir * 6, y: e.y - 14, vx: Math.cos(a) * v * dir, vy: Math.sin(a) * v - 0.4, life: 18 + random() * 16, max: 30, colour: random() < 0.5 ? '#5b3fa0' : '#a48cff', size: 1, gravity: -0.02 }); } }
-      else if (power === 'frostlance') projectiles.push({ x: e.x + dir * 8, y: e.y - 9, vx: dir * 4.5, vy: 0, life: 70, colour: '#a48cff', size: 6, damage: 2, element: 'frost', gravity: 0, from: 'enemy', lance: true });
-      else if (power === 'stormchain') { zaps.push({ x0: e.x, y0: e.y - 14, x1: hero.x, y1: hero.y - 11, colour: '#ffffff', life: 10 }); if (Math.abs(hero.x - e.x) < 140 && hurtHero(e.x, 2, 'mirror')) afflict('storm'); }
-      else { hazards.push({ x0: e.x - 44, x1: e.x + 44, y0: e.y - 40, y1: e.y + 6, life: 6, damage: 2, element: 'bloom', colour: '#9ae66e' }); e.hp = Math.min(e.maxHp, e.hp + 4); for (var k3 = 0; k3 < 24; k3++) { var a3 = k3 / 24 * Math.PI * 2; particles.push({ x: e.x, y: e.y - 12, vx: Math.cos(a3) * 2.4, vy: Math.sin(a3) * 2.4, life: 22, max: 22, colour: '#a48cff', size: 2, gravity: 0 }); } }
-    }
     function placeCreatures() {
       creatures = []; projectiles = []; zaps = [];
       var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
       for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
-      boss = null; hazards = []; telegraphs = [];
+      boss = null; hazards = []; telegraphs = []; blackout = false; stepLit.lights.length = 0; stepLit.glows.length = 0;
       placeChests();
       if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd); creatures.push(boss); sfx('roar'); }
     }
@@ -572,10 +566,13 @@
         level.locked = false; kills++; sfx('boom'); if (SND) SND.tension(0);
         hero.hp = hero.maxHp;
         spark(boss.x, boss.y - boss.h / 2, '#ffffff', 60, 3, 50, 0.02); spark(boss.x, boss.y - boss.h / 2, element.glow, 40, 2.4, 60, -0.01); shake(6);
-        dropPickup({ kind: 'weapon', id: WP.roll(random, run.floor + 1, true, weaponId) }, boss.x, boss.y - 20);
-        for (var hk = 0; hk < 3; hk++) dropPickup({ kind: 'heart', id: 'heart' }, boss.x + (hk - 1) * 14, boss.y - 24);
-        afterChoice = 'altar';
-        openChoice(3, true);
+        if (run.stage >= STAGES.length - 1) banner = { t: 0, text: 'The way up is open', sub: 'THERE IS NOTHING LEFT BELOW YOU', colour: '#ffdc9a' };   // the last of them: nothing to choose, only the door
+        else {
+          dropPickup({ kind: 'weapon', id: WP.roll(random, run.floor + 1, true, weaponId) }, boss.x, level.arena.groundY - 20);
+          for (var hk = 0; hk < 3; hk++) dropPickup({ kind: 'heart', id: 'heart' }, boss.x + (hk - 1) * 14, level.arena.groundY - 24);
+          afterChoice = 'altar';
+          openChoice(3, true);
+        }
       }
     }
     // what is about to happen is drawn over the dark, so that it can be read
@@ -723,6 +720,7 @@
         for (var j = 0; j < boxes.length; j++) {
           if (!overlaps(box, boxes[j])) continue;
           if (boxes[j].onHit) { if (boxes[j].onHit(e, ctx, damage, hero.x)) any = true; break; }
+          if (e.boss && e.vars) e.vars.struckHand = boxes[j].hand;
           if (e.boss && boxes.length > 1) e.struckAt = { x: (boxes[j].x0 + boxes[j].x1) / 2, y: (boxes[j].y0 + boxes[j].y1) / 2 };
           if (wound(e, Math.max(1, Math.round(damage * (boxes[j].mult || 1))), hero.x, elementName)) { any = true; if (boxes[j].mult > 1) { spark((boxes[j].x0 + boxes[j].x1) / 2, (boxes[j].y0 + boxes[j].y1) / 2, '#ffdc9a', 10, 2.2, 18, 0.02); number(e.x, e.y - e.h - 16, 'SOFT', '#ffdc9a'); } }
           break;
@@ -770,16 +768,11 @@
             fpen.drawImage(e.dying < 60 && e.dying % 10 < 2 ? P.silhouette(img, '#ffffff') : img, x, y);
             fpen.globalAlpha = 1; continue;
           }
-        } else if (e.boss) {
-          set = guardianSprites[e.kind]; frames = (e.dir >= 0 ? set : set.flipped)[e.anim] || set.idle; img = frames[Math.min(e.frame, frames.length - 1)];
-          scale = 1; w = img.width; h = img.height;
-          x = Math.round(e.x) - w / 2 - cx; y = Math.round(e.y) - h - cy + (e.spec.flying ? h / 2 : 0);
         } else {
           set = actorSprites[e.kind]; frames = (e.dir >= 0 ? set.frames : set.flipped)[e.anim] || set.frames.walk; img = frames[Math.min(e.frame, frames.length - 1)];
           scale = e.size; w = img.width * scale; h = img.height * scale;
           x = Math.round(e.x) - (e.dir >= 0 ? set.anchor.x : img.width - set.anchor.x) * scale - cx; y = Math.round(e.y) - set.anchor.y * scale - cy;
         }
-        if (e.boss && e.kind === 'mirror') { x = Math.round(e.x) - P.warden.anchor.x - cx; y = Math.round(e.y) - P.warden.anchor.y - cy; w = P.warden.width; h = P.warden.height; }
         var glow = WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow;
         if (e.dying) { var t = Math.min(1, e.dying / (e.boss ? 60 : 22)); fpen.globalAlpha = 1 - t; fpen.drawImage(P.silhouette(img, '#ffffff'), x + w * t / 2, y + h * t / 2, w * (1 - t), h * (1 - t)); fpen.globalAlpha = 1; continue; }
         if (e.flash > 0) fpen.drawImage(P.silhouette(img, '#ffffff'), x, y, w, h);
@@ -1208,6 +1201,7 @@
 
     // coloured light, laid over the dark: what makes an aura an aura
     function drawGlows() {
+      for (var hg = 0; hg < stepLit.glows.length; hg++) glows.push(stepLit.glows[hg]);
       var cx = Math.round(cam.x), cy = Math.round(cam.y);
       fpen.globalCompositeOperation = 'lighter';
       for (var k = 0; k < glows.length; k++) {
@@ -1325,11 +1319,13 @@
 
     // the dark, and the lantern's light cut out of it in steps, as a lamp lights a vault
     var dark = P.blank(W, H), dpen = dark.getContext('2d');
-    var lights = [];
-    function light(x, y, radius, strength) { lights.push({ x: x, y: y, r: radius, s: strength || 1 }); }
+    var lights = [], blackout = false;
+    // when the lights are put out only what is kept still shines: her lantern, and what a guardian allows
+    function light(x, y, radius, strength, keep) { if (blackout && !keep) return; lights.push({ x: x, y: y, r: radius, s: strength || 1 }); }
     function drawDark(flicker) {
+      for (var hk = 0; hk < stepLit.lights.length; hk++) lights.push(stepLit.lights[hk]);
       dpen.globalCompositeOperation = 'source-over';
-      dpen.fillStyle = level.boss ? 'rgba(2,2,8,0.5)' : 'rgba(2,2,8,0.74)';   // a guardian's hall is lit by the guardian
+      dpen.fillStyle = blackout ? 'rgba(0,0,4,0.95)' : level.boss ? 'rgba(2,2,8,0.5)' : 'rgba(2,2,8,0.74)';   // a guardian's hall is lit by the guardian
       dpen.fillRect(0, 0, W, H);
       dpen.globalCompositeOperation = 'destination-out';
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, r;
@@ -1500,7 +1496,7 @@
       if (afflictions.chill > 0) { fpen.globalAlpha = 0.45; fpen.drawImage(P.silhouette(img, '#9fd8ff'), x, y); fpen.globalAlpha = 1; }
       fpen.globalAlpha = 1;
       // the lantern's light travels with the hand
-      if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, Math.round((78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0)) * mods.lantern), 1);
+      if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, Math.round((78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0)) * mods.lantern), 1, true);
     }
 
     function drawHud() {
@@ -1628,7 +1624,7 @@
     var LESSONS = {
       spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
       fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', jelly: 'Never stand under a jelly whose arms have gone stiff.', puff: 'Pop it while it swells, or stand well back.', watcher: 'The line it draws is the line it burns.', toad: 'The toad\u2019s tongue is longer than you think.', shade: 'When the shade vanishes, turn round.', 
-      golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', heart: 'The heart reaches for your feet.', mirror: 'It was you.',
+      golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', lightless: 'It was you, and then it was not.', coal: 'Where a coal lands, the floor burns.', icicle: 'What hangs will fall.',
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };
     function endRun(wonRun) {
@@ -1717,7 +1713,7 @@
       stepWeapons();
       stepItems();
       stepAfflictions();
-      if (!slowmo || tick % 2 === 0) { stepCreatures(); stepHazards(); }
+      if (!slowmo || tick % 2 === 0) { stepLit.lights.length = 0; stepLit.glows.length = 0; stepCreatures(); stepHazards(); }
       stepFx();
       stepCamera(false);
     }

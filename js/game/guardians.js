@@ -1,127 +1,18 @@
-/* guardians.js: the ones that wait at the foot of each floor.
+/* guardians.js: the ground the four guardians stand on.
 
-   This file is the ground they stand on: the registry a guardian's own
-   file writes itself into, the rig that builds its frames from parts, the
-   clock of an attack (a wind-up that tells, the live steps, a recovery),
-   the marks on its bar where it changes, and the boxes it is struck in.
-   The Kiln Golem, the Rime Wyrm and the Storm Herald have their own files.
-   Until its own is written, the mirror below is the older, simpler kind. */
+   Each guardian has a file of its own (the Kiln Golem, the Rime Wyrm, the
+   Storm Herald, the Lightless) and writes itself into the registry here.
+   This file gives them what they share: a rig that builds frames from
+   parts, pieces turned through every heading, the clock of an attack (a
+   wind-up that tells, the live steps, a recovery), the marks on a bar
+   where a guardian reels and changes, and the boxes it is struck in.
+   Like the creatures they know nothing of the canvas: they are stepped
+   with the engine's helpers, and those that draw themselves are handed a
+   pen. */
 (function () {
   'use strict';
 
-  /* ---- the art ---- */
-
-  var PALETTES = {
-    ember: { k: '#1a0806', p: '#5a3e38', q: '#3a2a28', l: '#ff6a2b', e: '#ffdc9a', w: '#ffb347', m: '#8a6a5c' },
-    frost: { k: '#0a1220', p: '#9fd8ff', q: '#3f6f94', l: '#ffffff', e: '#3d5bff', w: '#d8f1ff', m: '#6f83a0' },
-    storm: { k: '#0e0a1c', p: '#443e58', q: '#2e2a3c', l: '#a48cff', e: '#ffffff', w: '#8fa3ff', m: '#7a7099' },
-    bloom: { k: '#06120a', p: '#365040', q: '#243328', l: '#9ae66e', e: '#ff4f7b', w: '#c5ff9a', m: '#5e8a66' },
-    void:  { k: '#000000', p: '#1e1a2c', q: '#0d0b14', l: '#5b3fa0', e: '#ffffff', w: '#a48cff', m: '#2b2836' }
-  };
-
-  var ART = {
-  };
-
-  var SPRITES = null;
-  function build() {
-    if (SPRITES) return SPRITES;
-    SPRITES = {};
-    Object.keys(ART).forEach(function (name) {
-      var el = KINDS[name].element, pal = {}, base = window.Pixels.PALETTE, over = PALETTES[el], key;
-      for (key in base) pal[key] = base[key];
-      for (key in over) pal[key] = over[key];
-      var A = window.Pixels.art;
-      SPRITES[name] = { idle: ART[name].idle.map(function (r) { return A(r, pal); }), attack: ART[name].attack.map(function (r) { return A(r, pal); }) };
-      SPRITES[name].flipped = { idle: SPRITES[name].idle.map(window.Pixels.flipH), attack: SPRITES[name].attack.map(window.Pixels.flipH) };
-    });
-    // the mirror wears the Warden's own frames, in the void's colours, with one white eye
-    var W = window.Pixels.warden.build(), mirror = { idle: [], attack: [], flipped: { idle: [], attack: [] } };
-    function shade(img) {
-      var c = window.Pixels.silhouette(img, '#1e1a2c'), g = c.getContext('2d');
-      g.fillStyle = '#ffffff'; g.fillRect(37, 29, 1, 1);
-      g.fillStyle = '#5b3fa0'; g.fillRect(28, 42, 5, 4);
-      return c;
-    }
-    mirror.idle = W.idle.map(shade); mirror.attack = W.attack1.map(shade).concat(W.attack3.map(shade)); mirror.dash = W.dash.map(shade); mirror.cast = W.cast.map(shade);
-    mirror.flipped.idle = mirror.idle.map(window.Pixels.flipH); mirror.flipped.attack = mirror.attack.map(window.Pixels.flipH); mirror.flipped.dash = mirror.dash.map(window.Pixels.flipH); mirror.flipped.cast = mirror.cast.map(window.Pixels.flipH);
-    SPRITES.mirror = mirror;
-    return SPRITES;
-  }
-
-  /* ---- the kinds and their patterns ---- */
-
-  var KINDS = {
-    mirror: { element: 'void',  name: 'The Void Mirror',  w: 10, h: 22, hp: 55, flying: false, damage: 2 }
-  };
-  var BY_FLOOR = ['golem', 'wyrm', 'herald', 'mirror'];
-
-  function legacySpawn(floor, arena, rnd) {
-    var kind = BY_FLOOR[Math.max(0, Math.min(3, floor - 1))], spec = KINDS[kind];
-    var scale = 1 + (floor - 1) * 0.15;
-    return {
-      boss: true, kind: kind, spec: spec, element: spec.element, name: spec.name,
-      x: arena.bossX, y: spec.flying ? arena.groundY - 70 : arena.groundY, vx: 0, vy: 0, w: spec.w, h: spec.h,
-      hp: Math.round(spec.hp * scale), maxHp: Math.round(spec.hp * scale), damage: spec.damage,
-      dir: -1, onGround: false, clock: 0, frame: 0, anim: 'idle', state: 'wake', wait: 60, cooldown: 90, hurt: 0, flash: 0, dying: 0, phase: 0, status: {}, seen: true, elder: true,
-      home: { x: arena.bossX, y: arena.groundY - 70 }, arena: arena, healed: false, drop: 0
-    };
-  }
-
-  function towards(e, hero) { return hero.x > e.x ? 1 : -1; }
-
-  function legacyStep(e, ctx) {
-    var hero = ctx.hero, A = e.arena;
-    if (e.dying) { e.dying++; if (e.dying % 6 === 0) ctx.spark(e.x + (ctx.random() - 0.5) * e.w, e.y - ctx.random() * e.h, '#ffffff', 6, 1.5, 20, 0); return; }
-    if (e.hurt > 0) e.hurt--;
-    if (e.flash > 0) e.flash--;
-    if (e.cooldown > 0) e.cooldown--;
-    e.clock++;
-    // the second wind: at a third of its life, it changes
-    if (!e.phase && e.hp > 0 && e.hp < e.maxHp * 0.4) { e.phase = 1; ctx.spark(e.x, e.y - e.h / 2, '#ffffff', 40, 2.5, 40, 0); ctx.shake(4); if (e.kind === 'heart' && !e.healed) { e.healed = true; e.hp = Math.min(e.maxHp, e.hp + 12); } }
-    if (e.status.freeze > 0) e.status.freeze = Math.min(e.status.freeze - 1, 24);
-    if (e.status.burn > 0) { e.status.burn--; if (e.status.burn % 40 === 0) { e.hp -= (e.status.burnDamage || 1); ctx.spark(e.x, e.y - e.h / 2, '#ff8c42', 4, 1, 16, -0.02); } }
-    if (e.status.poison > 0) { e.status.poison--; if (e.status.poison % 50 === 0) { e.hp -= 1; } }
-    if (e.status.shock > 0) e.status.shock--;
-    if (e.hp <= 0) { e.hp = 0; e.dying = 1; return; }
-    var quick = e.phase ? 0.6 : 1;
-    if (e.state === 'wake') { if (--e.wait <= 0) e.state = 'idle'; return; }
-    if (e.status.freeze > 0) { if (!e.spec.flying) { e.vx = 0; e.vy = Math.min(5, e.vy + 0.32); ctx.moveBody(e); } return; }
-    PATTERNS[e.kind](e, ctx, quick);
-    // touching the Warden
-    if (hero.alive && !e.spec.flying && Math.abs(e.x - hero.x) < (e.w + hero.w) / 2 && hero.y > e.y - e.h && hero.y - hero.h < e.y) { if (ctx.hurtHero(e.x, e.damage, e)) ctx.afflict(e.element); }
-    if (hero.alive && e.spec.flying && e.state === 'swoop' && Math.abs(e.x - hero.x) < e.w / 2 + hero.w / 2 && Math.abs((e.y - e.h / 2) - (hero.y - hero.h / 2)) < (e.h + hero.h) / 2) { if (ctx.hurtHero(e.x, e.damage, e)) ctx.afflict(e.element); }
-    var rate = e.state === 'idle' || e.state === 'walk' ? 14 : 6;
-    if (e.clock % rate === 0) e.frame = (e.frame + 1) % 2;
-  }
-
-  var PATTERNS = {
-    mirror: function (e, ctx, quick) {
-      var hero = ctx.hero, A = e.arena, d = Math.abs(hero.x - e.x);
-      e.vy = Math.min(5, e.vy + 0.32);
-      if (e.state === 'idle') {
-        e.anim = 'idle'; e.dir = towards(e, hero);
-        e.vx = e.dir * (e.phase ? 1.5 : 1.15);
-        if (d < 26 && e.cooldown <= 0) { e.state = 'swing'; e.wait = 14; e.vx = 0; }
-        else if (e.cooldown <= 0 && d > 50 && d < 140 && ctx.random() < 0.5) { e.state = 'cast'; e.wait = 20; e.vx = 0; }
-        else if (e.cooldown <= 0 && d > 60) { e.state = 'dash'; e.wait = 14; }
-        if (e.onGround && hero.y < e.y - 20 && ctx.random() < 0.02) e.vy = -5.2;
-      } else if (e.state === 'swing') {
-        e.anim = 'attack'; e.vx *= 0.8;
-        if (--e.wait === 8) ctx.hazard({ x0: e.dir > 0 ? e.x : e.x - 26, x1: e.dir > 0 ? e.x + 26 : e.x, y0: e.y - 26, y1: e.y - 2, life: 4, damage: 2, element: 'void', colour: '#a48cff' });
-        if (e.wait <= 0) { e.state = 'idle'; e.cooldown = Math.round(50 * quick); }
-      } else if (e.state === 'dash') {
-        e.anim = 'dash'; e.vx = e.dir * 4.2; e.vy = 0;
-        if (e.wait % 2 === 0) ctx.afterimage(e);
-        if (--e.wait <= 0) { e.state = 'idle'; e.cooldown = Math.round(60 * quick); }
-      } else if (e.state === 'cast') {
-        e.anim = 'cast'; e.vx *= 0.8;
-        if (--e.wait === 10) ctx.mirrorCast(e);
-        if (e.wait <= 0) { e.state = 'idle'; e.cooldown = Math.round(140 * quick); }
-      }
-      var touched = ctx.moveBody(e); e.onGround = touched.floor;
-      if (e.x < A.left + 8) e.x = A.left + 8; if (e.x > A.right - 8) e.x = A.right - 8;
-    }
-  };
+  var BY_FLOOR = ['golem', 'wyrm', 'herald', 'lightless'];
 
   /* ---- the guardians proper: a rig, boxes, and a clock for every blow ----
 
@@ -177,7 +68,7 @@
 
   function spawn(floor, arena, rnd) {
     var kind = BY_FLOOR[Math.max(0, Math.min(3, floor - 1))], D = REG[kind];
-    if (!D) return legacySpawn(floor, arena, rnd);
+    if (!D) return null;
     var e = {
       boss: true, kind: kind, spec: D, element: D.element, name: D.name, title: D.title || '',
       x: arena.bossX, y: D.flying ? arena.groundY - 70 : arena.groundY, vx: 0, vy: 0, w: D.body.w, h: D.body.h, size: 1,
@@ -273,27 +164,29 @@
     if (D.always) D.always(e, ctx);
   }
 
-  function step(e, ctx) { if (e.spec.modern) stepModern(e, ctx); else legacyStep(e, ctx); }
+  function step(e, ctx) { stepModern(e, ctx); }
 
   // where a guardian can be struck; soft places first, so that they are what a blade finds
   function hurtBoxes(e) {
-    if (e.spec.modern) { if (e.state === 'wake') return []; if (e.spec.hurtBoxes) return e.spec.hurtBoxes(e); }
+    if (e.state === 'wake') return [];
+    if (e.spec.hurtBoxes) return e.spec.hurtBoxes(e);
     return [{ x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y, mult: 1 }];
   }
   // for the probes: make it begin an attack by name, now
   function command(e, name, ctx) {
-    if (!e.spec.modern) { e.state = name; e.wait = 40; e.cooldown = 0; return e.state; }
     var A = e.spec.attacks[name];
     if (!A) return Object.keys(e.spec.attacks).join(',');
     e.state = 'idle'; e.wait = 0; e.stun = 0; begin(e, A, ctx);
     return name;
   }
 
+  var SPRITES = null;
   function buildAll() {
-    var S = build();
+    if (SPRITES) return SPRITES;
+    var S = SPRITES = {};
     Object.keys(REG).forEach(function (kind) { if (!S[kind]) { S[kind] = REG[kind].rig(); REG[kind].frames = (S[kind].byPhase ? S[kind].byPhase[0] : S[kind]).frames; } });
     return S;
   }
 
-  window.Guardians = { KINDS: KINDS, REG: REG, BY_FLOOR: BY_FLOOR, register: register, rig: rig, dots: dots, palette: paletteWith, turned: turned, flipV: flipV, front: front, towards: towardsHero, build: buildAll, spawn: spawn, step: step, hurtBoxes: hurtBoxes, command: command };
+  window.Guardians = { REG: REG, BY_FLOOR: BY_FLOOR, register: register, rig: rig, dots: dots, palette: paletteWith, turned: turned, flipV: flipV, front: front, towards: towardsHero, build: buildAll, spawn: spawn, step: step, hurtBoxes: hurtBoxes, command: command };
 })();
