@@ -809,6 +809,27 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Andrei Markov introduced his chains in 1913 by counting the vowels and consonants in the first twenty thousand letters of Pushkin’s Eugene Onegin, and Claude Shannon in 1948 used the same idea to generate English-shaped nonsense from letter and word frequencies, one order at a time. The chain here is of the second order, over words. Everything it says it has heard in this building, which is the confession of every docent.'
+    },
+    {
+      number: 36,
+      slug: 'undercroft',
+      ready: true,
+      scripts: ['game/pixels.js'],
+      stageAttributes: 'tabindex="0"',
+      title: 'Undercroft',
+      line: 'Go down. The floors draw themselves, and nothing you carry comes back up except what you learned.',
+      description: 'A rogue-like platformer, the last room: five floors that draw themselves from a seed, one for each element, a Warden with a sword, a lantern and one power, enemies, guardians and relics. Pixel art compiled from text, sound synthesised, nothing loaded.',
+      canvasLabel: 'A dark vaulted undercroft in crisp pixels, lit by the Warden’s amber lantern: a small hooded figure in an ultramarine cloak and rose scarf running, jumping and fighting along stone floors and ledges.',
+      medium: '2026. A game engine of sixteen-pixel tiles and a sixtieth-of-a-second step, sprites compiled from text when the page opened, floors stitched from a seeded grammar. Floor <span class="live" data-live="undercroft.floor">0</span>, seed <span class="live" data-live="undercroft.seed">36</span>, <span class="live" data-live="undercroft.cost">0</span> milliseconds a frame.',
+      text: 'Every other room shows you something. This one is a game, and it is the sum of the others: the seeded chance of the marbling and the snow, the steady step of the pendulums and the sand, the light of the lantern room, the rules that make a knot or a bolt of lightning. Go down. Each floor is drawn from a seed as you arrive, so no two descents are the same, and each belongs to an element that changes what the ground does to you and what you can do back. The Warden has a sword, a lantern and one power, finds relics that change the rules, and meets a guardian at the foot of every floor. Death is the end of the run and the start of the next one. Arrows or WASD move, X or K jumps, Z or J attacks, C or L dashes, V or I casts; press the stage first so it hears you.',
+      controls: `
+<div class="controls" role="group" aria-label="Undercroft controls">
+  <div class="controls__row">
+    <button class="btn" type="button" data-undercroft-start>Go down</button>
+    <button class="btn" type="button" data-undercroft-full>Full screen</button>
+  </div>
+</div>`,
+      wall: 'Rogue was written by Michael Toy and Glenn Wichman in 1980 for a Unix machine that drew its dungeon in letters, a new one each time, and threw away the game when you died, which is the lineage of everything here. The platformer half is older than the arcade: Donkey Kong in 1981 was the first to be called one. The undercroft borrows its seeded rooms from the first, its coyote time and jump buffer from the second, and its lantern from room 28.'
     }
   ]
 };

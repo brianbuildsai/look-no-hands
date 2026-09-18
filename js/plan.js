@@ -425,6 +425,18 @@
     pen.beginPath(); pen.moveTo(-s * 0.36, s * 0.4); pen.lineTo(s * 0.12, s * 0.4); pen.stroke();
   };
 
+  glyphs.undercroft = function (pen, s) {
+    // a stair going down into an arch, and a lantern's dot at the bottom
+    pen.beginPath(); pen.arc(0, -s * 0.1, s * 0.4, Math.PI, 0); pen.stroke();
+    pen.beginPath(); pen.moveTo(-s * 0.4, -s * 0.1); pen.lineTo(-s * 0.4, s * 0.42); pen.moveTo(s * 0.4, -s * 0.1); pen.lineTo(s * 0.4, s * 0.42); pen.stroke();
+    pen.beginPath();
+    pen.moveTo(-s * 0.3, -s * 0.05);
+    for (var k = 0; k < 4; k++) { pen.lineTo(-s * 0.3 + k * s * 0.15, -s * 0.05 + k * s * 0.12); pen.lineTo(-s * 0.3 + (k + 1) * s * 0.15, -s * 0.05 + k * s * 0.12); }
+    pen.lineTo(s * 0.3, s * 0.43);
+    pen.stroke();
+    pen.beginPath(); pen.arc(s * 0.22, s * 0.3, s * 0.045, 0, 6.2832); pen.fill();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
