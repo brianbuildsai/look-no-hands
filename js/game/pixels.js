@@ -37,7 +37,7 @@
   // text to canvas: one character a pixel; '.' and ' ' are clear
   function art(rows, palette) {
     palette = palette || PALETTE;
-    var key = rows.join('|') + (palette === PALETTE ? '' : '#' + (palette.p || '') + (palette.k || ''));
+    var key = rows.join('|') + (palette === PALETTE ? '' : '#' + (palette.id || (palette.p || '') + (palette.k || '')));
     if (cache[key]) return cache[key];
     var w = 0, h = rows.length, y, x;
     for (y = 0; y < h; y++) w = Math.max(w, rows[y].length);
@@ -201,34 +201,53 @@
   // the Warden's frames are 72 by 56, her body where it was in a 32 by 32 frame but moved 20 right and 20 down,
   // so that a long weapon has room on every side
   var FW = 72, FH = 56, OX = 20, OY = 20, currentWeapon = null;
+
+  /* A skin is who is wearing the skeleton: the parts, where each hangs, where
+     the hand is on the arm, and a palette of its own. The Warden's is below;
+     the others are added by classes.js. Every skin makes every frame. */
+  var SKINS = {
+    warden: {
+      parts: { head: HEAD, torso: TORSO, cloak: CLOAK, arm: ARM, leg: LEG, legBent: LEG_BENT, scarf: SCARF, scarfUp: SCARF_UP, lantern: LANTERN },
+      at: { cloak: [8, 10], backLeg: [11, 21], backArm: [10, 13], lantern: [7, 19], torso: [11, 12], frontLeg: [15, 21], head: [10, 3], scarf: [4, 11], frontArm: [17, 13] },
+      hand: { down: [1, 5], reach: [6, 1] }, palette: null
+    }
+  };
+  var skin = SKINS.warden;
+  function addSkin(id, def) { if (def.palette) { var pal = {}, key; for (key in PALETTE) pal[key] = PALETTE[key]; for (key in def.palette) pal[key] = def.palette[key]; pal.id = id; def.palette = pal; } SKINS[id] = def; }
+
   function pose(o) {
     o = o || {};
-    var bob = o.bob || 0, lean = o.lean || 0;
-    var A = Pixels.art;
+    var bob = o.bob || 0, lean = o.lean || 0, S = skin, P = S.parts, at = S.at, pal = S.palette || undefined;
+    function A(rows) { return Pixels.art(rows, pal); }
     var layers = [];
     // cloak, trailing behind by `trail`
-    layers.push({ img: A(CLOAK), x: 8 - (o.trail || 0) + lean, y: 10 + bob + (o.cloakLift || 0) });
+    if (P.cloak) layers.push({ img: A(P.cloak), x: at.cloak[0] - (o.trail || 0) + lean, y: at.cloak[1] + bob + (o.cloakLift || 0) });
     // back leg
     var back = o.back || { x: 0, y: 0 };
-    layers.push({ img: A(back.bent ? LEG_BENT : LEG), x: 11 + back.x, y: 21 + back.y + bob });
+    layers.push({ img: A(back.bent ? P.legBent : P.leg), x: at.backLeg[0] + back.x, y: at.backLeg[1] + back.y + bob });
     // back arm, with the lantern hanging from it
     var ba = o.backArm || { x: 0, y: 0 };
-    layers.push({ img: A(ARM), x: 10 + ba.x + lean, y: 13 + ba.y + bob, rot: ba.rot || 0 });
+    layers.push({ img: A(P.arm), x: at.backArm[0] + ba.x + lean, y: at.backArm[1] + ba.y + bob, rot: ba.rot || 0 });
     var lant = o.lantern || { x: 0, y: 0 };
-    layers.push({ img: A(LANTERN), x: 7 + ba.x + lant.x + lean, y: 19 + ba.y + lant.y + bob });
+    layers.push({ img: A(P.lantern), x: at.lantern[0] + ba.x + lant.x + lean, y: at.lantern[1] + ba.y + lant.y + bob });
     // torso
-    layers.push({ img: A(TORSO), x: 11 + lean, y: 12 + bob });
+    layers.push({ img: A(P.torso), x: at.torso[0] + lean, y: at.torso[1] + bob });
     // front leg
     var front = o.front || { x: 0, y: 0 };
-    layers.push({ img: A(front.bent ? LEG_BENT : LEG), x: 15 + front.x, y: 21 + front.y + bob });
+    layers.push({ img: A(front.bent ? P.legBent : P.leg), x: at.frontLeg[0] + front.x, y: at.frontLeg[1] + front.y + bob });
+    // the skirt of a long coat, over the tops of the legs
+    if (P.skirt) layers.push({ img: A(P.skirt), x: at.skirt[0] + lean + Math.round(((front.x || 0) + (back.x || 0)) / 4), y: at.skirt[1] + bob });
     // head
-    layers.push({ img: A(HEAD), x: 10 + lean + (o.headX || 0), y: 3 + bob + (o.headY || 0) });
-    // scarf, streaming back
+    layers.push({ img: A(P.head), x: at.head[0] + lean + (o.headX || 0), y: at.head[1] + bob + (o.headY || 0) });
+    // scarf (or ribbons), streaming back
     var sc = o.scarf || { x: 0, y: 0 };
-    layers.push({ img: A(sc.up ? SCARF_UP : SCARF), x: 4 + sc.x + lean, y: 11 + sc.y + bob });
-    // front arm and the sword it holds
+    if (P.scarf) layers.push({ img: A(sc.up ? P.scarfUp : P.scarf), x: at.scarf[0] + sc.x + lean, y: at.scarf[1] + sc.y + bob });
+    if (P.ribbon) layers.push({ img: A(sc.up ? P.ribbonUp || P.ribbon : P.ribbon), x: at.ribbon[0] + Math.round(sc.x * 1.5) + lean, y: at.ribbon[1] + sc.y + bob + (sc.up ? -2 : 0) });
+    // a pauldron or the like, over the shoulder
+    if (P.over) layers.push({ img: A(P.over), x: at.over[0] + lean, y: at.over[1] + bob });
+    // front arm and the weapon it holds
     var fa = o.frontArm || { x: 0, y: 0 };
-    layers.push({ img: A(ARM), x: 17 + fa.x + lean, y: 13 + fa.y + bob, rot: fa.rot || 0 });
+    layers.push({ img: A(P.arm), x: at.frontArm[0] + fa.x + lean, y: at.frontArm[1] + fa.y + bob, rot: fa.rot || 0 });
     var sw = o.sword;
     if (sw !== null && currentWeapon) {
       sw = sw || { kind: 'up', x: 0, y: 0 };
@@ -237,27 +256,28 @@
       if (rot === 1) { rgx = ih - 1 - view.gy; rgy = view.gx; } else if (rot === 2) { rgx = iw - 1 - view.gx; rgy = ih - 1 - view.gy; } else if (rot === 3) { rgx = view.gy; rgy = iw - 1 - view.gx; }
       if (sw.flip) rgx = (rot % 2 ? ih : iw) - 1 - rgx;
       // the grip sits in the front hand: the bottom of the arm, or its far end when the arm reaches out
-      var reaching = fa.rot === 3, hx = 17 + fa.x + lean + (reaching ? 6 : 1), hy = 13 + fa.y + bob + (reaching ? 1 : 5);
+      var reaching = fa.rot === 3, hand = reaching ? S.hand.reach : S.hand.down, hx = at.frontArm[0] + fa.x + lean + hand[0], hy = at.frontArm[1] + fa.y + bob + hand[1];
       layers.push({ img: img, x: hx - rgx + (sw.x || 0), y: hy - rgy + (sw.y || 0), rot: rot, flip: sw.flip });
     }
     for (var n = 0; n < layers.length; n++) { layers[n].x += OX; layers[n].y += OY; }
     return Pixels.compose(FW, FH, layers);
   }
 
-  // the Warden lying on the ground, composed by hand: the cloak spread, the body turned, the lantern set down
+  // lying on the ground, composed by hand: the cloak spread, the body turned, the lantern set down
   function lying(raise) {
-    var A = Pixels.art, flat = currentWeapon ? currentWeapon.flat.img : A(SWORD_FLAT);
+    var P = skin.parts, pal = skin.palette || undefined, flat = currentWeapon ? currentWeapon.flat.img : Pixels.art(SWORD_FLAT);
+    function A(rows) { return Pixels.art(rows, pal); }
     var layers = [
-      { img: A(CLOAK), x: 3, y: 18 - raise, rot: 1 },
-      { img: A(LEG), x: 1, y: 25 - raise, rot: 3 },
-      { img: A(LEG), x: 3, y: 27 - raise, rot: 3 },
-      { img: A(TORSO), x: 11, y: 22 - raise, rot: 1 },
-      { img: A(ARM), x: 12, y: 25 - raise, rot: 1 },
-      { img: A(HEAD), x: 20, y: 21 - raise, rot: 3 },
-      { img: A(SCARF), x: 16, y: 18 - raise },
+      P.cloak ? { img: A(P.cloak), x: 3, y: 18 - raise, rot: 1 } : null,
+      { img: A(P.leg), x: 1, y: 25 - raise, rot: 3 },
+      { img: A(P.leg), x: 3, y: 27 - raise, rot: 3 },
+      { img: A(P.torso), x: 11, y: 22 - raise, rot: 1 },
+      { img: A(P.arm), x: 12, y: 25 - raise, rot: 1 },
+      { img: A(P.head), x: 20, y: 31 - raise - A(P.head).width, rot: 3 },
+      P.scarf ? { img: A(P.scarf), x: 16, y: 18 - raise } : null,
       { img: flat, x: 18, y: 31 - flat.height },
-      { img: A(LANTERN), x: 26, y: 23 }
-    ];
+      { img: A(P.lantern), x: 26, y: 23 }
+    ].filter(Boolean);
     for (var n = 0; n < layers.length; n++) { layers[n].x += OX; layers[n].y += OY; }
     return Pixels.compose(FW, FH, layers);
   }
@@ -284,7 +304,7 @@
 
   /* ---- the Warden: frames ---- */
 
-  function wardenFrames() {
+  function heroFrames() {
     var F = {}, k, t;
     // idle: a slow breath, the scarf lifting, the lantern swaying
     F.idle = [];
@@ -393,20 +413,25 @@
       lying(1),
       lying(0)
     ];
+    if (skin.more) skin.more(F, pose, { FW: FW, FH: FH, OX: OX, OY: OY });
     return F;
   }
 
-  // the Warden's frames, built once for each weapon she holds
-  var warden = {
+  // frames, built once for each of them and each weapon they hold
+  var hero = {
     sets: {}, anchor: { x: 16 + OX, y: 31 + OY }, width: FW, height: FH,
-    build: function (id, viewSet) {
-      id = id || 'shortsword';
-      if (warden.sets[id]) return warden.sets[id];
-      currentWeapon = viewSet || weaponViews(SWORD, 1, 11, true);
-      warden.sets[id] = wardenFrames();
-      return warden.sets[id];
+    build: function (who, id, viewSet) {
+      who = SKINS[who] ? who : 'warden'; id = id || 'shortsword';
+      var key = who + ':' + id;
+      if (hero.sets[key]) return hero.sets[key];
+      skin = SKINS[who]; currentWeapon = viewSet || weaponViews(SWORD, 1, 11, true);
+      hero.sets[key] = heroFrames();
+      skin = SKINS.warden;
+      return hero.sets[key];
     }
   };
+  // the old name, for whoever still asks for the Warden alone
+  var warden = { anchor: hero.anchor, width: FW, height: FH, build: function (id, viewSet) { return hero.build('warden', id, viewSet); } };
 
-  window.Pixels = { PALETTE: PALETTE, art: art, compose: compose, flipH: flipH, silhouette: silhouette, count: count, blank: blank, warden: warden, weaponViews: weaponViews, DUMMY: DUMMY };
+  window.Pixels = { PALETTE: PALETTE, art: art, compose: compose, flipH: flipH, silhouette: silhouette, count: count, blank: blank, warden: warden, hero: hero, addSkin: addSkin, weaponViews: weaponViews, DUMMY: DUMMY };
 })();

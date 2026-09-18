@@ -36,12 +36,16 @@
     }
     var frame = P.blank(W, H), fpen = frame.getContext('2d');
     fpen.imageSmoothingEnabled = false;
-    var sprites = { warden: P.warden.build() };
+    var CL = window.Classes;
+    if (!CL) { env.fail('The undercroft\u2019s four did not load. The other rooms still run.'); return null; }
+    // who goes down: numbers and switches from classes.js, frames from pixels.js for that skin and the weapon held
+    var classId = 'warden', klass = CL.CLASSES.warden;
+    var sprites = { warden: P.hero.build(classId) };
     var flipped = {};
     function facing(set, name, k, dir) {
       var img = sprites[set][name][k];
       if (dir >= 0) return img;
-      var key = weaponId + '/' + set + '/' + name + '/' + k;
+      var key = classId + '/' + weaponId + '/' + set + '/' + name + '/' + k;
       return flipped[key] || (flipped[key] = P.flipH(img));
     }
 
@@ -406,7 +410,7 @@
         var accel = (hero.onGround ? ACCEL : AIR_ACCEL) * (afflictions.chill > 0 ? 0.55 : 1);
         if (move !== 0) {
           hero.vx += move * (onIce ? accel * 0.35 : slick ? accel * 0.55 : accel);
-          var top = RUN_MAX * (afflictions.chill > 0 ? 0.6 : 1);
+          var top = RUN_MAX * klass.run * mods.speed * (afflictions.chill > 0 ? 0.6 : 1);
           if (Math.abs(hero.vx) > top) hero.vx = move * top;
           hero.dir = move;
         } else {
@@ -532,7 +536,7 @@
       shake: shake,
       count: function () { return creatures.length; },
       summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
-      weaponId: function () { return weaponId; }, powerName: function () { return power; },
+      weaponId: function () { return weaponId; }, powerName: function () { return power; }, classId: function () { return classId; },
       blackout: function (on) { blackout = !!on; },
       glow: function (x, y, r, colour, alpha) { stepLit.glows.push({ x: x, y: y, r: r, colour: colour, alpha: alpha }); },
       // a guardian has fallen: whatever it had in the air is gone with it
@@ -815,8 +819,8 @@
 
     function applyRelics() {
       var wasMax = hero.maxHp, wasEnergy = hero.maxEnergy;
-      mods = RL.mods(held);
-      hero.maxHp = 6 + mods.maxHp; hero.maxEnergy = 3 + mods.maxEnergy;
+      mods = RL.mods(held); klass.apply(mods);
+      hero.maxHp = klass.hp + mods.maxHp; hero.maxEnergy = klass.energy + mods.maxEnergy;
       if (hero.maxHp > wasMax) hero.hp += hero.maxHp - wasMax;
       if (hero.maxEnergy > wasEnergy) hero.energy += hero.maxEnergy - wasEnergy;
       hero.hp = Math.min(hero.hp, hero.maxHp); hero.energy = Math.min(hero.energy, hero.maxEnergy);
@@ -930,7 +934,7 @@
     function equip(id) {
       if (!WP.WEAPONS[id]) return false;
       weaponId = id; weapon = WP.WEAPONS[id]; swings = WP.MOVESETS[weapon.moveset];
-      sprites.warden = P.warden.build(id, WP.views(id));
+      sprites.warden = P.hero.build(classId, id, WP.views(id));
       hero.combo = 0; hero.queued = false; ribbon = [];
       return true;
     }
@@ -1691,11 +1695,12 @@
 
     /* ---- the loop and the room's wiring ---- */
 
+    function pickClass(who) { if (CL.CLASSES[who]) { classId = who; klass = CL.CLASSES[who]; } return classId; }
     function begin() {
       state = 'run';
       run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; applyRelics();
-      equip('shortsword'); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
+      equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
@@ -1804,7 +1809,9 @@
       relics: function () { return { power: power, held: held.slice(), mods: mods, choice: choice ? { index: choice.index, offered: choice.relics.map(function (r) { return r.id; }) } : null, casts: casts, shieldUp: shieldUp }; },
       take: function (id) { takeRelic(id); return held.slice(); },
       offer: function (n) { return openChoice(n || 3); },
-      begin: function (seed) { if (seed !== undefined) run.seed = seed; begin(); kills = 0; return run; },
+      begin: function (seed, who) { if (seed !== undefined) run.seed = seed; if (who) pickClass(who); begin(); kills = 0; return run; },
+      pick: function (who) { return pickClass(who); },
+      classes: function () { return CL.ORDER.slice(); },
       hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
       sprites: function () {
         var out = {};

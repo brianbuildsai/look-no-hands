@@ -62,7 +62,7 @@
     }
     return white ? (flip ? set.whiteLeft : set.white) : (flip ? set.left : set.right);
   }
-  function wardenFrames(e) { return window.Pixels.warden.build(e.vars.weaponId, window.Weapons.views(e.vars.weaponId)); }
+  function wardenFrames(e) { return window.Pixels.hero.build(e.vars.classId, e.vars.weaponId, window.Weapons.views(e.vars.weaponId)); }
 
   function drawBrazier(pen, b, cx, cy, tick) {
     var x = Math.round(b.x) - cx, y = Math.round(b.y) - cy;
@@ -343,11 +343,11 @@
   function start(e, arena, rnd) {
     var v = e.vars, mid = (arena.left + arena.right) / 2;
     v.form = 'double'; v.anim = 'idle'; v.frame = 0; v.ghosts = []; v.hands = []; v.braziers = [{ x: arena.left + 58, y: arena.groundY, lit: 0 }, { x: mid, y: arena.groundY - 32, lit: 0 }, { x: arena.right - 58, y: arena.groundY, lit: 0 }];
-    v.weaponId = 'shortsword'; v.power = 'emberwave'; e.w = 10; e.h = 22; e.y = arena.groundY;
+    v.weaponId = 'shortsword'; v.power = 'emberwave'; v.classId = 'warden'; e.w = 10; e.h = 22; e.y = arena.groundY;
   }
   function waking(e, ctx, t) {
     var v = e.vars;
-    if (t === 1) { v.weaponId = ctx.weaponId(); v.power = ctx.powerName(); }
+    if (t === 1) { v.weaponId = ctx.weaponId(); v.power = ctx.powerName(); v.classId = ctx.classId(); }
     // it stands as you stand, and then it draws
     setPose(e, t < 70 ? 'idle' : 'heavy1', t < 70 ? Math.floor(t / 10) % 4 : Math.min(1, Math.floor((t - 70) / 12)));
     e.dir = GD.towards(e, ctx.hero); body(e, ctx, 0.8);
