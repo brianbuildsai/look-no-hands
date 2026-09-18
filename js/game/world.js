@@ -275,8 +275,8 @@
     for (x = 0; x < 38; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(36, k, STONE); L.set(37, k, STONE); }
     [5, 6, 31, 32].forEach(function (px) { L.set(px, g, HAZARD); });
-    for (x = 11; x < 14; x++) L.set(x, g - 3, LEDGE);
-    for (x = 24; x < 27; x++) L.set(x, g - 3, LEDGE);
+    for (x = 11; x < 14; x++) L.set(x, g - 2, LEDGE);
+    for (x = 24; x < 27; x++) L.set(x, g - 2, LEDGE);
     L.spawn = { x: 3 * TILE + 8, y: g * TILE };
     L.door = { x: 34 * TILE + 8, y: g * TILE };
     L.lights.push({ x: 3, y: g - 4 }, { x: 12, y: g - 6 }, { x: 25, y: g - 6 }, { x: 34, y: g - 4 });
@@ -284,9 +284,26 @@
     L.arena = { left: 7 * TILE, right: 31 * TILE, groundY: g * TILE, bossX: 24 * TILE, row: g, pits: [5, 6, 31, 32], edges: [7, 8, 9, 28, 29, 30] };
     return L;
   }
+  // The Frozen Cistern: a roofed hall of slick ice, three ledges and a high perch
+  function frozenCistern(element, floor) {
+    var L = new Level(34, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 34; x++) { L.column(x, g); for (k = 0; k < 4; k++) L.set(x, k, STONE); }
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(32, k, STONE); L.set(33, k, STONE); }
+    for (x = 6; x < 9; x++) L.set(x, g - 2, LEDGE);
+    for (x = 13; x < 16; x++) L.set(x, g - 2, LEDGE);
+    for (x = 17; x < 20; x++) L.set(x, g - 4, LEDGE);
+    for (x = 25; x < 28; x++) L.set(x, g - 2, LEDGE);
+    L.spawn = { x: 3 * TILE + 8, y: g * TILE };
+    L.door = { x: 30 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 4, y: g - 4 }, { x: 11, y: g - 6 }, { x: 22, y: g - 6 }, { x: 29, y: g - 4 });
+    L.boss = true; L.locked = true; L.slick = true; L.title = 'The Frozen Cistern';
+    L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 4 * TILE, bossX: 22 * TILE, row: g };
+    return L;
+  }
   function arena(seed, floor) {
     var element = byName(ARENA_ELEMENT[Math.max(0, Math.min(3, floor - 1))]);
     if (floor === 1) return greatKiln(element, floor);
+    if (floor === 2) return frozenCistern(element, floor);
     var L = new Level(46, element, floor, 3), g = 11, x, k;
     for (x = 0; x < 46; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }

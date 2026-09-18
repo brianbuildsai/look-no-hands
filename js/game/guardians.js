@@ -4,8 +4,8 @@
    file writes itself into, the rig that builds its frames from parts, the
    clock of an attack (a wind-up that tells, the live steps, a recovery),
    the marks on its bar where it changes, and the boxes it is struck in.
-   The Kiln Golem has its own file. Until theirs are written, the wyrm,
-   the herald and the mirror below are the older, simpler kind. */
+   The Kiln Golem and the Rime Wyrm have their own files. Until theirs are
+   written, the herald and the mirror below are the older, simpler kind. */
 (function () {
   'use strict';
 
@@ -20,13 +20,6 @@
   };
 
   var ART = {
-    wyrm: {
-      idle: [
-        ['..............kkkk..............', '............kkppppkk............', '...........kpppwwpppk...........', '..........kppwwlleppk...........', '.........kppwwlllleppkk.........', '........kppwwwllllpppppkk.......', '.......kppwwwwllllpppppppkk.....', '......kppwwwwwllllpppppppppkk...', '.....kqqpwwwwwlllppppppqqqppppk.', '....kqqqppwwwwllppppppqqqqqpppk.', '...kqqqqpppwwwlppppppqqqqqpppk..', '..kqqqqqppppppppppppqqqqqpppk...', '.kqqqqqqpppppppppppqqqqqpppk....', 'kqqqqqqqppppppppppqqqqqpppk.....', 'kkkkkkkkkkkkkkkkkkkkkkkkkk......'],
-        ['..............kkkk..............', '............kkppppkk............', '...........kpppwwpppk...........', '..........kppwwlleppk...........', '.........kppwwlllleppkk.........', '........kppwwwllllpppppkk.......', '.......kppwwwwllllpppppppkk.....', '......kppwwwwwllllpppppppppkk...', '.....kqqpwwwwwlllppppppqqqppppk.', '....kqqqppwwwwllppppppqqqqqpppk.', '...kqqqqpppwwwlppppppqqqqqpppk..', '..kqqqqqppppppppppppqqqqqpppkk..', '.kqqqqqqpppppppppppqqqqqppppppk.', 'kqqqqqqqppppppppppqqqqqppppppk..', 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkk...']
-      ],
-      attack: [['..............kkkk..............', '............kkppppkk............', '...........kpppwwpppk...........', '..........kppwwlleppk...........', '.........kppwwlllleppkk.........', '..kkkkkkkppwwwllllpppppkk.......', '.klllllkppwwwwllllpppppppkk.....', 'kllllllkppwwwwwllllpppppppppkk..', 'kllllllkqqpwwwwwlllppppppqqqppppk', '.klllllkqqqppwwwwllppppppqqqqqpppk', '..kkkkkkqqqqpppwwwlppppppqqqqqpppk', '..kqqqqqppppppppppppqqqqqpppk...', '.kqqqqqqpppppppppppqqqqqpppk....', 'kqqqqqqqppppppppppqqqqqpppk.....', 'kkkkkkkkkkkkkkkkkkkkkkkkkk......']]
-    },
     herald: {
       idle: [
         ['.......kkkkkk.......', '.....kkppppppkk.....', '....kppppppppppk....', '....kpppkkkkpppk....', '....kppkeekkeekppk..', '.....kkpppppppkk....', '......kppppppk......', '.....kppplllppk.....', '....kppplllllppk....', '...kppplllwlllppk...', '...kpppllwwwllppk...', '..kppppllwwwllpppk..', '..kpppplllwlllpppk..', '..kkkppplllllpppkkk.', '....kpppppppppppk...', '....kppppppppppk....', '.....kppppppppk.....', '......kpppppk.......', '.......kpppk........', '........kkk.........'],
@@ -72,7 +65,6 @@
   /* ---- the kinds and their patterns ---- */
 
   var KINDS = {
-    wyrm:   { element: 'frost', name: 'The Frost Wyrm',  w: 30, h: 14, hp: 50, flying: true,  damage: 1 },
     herald: { element: 'storm', name: 'The Storm Herald', w: 14, h: 26, hp: 45, flying: true,  damage: 1 },
     heart:  { element: 'bloom', name: 'The Bramble Heart', w: 26, h: 18, hp: 70, flying: false, damage: 1 },
     mirror: { element: 'void',  name: 'The Void Mirror',  w: 10, h: 22, hp: 55, flying: false, damage: 2 }
@@ -119,33 +111,6 @@
   }
 
   var PATTERNS = {
-    wyrm: function (e, ctx, quick) {
-      var hero = ctx.hero, A = e.arena, tx, ty;
-      if (e.state === 'idle') {
-        e.anim = 'idle';
-        tx = hero.x - towards(e, hero) * 60; ty = A.groundY - 64 + Math.sin(e.clock * 0.04) * 14;
-        e.vx += (tx - e.x) * 0.003; e.vy += (ty - e.y) * 0.004; e.vx *= 0.94; e.vy *= 0.94;
-        if (Math.abs(e.vx) > 0.3) e.dir = e.vx > 0 ? 1 : -1;
-        if (e.cooldown <= 0) { var r = ctx.random(); e.state = r < 0.4 ? 'swoop' : r < 0.7 ? 'hail' : 'breath'; e.wait = 36; }
-      } else if (e.state === 'swoop') {
-        e.anim = 'attack';
-        if (e.wait > 0) { e.vx *= 0.9; e.vy *= 0.9; if (e.wait === 36) { e.dir = towards(e, hero); e.swoopY = hero.y - 10; ctx.telegraph(A.left, e.swoopY - 8, A.right - A.left, 16, 36, '#9fd8ff'); } if (--e.wait === 0) { e.vx = e.dir * 5; e.vy = (e.swoopY - e.y) * 0.05; e.wait = -1; } }
-        else { e.vy += (e.swoopY - (e.y - 4)) * 0.08; e.vy *= 0.8; e.wait--; if ((e.dir > 0 ? e.x > A.right - 20 : e.x < A.left + 20) || e.wait < -80) { e.state = 'idle'; e.cooldown = Math.round(120 * quick); e.vx = 0; } }
-      } else if (e.state === 'hail') {
-        e.anim = 'attack'; e.vx *= 0.9; e.vy *= 0.9;
-        if (e.wait === 36) { e.spots = []; for (var k = 0; k < 6; k++) e.spots.push(hero.x + (ctx.random() - 0.5) * 140); e.spots.forEach(function (sx) { ctx.telegraph(sx - 3, A.groundY - 90, 6, 90, 36, '#9fd8ff'); }); }
-        if (--e.wait === 0) e.spots.forEach(function (sx, i) { ctx.projectile({ x: sx, y: A.groundY - 120 - i * 10, vx: 0, vy: 1 + i * 0.3, life: 140, colour: '#d8f1ff', size: 3, damage: 1, element: 'frost', gravity: 0.06 }); });
-        if (e.wait <= -20) { e.state = 'idle'; e.cooldown = Math.round(140 * quick); }
-      } else if (e.state === 'breath') {
-        e.anim = 'attack'; e.vx *= 0.9; e.vy *= 0.9; e.dir = towards(e, hero);
-        if (e.wait === 36) ctx.telegraph(e.dir > 0 ? e.x : e.x - 70, e.y - 20, 70, 40, 36, '#9fd8ff');
-        if (--e.wait <= 0 && e.wait > -40) { if (e.wait % 3 === 0) ctx.hazard({ x0: e.dir > 0 ? e.x : e.x - 70, x1: e.dir > 0 ? e.x + 70 : e.x, y0: e.y - 20, y1: e.y + 20, life: 4, damage: 1, element: 'frost', colour: '#d8f1ff' }); if (e.wait % 2 === 0) ctx.spark(e.x + e.dir * 10, e.y - 2, '#d8f1ff', 3, 2.4, 26, 0); }
-        if (e.wait <= -40) { e.state = 'idle'; e.cooldown = Math.round(150 * quick); }
-      }
-      e.x += e.vx; e.y += e.vy;
-      if (e.x < A.left + 16) { e.x = A.left + 16; e.vx = Math.abs(e.vx); } if (e.x > A.right - 16) { e.x = A.right - 16; e.vx = -Math.abs(e.vx); }
-      if (e.y > A.groundY - 6) e.y = A.groundY - 6; if (e.y < 24) e.y = 24;
-    },
     herald: function (e, ctx, quick) {
       var hero = ctx.hero, A = e.arena;
       if (e.state === 'idle') {
@@ -253,6 +218,18 @@
     return rows;
   }
 
+  // a piece turned through `steps` headings about its middle, without smoothing
+  function turned(img, steps) {
+    var d = Math.ceil(Math.sqrt(img.width * img.width + img.height * img.height)) + 2, out = [];
+    for (var k = 0; k < steps; k++) {
+      var c = window.Pixels.blank(d, d), g = c.getContext('2d');
+      g.imageSmoothingEnabled = false; g.translate(d / 2, d / 2); g.rotate(k / steps * Math.PI * 2); g.drawImage(img, -Math.round(img.width / 2), -Math.round(img.height / 2));
+      out.push(c);
+    }
+    return out;
+  }
+  function flipV(img) { var c = window.Pixels.blank(img.width, img.height), g = c.getContext('2d'); g.translate(0, img.height); g.scale(1, -1); g.drawImage(img, 0, 0); return c; }
+
   function towardsHero(e, hero) { return hero.x > e.x ? 1 : -1; }
   // a box ahead of a guardian (negative distances are behind it), from `up` above its feet to `down` below
   function front(e, near, far, up, down) {
@@ -312,7 +289,7 @@
     var D = e.spec, F = D.frames;
     if (e.dying) {
       e.dying++; e.boxes = []; e.attack = null;
-      if (e.dying === 2 && D.fall) D.fall(e, ctx);
+      if (e.dying === 2) { ctx.calm(); if (D.fall) D.fall(e, ctx); }
       if (D.dyingStep) D.dyingStep(e, ctx);
       if (e.dying < 80) ctx.light(e.x, e.y - e.h / 2, 60, 0.85);
       if (F.death) { e.anim = 'death'; e.frame = Math.min(F.death.length - 1, Math.floor(e.dying / 60 * F.death.length)); }
@@ -380,5 +357,5 @@
     return S;
   }
 
-  window.Guardians = { KINDS: KINDS, REG: REG, BY_FLOOR: BY_FLOOR, register: register, rig: rig, dots: dots, front: front, towards: towardsHero, build: buildAll, spawn: spawn, step: step, hurtBoxes: hurtBoxes, command: command };
+  window.Guardians = { KINDS: KINDS, REG: REG, BY_FLOOR: BY_FLOOR, register: register, rig: rig, dots: dots, palette: paletteWith, turned: turned, flipV: flipV, front: front, towards: towardsHero, build: buildAll, spawn: spawn, step: step, hurtBoxes: hurtBoxes, command: command };
 })();
