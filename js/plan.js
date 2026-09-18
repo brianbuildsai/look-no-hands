@@ -291,6 +291,21 @@
     pen.restore();
   };
 
+  // room 26: a crystal of six branches, each with side branches
+  glyphs.six = function (pen, s) {
+    for (var k = 0; k < 6; k++) {
+      var a = k * Math.PI / 3, c = Math.cos(a), sn = Math.sin(a), L = s * 0.45;
+      pen.beginPath(); pen.moveTo(0, 0); pen.lineTo(c * L, sn * L); pen.stroke();
+      for (var j = 1; j <= 3; j++) {
+        var t = j / 4 * L, side = L * (0.28 - j * 0.06);
+        for (var d = -1; d <= 1; d += 2) {
+          var b = a + d * Math.PI / 3;
+          pen.beginPath(); pen.moveTo(c * t, sn * t); pen.lineTo(c * t + Math.cos(b) * side, sn * t + Math.sin(b) * side); pen.stroke();
+        }
+      }
+    }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

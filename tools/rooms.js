@@ -570,6 +570,33 @@ module.exports = {
   </div>
 </div>`,
       wall: 'This is how films are lit now, and it is mostly patience: James Kajiya set the method out in 1986 and nothing about it has needed inventing since, only faster machines. Every work in this building was worked out rather than recorded. This one lets you watch the working. Thank you for coming. The way out is also the way in.'
+    },
+    {
+      number: 26,
+      slug: 'six',
+      ready: true,
+      title: 'Six',
+      line: 'Grow a snowflake and steer it with the weather.',
+      description: 'A snow crystal grows from a single cell of ice on a hexagonal grid, by Reiter\u2019s model. Steer it with humidity and cold as it grows: it keeps a record of every change in its shape, and no two are alike.',
+      canvasLabel: 'A six-pointed snow crystal growing outward from its centre on black, drawn in pale blue-white, its branches sprouting side-branches as it grows.',
+      medium: '2026. <span class="live" data-live="six.ice">1</span> cells of ice after <span class="live" data-live="six.steps">0</span> steps. Humidity <span class="live" data-live="six.humidity">0.40</span>, cold <span class="live" data-live="six.cold">1.0</span>. Nothing in the rules mentions six.',
+      text: 'Every cell of air holds a little water. Ice, and the air touching ice, keeps its water and gathers more; everywhere else the water spreads out evenly. That is all it takes. Whether it grows needles, ferns or plates depends only on how much water there is and how fast it arrives, and a crystal that meets changing weather as it grows writes every change into its shape. Steer it with the two dials. Left alone, the weather wanders on its own.',
+      controls: `
+<div class="controls" role="group" aria-label="Six controls">
+  <label class="dial">
+    <span class="dial__label"><span>Humidity</span><span data-six-humidity-value></span></span>
+    <input class="dial__input" type="range" min="30" max="80" step="1" value="40" data-six-humidity>
+  </label>
+  <label class="dial">
+    <span class="dial__label"><span>Cold</span><span data-six-cold-value></span></span>
+    <input class="dial__input" type="range" min="2" max="60" step="1" value="10" data-six-cold>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-six-drift aria-pressed="true">Let the weather wander</button>
+    <button class="btn" type="button" data-six-again>Another</button>
+  </div>
+</div>`,
+      wall: 'Wilson Bentley photographed five thousand snow crystals in Vermont between 1885 and 1931 and found no two the same, and Ukichiro Nakaya grew them to order in a cold room in the 1930s and showed that their shape follows the weather they fall through. The model here is Clifford Reiter\u2019s, from 2005: three rules on a honeycomb, and the six comes free.'
     }
   ]
 };
