@@ -185,7 +185,7 @@
     for (x = 12; x < 18; x++) L.set(x, g - 1, STONE);                       // a dais for the three
     L.spawn = { x: 4 * TILE + 8, y: g * TILE };
     L.door = { x: 25 * TILE + 8, y: g * TILE };
-    L.font = { x: 8 * TILE + 8, y: g * TILE };
+    L.fountain = { x: 8 * TILE + 8, y: g * TILE };
     L.plinths = [{ x: 12 * TILE + 8, y: (g - 1) * TILE }, { x: 15 * TILE, y: (g - 1) * TILE }, { x: 17 * TILE + 8, y: (g - 1) * TILE }];
     L.lights.push({ x: 5, y: g - 5 }, { x: 15, y: g - 6 }, { x: 24, y: g - 5 });
     L.portal = true; L.sanctuary = true; L.title = 'A still place';

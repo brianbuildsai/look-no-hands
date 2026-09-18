@@ -171,18 +171,19 @@
     var level = null, run = { seed: 36, floor: 1, section: 0, stage: 0 }, flames = 3;
     // the way down: two sections and a guardian on each of three floors, then the vault
     var STAGES = [
-      { floor: 1, section: 0, element: 'ember' }, { floor: 1, section: 1, element: 'ember', fountain: true }, { floor: 1, boss: true },
-      { floor: 2, section: 0, element: 'frost' }, { floor: 2, section: 1, element: 'bloom', fountain: true }, { floor: 2, boss: true },
-      { floor: 3, section: 0, element: 'storm' }, { floor: 3, section: 1, element: 'void', fountain: true }, { floor: 3, boss: true },
-      { floor: 4, section: 0, element: 'void', fountain: true }, { floor: 4, boss: true }
+      { floor: 1, section: 0, element: 'ember' }, { floor: 1, sanctuary: true, element: 'ember' }, { floor: 1, boss: true },
+      { floor: 2, sanctuary: true, element: 'frost', boost: true }, { floor: 2, section: 0, element: 'frost' }, { floor: 2, sanctuary: true, element: 'bloom' }, { floor: 2, section: 1, element: 'bloom' }, { floor: 2, sanctuary: true, element: 'frost' }, { floor: 2, boss: true },
+      { floor: 3, sanctuary: true, element: 'storm', boost: true }, { floor: 3, section: 0, element: 'storm' }, { floor: 3, sanctuary: true, element: 'void' }, { floor: 3, section: 1, element: 'void' }, { floor: 3, sanctuary: true, element: 'storm' }, { floor: 3, boss: true },
+      { floor: 4, sanctuary: true, element: 'void', boost: true }, { floor: 4, boss: true }
     ];
-    function syncStage() { var st = STAGES[run.stage]; run.floor = st.floor; run.section = st.boss ? 3 : st.section; }
+
+    function syncStage() { var st = STAGES[run.stage]; run.floor = st.floor; run.section = st.boss ? 3 : st.section || 0; }
     var element = WD.ELEMENTS[0];
 
     function loadSection() {
       syncStage();
       var st = STAGES[run.stage];
-      level = st.boss ? WD.arena(run.seed, st.floor) : WD.explore(run.seed, st.floor, st.section, st.element);
+      level = st.boss ? WD.arena(run.seed, st.floor) : st.sanctuary ? WD.sanctuary(run.seed, st.floor, st.element) : WD.explore(run.seed, st.floor, st.section, st.element);
       seenCells = {};
       element = level.element;
       if (SND && SND.isOn()) { SND.music(element.name); SND.tension(run.section >= 3 ? 0.4 : 0); }
@@ -482,7 +483,7 @@
       if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('pickup'); }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
       if (!level.portal && hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
-      stepPortal();
+      stepPortal(); stepPerks();
       if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) {
         if (flames > 1) {
           flames--;
@@ -581,7 +582,7 @@
       var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
       for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
       boss = null; hazards = []; telegraphs = []; blackout = false; stepLit.lights.length = 0; stepLit.glows.length = 0;
-      placeChests();
+      placeChests(); placePerks();
       if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd); creatures.push(boss); sfx('roar'); }
     }
     function stepHazards() {
@@ -603,8 +604,7 @@
         else {
           dropPickup({ kind: 'weapon', id: WP.roll(random, run.floor + 1, true, weaponId) }, boss.x, level.arena.groundY - 20);
           for (var hk = 0; hk < 3; hk++) dropPickup({ kind: 'heart', id: 'heart' }, boss.x + (hk - 1) * 14, level.arena.groundY - 24);
-          afterChoice = 'altar';
-          openChoice(3, true);
+          openAltar();
         }
       }
     }
@@ -1315,7 +1315,6 @@
       fpen.globalAlpha = 1;
       fpen.fillStyle = '#ffffff'; for (k = 0; k < 3; k++) { a = tick * 0.09 + k * 2.1; fpen.fillRect(px + Math.round(Math.cos(a) * 4), py + Math.round(Math.sin(a) * 8), 1, 1); }
       light(level.door.x, level.door.y - 16, 52 + 4 * Math.sin(tick * 0.1), 0.95); glow(level.door.x, level.door.y - 16, 30, element.glow, 0.3 + 0.08 * Math.sin(tick * 0.1));
-      if (nearPortal && !prompt) text('UP: STEP THROUGH', px, py - 30, '#ffffff', 1, 'center');
     }
     // when it is near but not in sight, a glimmer at the edge of the picture, on the side it lies
     function drawPortalHint() {
@@ -1343,6 +1342,82 @@
         if (mine) { fpen.fillStyle = '#ffb347'; fpen.fillRect(x + 2 + Math.round((hero.x / TILE - 1 - c.cx * G.cw) / G.cw * 4), y + 2, 1, 1); }
       }
       if (mods.map) for (k = 0; k < chests.length; k++) if (!chests[k].open) { var qx = Math.floor((chests[k].x / TILE - 1) / G.cw), qy = Math.floor((chests[k].y / TILE - 2) / G.ch); fpen.fillStyle = rarity(chests[k].rarity).colour; fpen.fillRect(x0 + qx * cw + 6, y0 + qy * ch + 1, 1, 1); }
+    }
+
+    /* ---- the sanctuary between: a font, and three perks turning in their auras over their plinths ---- */
+
+    var perks = [], nearPerk = null, visited = {};
+    function placePerks() {
+      perks = []; nearPerk = null;
+      if (!level.sanctuary) return;
+      var st = STAGES[run.stage];
+      if (visited[run.stage]) { level.taken = true; return; }     // risen here again after a death: the font still runs, the plinths are bare
+      var rnd = WD.makeRandom(run.seed * 977 + run.stage * 131 + held.length * 7 + 5);
+      var offered = RL.offer(held, element.name, RL.POWERS[power].element, rnd, 3, run.floor, !!st.boost);
+      if (!offered.length) { level.taken = true; return; }
+      offered.forEach(function (r, k) { var pl = level.plinths[k]; perks.push({ relic: r, x: pl.x, y: pl.y, phase: k * 2.1, gone: 0 }); });
+    }
+    function stepPerks() {
+      nearPerk = null;
+      if (!level.sanctuary) return;
+      var k, p;
+      for (k = perks.length - 1; k >= 0; k--) {
+        p = perks[k];
+        if (p.gone) { p.gone++; if (p.gone > 30) perks.splice(k, 1); continue; }
+        var r = rarity(p.relic.rarity), by = p.y - 30 + Math.sin(tick * 0.05 + p.phase) * 3;
+        if (tick % (r.rank >= 4 ? 2 : 4) === 0) { var a = random() * 6.2832; particles.push({ x: p.x + Math.cos(a) * 12, y: by + Math.sin(a) * 12, vx: -Math.cos(a) * 0.3, vy: -0.35 - random() * 0.3, life: 26, max: 26, colour: random() < 0.3 ? '#ffffff' : r.colour, size: 1, gravity: -0.004 }); }
+        if (!level.taken && hero.alive && Math.abs(hero.x - p.x) < 13 && Math.abs(hero.y - p.y) < 30 && (!nearPerk || Math.abs(hero.x - p.x) < Math.abs(hero.x - nearPerk.x))) nearPerk = p;
+      }
+      if (nearPerk && hit('up')) {
+        var took = nearPerk; level.taken = true; visited[run.stage] = true; perks.splice(perks.indexOf(took), 1);
+        perks.forEach(function (q) { q.gone = 1; spark(q.x, q.y - 30, '#5c5a56', 14, 1.4, 24, 0.02); });
+        takePickup({ kind: 'relic', id: took.relic.id, rarity: took.relic.rarity });
+        rings.push({ x: took.x, y: took.y - 30, r: 4, grow: 3, life: 16, max: 16, colour: rarity(took.relic.rarity).colour });
+        banner = banner || { t: 0, text: took.relic.name, sub: 'THE WAY ON IS OPEN', colour: rarity(took.relic.rarity).colour };
+        sfx('chest'); nearPerk = null;
+      }
+    }
+    function drawPerks() {
+      if (!level.sanctuary) return;
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, j;
+      // the plinths stand whether or not anything is on them
+      (level.plinths || []).forEach(function (pl) { var x = Math.round(pl.x) - cx, y = Math.round(pl.y) - cy; fpen.fillStyle = element.stone[3]; fpen.fillRect(x - 6, y - 8, 12, 8); fpen.fillStyle = element.stone[2]; fpen.fillRect(x - 8, y - 10, 16, 2); fpen.fillStyle = element.top; fpen.fillRect(x - 8, y - 10, 16, 1); });
+      for (k = 0; k < perks.length; k++) {
+        var p = perks[k], r = rarity(p.relic.rarity), bob = Math.sin(tick * 0.05 + p.phase) * 3, x = Math.round(p.x) - cx, y = Math.round(p.y - 30 + bob) - cy, near = p === nearPerk, fade = p.gone ? Math.max(0, 1 - p.gone / 30) : 1;
+        fpen.globalAlpha = fade;
+        // rays turning behind it, more of them the rarer it is
+        var rays = 4 + r.rank * 2;
+        fpen.strokeStyle = r.colour; fpen.lineWidth = 1;
+        for (j = 0; j < rays; j++) { var a = tick * 0.02 * (k % 2 ? -1 : 1) + j / rays * 6.2832, r0 = 8, r1 = 13 + r.rank * 2 + (j % 2) * 3 + (near ? 3 : 0); fpen.globalAlpha = fade * (0.25 + 0.2 * Math.sin(tick * 0.1 + j)); fpen.beginPath(); fpen.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); fpen.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); fpen.stroke(); }
+        fpen.globalAlpha = fade;
+        // the thing itself: a cut stone in its rarity's colour, turning, so it narrows and widens
+        var wide = Math.abs(Math.cos(tick * 0.04 + p.phase)), hw = Math.max(1, Math.round(5 * wide));
+        fpen.fillStyle = '#0b0b12'; fpen.fillRect(x - hw - 1, y - 7, hw * 2 + 2, 14);
+        fpen.fillStyle = r.colour; fpen.fillRect(x - hw, y - 6, hw * 2, 12);
+        fpen.fillStyle = '#0b0b12'; fpen.fillRect(x - hw - 1, y - 7, 2, 3); fpen.fillRect(x + hw - 1, y - 7, 2, 3); fpen.fillRect(x - hw - 1, y + 4, 2, 3); fpen.fillRect(x + hw - 1, y + 4, 2, 3);
+        fpen.fillStyle = '#ffffff'; fpen.fillRect(x - Math.max(0, hw - 2), y - 4, Math.max(1, hw - 1), 3); fpen.fillRect(x, y + 1, 1, 2);
+        if (r.rank >= 4) { var sh = (tick * 0.6 + k * 7) % 16 - 2; fpen.fillStyle = '#fff3b0'; if (sh > -6 && sh < 6) fpen.fillRect(x - hw, y + Math.round(sh), hw * 2, 1); }
+        fpen.globalAlpha = 1;
+        if (!p.gone) { light(p.x, p.y - 30 + bob, 34 + r.rank * 4, 0.9); glow(p.x, p.y - 30 + bob, 16 + r.rank * 4 + (near ? 6 : 0), r.colour, 0.3 + r.rank * 0.05 + 0.06 * Math.sin(tick * 0.12 + k)); }
+      }
+    }
+    // what the near one is, written over the dark so it can be read
+    function drawPerkLabel() {
+      if (!level.sanctuary || state !== 'run') return;
+      var cx = Math.round(cam.x), cy = Math.round(cam.y);
+      if (nearPerk && !prompt) {
+        var n = nearPerk, nr = rarity(n.relic.rarity), tx = Math.max(90, Math.min(W - 90, Math.round(n.x) - cx)), ty = Math.round(n.y) - cy - 78;
+        text(n.relic.name.toUpperCase(), tx, ty, nr.colour, 2, 'center');
+        text(nr.name, tx, ty + 14, nr.colour, 1, 'center');
+        wrapText(n.relic.line.toUpperCase(), tx, ty + 23, 44);
+        text('UP: TAKE IT', tx, ty + 23 + 16, '#ffffff', 1, 'center');
+      } else if (level.sanctuary && !level.taken && perks.length) text('THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
+    }
+    // a line of the small type broken at spaces, two lines at most
+    function wrapText(s, x, y, width) {
+      if (s.length <= width) { text(s, x, y, '#c4c1ba', 1, 'center'); return; }
+      var cut = s.lastIndexOf(' ', width); if (cut < 0) cut = width;
+      text(s.slice(0, cut), x, y, '#c4c1ba', 1, 'center'); text(s.slice(cut + 1, cut + 1 + width + 8), x, y + 8, '#c4c1ba', 1, 'center');
     }
 
     function drawMap() {
@@ -1581,7 +1656,7 @@
         light(lx, ly, 46, 0.7);
         if (tick % 4 === 0 && random() < 0.5) ember(lx, ly - 4);
       }
-      if (level.portal) { drawPortal(); return; }
+      if (level.portal) { drawPortal(); drawPerks(); return; }
       var dx = Math.round(level.door.x) - cx, dy = Math.round(level.door.y) - cy;
       fpen.fillStyle = element.stone[3]; fpen.fillRect(dx - 9, dy - 26, 18, 26);
       fpen.fillStyle = '#030306'; fpen.fillRect(dx - 7, dy - 24, 14, 24);
@@ -1612,7 +1687,7 @@
       }
       for (k = 0; k < 3; k++) { var flx = 8 + hero.maxHp * 9 + k * 7; fpen.fillStyle = k < flames ? '#ffb347' : '#3a3936'; fpen.fillRect(flx, 7, 3, 5); fpen.fillRect(flx + 1, 5, 1, 2); if (k < flames) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(flx + 1, 9, 1, 2); } }
       for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
-      text(element.title + '  ' + run.floor + '-' + (run.section >= 3 ? 'GUARDIAN' : (run.section + 1)), W - 4, 4, '#8f8d88', 1, 'right');
+      text(level.sanctuary ? 'A STILL PLACE' : element.title + '  ' + run.floor + '-' + (run.section >= 3 ? 'GUARDIAN' : (run.section + 1)), W - 4, 4, '#8f8d88', 1, 'right');
       text(timeText(Math.floor(clockSeconds)) + '  SEED ' + run.seed, W - 4, 12, '#5c5a56', 1, 'right');
       var pw = RL.POWERS[power];
       fpen.fillStyle = pw.colour; fpen.fillRect(4 + hero.maxEnergy * 6 + 4, 16, 4, 4);
@@ -1667,7 +1742,8 @@
       drawFlash();
       drawTransition();
       drawHud();
-      drawMap(); drawChambers(); drawPortalHint();
+      drawMap(); drawChambers(); drawPortalHint(); drawPerkLabel();
+      if (nearPortal && !prompt && state === 'run') text('UP: STEP THROUGH', Math.round(level.door.x - cam.x), Math.round(level.door.y - cam.y) - 46, '#ffffff', 1, 'center');
       drawBossBar();
       drawBanner();
       drawChoice();
@@ -1849,7 +1925,7 @@
     function begin() {
       state = 'run';
       run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
-      held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; applyRelics();
+      held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; visited = {}; applyRelics();
       equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
@@ -1949,6 +2025,7 @@
       lastHurtBy: function () { return lastHurtBy; },
       guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length, targets: boxesOf(boss).map(function (b) { return { x: Math.round((b.x0 + b.x1) / 2), y: Math.round((b.y0 + b.y1) / 2), mult: b.onHit ? 3 : b.mult }; }), balls: boss.vars && boss.vars.balls ? boss.vars.balls.map(function (b) { return { x: Math.round(b.x), y: Math.round(b.y), struck: b.struck }; }) : undefined } : null; },
       stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
+      perks: function () { return { near: nearPerk ? nearPerk.relic.id : null, taken: !!level.taken, offered: perks.map(function (p) { return { id: p.relic.id, rarity: p.relic.rarity, x: p.x, y: p.y }; }) }; },
       portal: function () { return { x: level.door.x, y: level.door.y, portal: !!level.portal, open: portalOpen(), grid: level.grid || null, seen: Object.keys(seenCells).length, rows: level.rows, cols: level.cols, chests: chests.length, creatures: creatures.length }; },
       arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
