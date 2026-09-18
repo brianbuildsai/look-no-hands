@@ -182,7 +182,8 @@
     function loadSection() {
       syncStage();
       var st = STAGES[run.stage];
-      level = st.boss ? WD.arena(run.seed, st.floor) : WD.generate(run.seed, st.floor, st.section, st.element, st.fountain);
+      level = st.boss ? WD.arena(run.seed, st.floor) : WD.explore(run.seed, st.floor, st.section, st.element);
+      seenCells = {};
       element = level.element;
       if (SND && SND.isOn()) { SND.music(element.name); SND.tension(run.section >= 3 ? 0.4 : 0); }
       makeTiles(element);
@@ -480,7 +481,8 @@
       if (shieldUp > 0) shieldUp--;
       if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('pickup'); }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
-      if (hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
+      if (!level.portal && hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
+      stepPortal();
       if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) {
         if (flames > 1) {
           flames--;
@@ -657,7 +659,7 @@
       var k, e;
       for (k = creatures.length - 1; k >= 0; k--) {
         e = creatures[k];
-        if (Math.abs(e.x - hero.x) > W * 1.2 && !e.seen) continue;   // asleep until the Warden is near
+        if ((Math.abs(e.x - hero.x) > W * 1.2 || Math.abs(e.y - hero.y) > H * 0.9) && !e.seen) continue;   // asleep until she is near
         if (e.boss) GD.step(e, ctx); else AC.step(e, ctx);
         if (e.boxes && e.boxes.length && hero.alive && !e.hitHero) {
           var hb = heroHurtBox();
@@ -783,7 +785,7 @@
       for (k = 0; k < creatures.length; k++) {
         e = creatures[k];
         if (e.boss && e.spec.scenery) e.spec.scenery(e, { pen: fpen, cx: cx, cy: cy, tick: tick });
-        if ((e.x < cam.x - 40 || e.x > cam.x + W + 40) && !(e.boss && e.spec.draw)) continue;
+        if ((e.x < cam.x - 40 || e.x > cam.x + W + 40 || e.y < cam.y - 50 || e.y > cam.y + H + 60) && !(e.boss && e.spec.draw)) continue;
         var set, frames, img, scale, w, h, x, y;
         if (e.boss && e.spec.draw) {
           e.spec.draw(e, { pen: fpen, cx: cx, cy: cy, tick: tick });
@@ -1284,8 +1286,67 @@
       if (t > 60 && (tick >> 4) % 2 === 0) text('PRESS TO GO ON', W / 2, H - 16, '#8f8d88', 1, 'center');
     }
     // Standish's almanac: the whole floor, small, at the top of your sight
+    /* ---- the portal: a turning ring of the element's colour, somewhere in the stage ---- */
+
+    var seenCells = {}, nearPortal = false;
+    function portalOpen() { return !level.locked && !(level.sanctuary && !level.taken); }
+    function stepPortal() {
+      nearPortal = false;
+      if (!level.portal || !hero.alive || transition !== 0) return;
+      var px = level.door.x, py = level.door.y - 16, open = portalOpen();
+      if (open && tick % 2 === 0) { var a = random() * 6.2832, r = 22 + random() * 10; particles.push({ x: px + Math.cos(a) * r, y: py + Math.sin(a) * r * 1.3, vx: -Math.cos(a) * r / 18 - Math.sin(a) * 0.8, vy: -Math.sin(a) * r * 1.3 / 18 + Math.cos(a) * 0.8, life: 18, max: 18, colour: random() < 0.4 ? '#ffffff' : element.glow, size: 1, gravity: 0 }); }
+      if (open && Math.abs(hero.x - px) < 12 && Math.abs(hero.y - level.door.y) < 26) { nearPortal = true; if (hit('up') && !prompt) { transition = 1; sfx('door'); flash = { colour: element.glow, life: 10 }; } }
+      // the chambers she has stood in are drawn on her map
+      if (level.grid) { var G = level.grid, ccx = Math.floor((hero.x / TILE - 1) / G.cw), ccy = Math.floor(((hero.y - 4) / TILE - 1) / G.ch); if (ccx >= 0 && ccy >= 0 && ccx < G.gw && ccy < G.gh) seenCells[ccy * G.gw + ccx] = true; }
+    }
+    function drawPortal() {
+      if (!level.portal) return;
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), px = Math.round(level.door.x) - cx, py = Math.round(level.door.y) - 16 - cy, open = portalOpen(), k, a;
+      // a low plinth of the floor's own stone
+      fpen.fillStyle = element.stone[2]; fpen.fillRect(px - 12, py + 14, 24, 2); fpen.fillStyle = element.stone[3]; fpen.fillRect(px - 10, py + 12, 20, 2);
+      if (!open) { fpen.strokeStyle = element.stone[1]; fpen.lineWidth = 1; fpen.beginPath(); fpen.ellipse(px, py, 9, 14, 0, 0, 6.2832); fpen.stroke(); return; }
+      // the dark inside it, then three rings of broken arcs turning against each other
+      fpen.fillStyle = '#05040a'; fpen.beginPath(); fpen.ellipse(px, py, 8, 13, 0, 0, 6.2832); fpen.fill();
+      for (k = 0; k < 3; k++) {
+        var rx = 9 + k * 2.5, ry = 14 + k * 3, spin = tick * (0.05 + k * 0.02) * (k % 2 ? -1 : 1);
+        fpen.strokeStyle = k === 0 ? '#ffffff' : element.glow; fpen.globalAlpha = k === 2 ? 0.5 : 1; fpen.lineWidth = k === 0 ? 1 : 1.5;
+        for (a = 0; a < 3; a++) { fpen.beginPath(); fpen.ellipse(px, py, rx, ry, 0, spin + a * 2.094, spin + a * 2.094 + 1.3); fpen.stroke(); }
+      }
+      fpen.globalAlpha = 1;
+      fpen.fillStyle = '#ffffff'; for (k = 0; k < 3; k++) { a = tick * 0.09 + k * 2.1; fpen.fillRect(px + Math.round(Math.cos(a) * 4), py + Math.round(Math.sin(a) * 8), 1, 1); }
+      light(level.door.x, level.door.y - 16, 52 + 4 * Math.sin(tick * 0.1), 0.95); glow(level.door.x, level.door.y - 16, 30, element.glow, 0.3 + 0.08 * Math.sin(tick * 0.1));
+      if (nearPortal && !prompt) text('UP: STEP THROUGH', px, py - 30, '#ffffff', 1, 'center');
+    }
+    // when it is near but not in sight, a glimmer at the edge of the picture, on the side it lies
+    function drawPortalHint() {
+      if (!level.portal || !level.grid || !portalOpen() || state !== 'run') return;
+      var dx = level.door.x - (cam.x + W / 2), dy = level.door.y - 16 - (cam.y + H / 2), far = Math.sqrt(dx * dx + dy * dy);
+      if (Math.abs(dx) < W / 2 - 8 && Math.abs(dy) < H / 2 - 8) return;
+      if (far > 460) return;
+      var s = Math.min((W / 2 - 7) / Math.max(1, Math.abs(dx)), (H / 2 - 7) / Math.max(1, Math.abs(dy))), ex = Math.round(W / 2 + dx * s), ey = Math.round(H / 2 + dy * s), strength = (1 - far / 460) * (0.5 + 0.5 * Math.sin(tick * 0.12));
+      fpen.globalAlpha = Math.max(0, strength); fpen.fillStyle = element.glow; fpen.fillRect(ex - 2, ey - 2, 5, 5); fpen.fillStyle = '#ffffff'; fpen.fillRect(ex - 1, ey - 1, 3, 3); fpen.globalAlpha = 1;
+    }
+    // the chambers she has seen, small, under the clock; the Almanac shows them all, and the portal
+    function drawChambers() {
+      if (!level.grid || state !== 'run') return;
+      var G = level.grid, cw = 9, ch = 6, x0 = W - 8 - G.gw * cw, y0 = 24, k;
+      var here = { cx: Math.floor((hero.x / TILE - 1) / G.cw), cy: Math.floor(((hero.y - 4) / TILE - 1) / G.ch) };
+      for (k = 0; k < G.cells.length; k++) {
+        var c = G.cells[k], known = mods.map || seenCells[c.cy * G.gw + c.cx];
+        if (c.solid || !known) continue;
+        var x = x0 + c.cx * cw, y = y0 + c.cy * ch, mine = c.cx === here.cx && c.cy === here.cy;
+        fpen.fillStyle = mine ? '#ffdc9a' : '#5c5a56'; fpen.fillRect(x, y, cw - 1, ch - 1);
+        fpen.fillStyle = '#0b0b12'; fpen.fillRect(x + 1, y + 1, cw - 3, ch - 3);
+        fpen.fillStyle = mine ? '#ffdc9a' : '#5c5a56';
+        if (c.r) fpen.fillRect(x + cw - 2, y + 2, 2, 1); if (c.l) fpen.fillRect(x - 1, y + 2, 2, 1); if (c.d) fpen.fillRect(x + 3, y + ch - 2, 2, 2); if (c.u) fpen.fillRect(x + 3, y - 1, 2, 2);
+        if (c.cx === G.portal.cx && c.cy === G.portal.cy) { fpen.fillStyle = (tick >> 3) % 2 ? '#ffffff' : element.glow; fpen.fillRect(x + 3, y + 1, 2, 3); }
+        if (mine) { fpen.fillStyle = '#ffb347'; fpen.fillRect(x + 2 + Math.round((hero.x / TILE - 1 - c.cx * G.cw) / G.cw * 4), y + 2, 1, 1); }
+      }
+      if (mods.map) for (k = 0; k < chests.length; k++) if (!chests[k].open) { var qx = Math.floor((chests[k].x / TILE - 1) / G.cw), qy = Math.floor((chests[k].y / TILE - 2) / G.ch); fpen.fillStyle = rarity(chests[k].rarity).colour; fpen.fillRect(x0 + qx * cw + 6, y0 + qy * ch + 1, 1, 1); }
+    }
+
     function drawMap() {
-      if (!mods.map || state !== 'run') return;
+      if (!mods.map || state !== 'run' || level.grid) return;
       var mw = Math.min(180, level.cols), scale = mw / level.cols, x0 = Math.round(W / 2 - mw / 2), y0 = 22, x, y;
       fpen.fillStyle = 'rgba(0,0,0,0.5)'; fpen.fillRect(x0 - 1, y0 - 1, mw + 2, level.rows + 2);
       fpen.fillStyle = '#5c5a56';
@@ -1384,7 +1445,7 @@
 
     var cam = { x: 0, y: 0, shake: 0 };
     function stepCamera(snap) {
-      var tx = hero.x + hero.dir * 28 - W / 2, ty = hero.y - H * 0.62;
+      var tx = hero.x + hero.dir * 28 - W / 2, ty = hero.y - H * 0.62 + Math.max(0, Math.min(46, (hero.vy - 2.5) * 16));
       tx = Math.max(0, Math.min(level.cols * TILE - W, tx));
       ty = Math.max(0, Math.min(level.rows * TILE - H, ty));
       if (snap) { cam.x = tx; cam.y = ty; return; }
@@ -1438,42 +1499,45 @@
       var grad = fpen.createLinearGradient(0, 0, 0, H);
       grad.addColorStop(0, element.sky[0]); grad.addColorStop(1, element.sky[1]);
       fpen.fillStyle = grad; fpen.fillRect(0, 0, W, H);
-      var ox = Math.round(cam.x * 0.35) % 96, oy = Math.round(cam.y * 0.2), k, ax;
-      fpen.fillStyle = element.stone[3];
-      for (k = -1; k < W / 96 + 1; k++) {
-        ax = k * 96 - ox;
-        fpen.fillRect(ax, 40 - oy, 10, H);
-        fpen.beginPath(); fpen.arc(ax + 48, 64 - oy, 43, Math.PI, 0); fpen.fill();
-      }
-      fpen.fillStyle = element.sky[0];
-      for (k = -1; k < W / 96 + 1; k++) { ax = k * 96 - ox; fpen.beginPath(); fpen.arc(ax + 48, 64 - oy, 38, Math.PI, 0); fpen.fill(); }
-      // what hangs, glows or grows in the arches
-      var name = element.hazard;
-      for (k = -1; k < W / 96 + 1; k++) {
-        ax = k * 96 - ox + 48;
-        var seed = ((k + Math.floor(cam.x * 0.35 / 96)) * 31 + 7) % 5;
-        if (name === 'lava') {
-          fpen.fillStyle = element.hazardColours[0]; fpen.fillRect(ax - 14, 118 - oy, 28, 5);
-          fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 10 + ((tick >> 3) + seed) % 6, 119 - oy, 4, 2);
-          fpen.fillStyle = 'rgba(255,106,43,0.08)'; fpen.fillRect(ax - 30, 70 - oy, 60, 50);
-        } else if (name === 'ice') {
-          fpen.fillStyle = element.hazardColours[1];
-          for (var i = 0; i < 4; i++) { var ih = 6 + ((seed + i * 3) % 4) * 4; fpen.fillRect(ax - 20 + i * 12, 26 - oy, 2, ih); fpen.fillRect(ax - 20 + i * 12, 26 - oy + ih, 1, 2); }
-        } else if (name === 'rail') {
-          fpen.fillStyle = (tick + k * 17) % 90 < 4 ? element.hazardColours[2] : element.hazardColours[0];
-          fpen.fillRect(ax - 40, 100 - oy, 80, 1);
-          fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 1, 100 - oy, 2, 12); fpen.fillRect(ax - 3, 111 - oy, 6, 2);
-        } else if (name === 'spores') {
-          fpen.fillStyle = element.hazardColours[0];
-          for (var v = 0; v < 3; v++) { var vh = 20 + ((seed + v * 5) % 5) * 8, vx = ax - 24 + v * 20; fpen.fillRect(vx, 30 - oy, 1, vh); fpen.fillRect(vx - 1, 30 - oy + vh - 4, 3, 2); if (v === 1) fpen.fillRect(vx + 1, 30 - oy + (vh >> 1), 2, 1); }
-        } else {
-          fpen.fillStyle = element.hazardColours[1];
-          for (var st = 0; st < 5; st++) { var sx = ax - 40 + ((seed * 7 + st * 19) % 80), sy = 20 + ((seed * 13 + st * 23) % 90) - oy; if ((tick + st * 11 + seed) % 120 < 90) fpen.fillRect(sx, sy, 1, 1); }
+      var ox = Math.round(cam.x * 0.35) % 96, band = 184, oyAll = Math.round(cam.y * 0.2), k, ax;
+      for (var oy = oyAll; 40 - oy < H; oy -= band) {
+        fpen.fillStyle = element.stone[3];
+        for (k = -1; k < W / 96 + 1; k++) {
+          ax = k * 96 - ox;
+          fpen.fillRect(ax, 40 - oy, 10, H);
+          fpen.beginPath(); fpen.arc(ax + 48, 64 - oy, 43, Math.PI, 0); fpen.fill();
         }
+        fpen.fillStyle = element.sky[0];
+        for (k = -1; k < W / 96 + 1; k++) { ax = k * 96 - ox; fpen.beginPath(); fpen.arc(ax + 48, 64 - oy, 38, Math.PI, 0); fpen.fill(); }
+        // what hangs, glows or grows in the arches
+        var name = element.hazard;
+        for (k = -1; k < W / 96 + 1; k++) {
+          ax = k * 96 - ox + 48;
+          var seed = ((k + Math.floor(cam.x * 0.35 / 96)) * 31 + 7) % 5;
+          if (name === 'lava') {
+            fpen.fillStyle = element.hazardColours[0]; fpen.fillRect(ax - 14, 118 - oy, 28, 5);
+            fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 10 + ((tick >> 3) + seed) % 6, 119 - oy, 4, 2);
+            fpen.fillStyle = 'rgba(255,106,43,0.08)'; fpen.fillRect(ax - 30, 70 - oy, 60, 50);
+          } else if (name === 'ice') {
+            fpen.fillStyle = element.hazardColours[1];
+            for (var i = 0; i < 4; i++) { var ih = 6 + ((seed + i * 3) % 4) * 4; fpen.fillRect(ax - 20 + i * 12, 26 - oy, 2, ih); fpen.fillRect(ax - 20 + i * 12, 26 - oy + ih, 1, 2); }
+          } else if (name === 'rail') {
+            fpen.fillStyle = (tick + k * 17) % 90 < 4 ? element.hazardColours[2] : element.hazardColours[0];
+            fpen.fillRect(ax - 40, 100 - oy, 80, 1);
+            fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 1, 100 - oy, 2, 12); fpen.fillRect(ax - 3, 111 - oy, 6, 2);
+          } else if (name === 'spores') {
+            fpen.fillStyle = element.hazardColours[0];
+            for (var v = 0; v < 3; v++) { var vh = 20 + ((seed + v * 5) % 5) * 8, vx = ax - 24 + v * 20; fpen.fillRect(vx, 30 - oy, 1, vh); fpen.fillRect(vx - 1, 30 - oy + vh - 4, 3, 2); if (v === 1) fpen.fillRect(vx + 1, 30 - oy + (vh >> 1), 2, 1); }
+          } else {
+            fpen.fillStyle = element.hazardColours[1];
+            for (var st = 0; st < 5; st++) { var sx = ax - 40 + ((seed * 7 + st * 19) % 80), sy = 20 + ((seed * 13 + st * 23) % 90) - oy; if ((tick + st * 11 + seed) % 120 < 90) fpen.fillRect(sx, sy, 1, 1); }
+          }
+        }
+        var oy2 = Math.round(cam.x * 0.6) % 48;
+        fpen.fillStyle = element.stone[3];
+        for (k = -1; k < W / 48 + 1; k++) fpen.fillRect(k * 48 - oy2, 120 - oy, 6, H);
+        if (level.rows <= 20) break;
       }
-      var oy2 = Math.round(cam.x * 0.6) % 48;
-      fpen.fillStyle = element.stone[3];
-      for (k = -1; k < W / 48 + 1; k++) fpen.fillRect(k * 48 - oy2, 120 - oy, 6, H);
     }
 
     function drawTiles() {
@@ -1517,6 +1581,7 @@
         light(lx, ly, 46, 0.7);
         if (tick % 4 === 0 && random() < 0.5) ember(lx, ly - 4);
       }
+      if (level.portal) { drawPortal(); return; }
       var dx = Math.round(level.door.x) - cx, dy = Math.round(level.door.y) - cy;
       fpen.fillStyle = element.stone[3]; fpen.fillRect(dx - 9, dy - 26, 18, 26);
       fpen.fillStyle = '#030306'; fpen.fillRect(dx - 7, dy - 24, 14, 24);
@@ -1602,7 +1667,7 @@
       drawFlash();
       drawTransition();
       drawHud();
-      drawMap();
+      drawMap(); drawChambers(); drawPortalHint();
       drawBossBar();
       drawBanner();
       drawChoice();
@@ -1884,6 +1949,7 @@
       lastHurtBy: function () { return lastHurtBy; },
       guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length, targets: boxesOf(boss).map(function (b) { return { x: Math.round((b.x0 + b.x1) / 2), y: Math.round((b.y0 + b.y1) / 2), mult: b.onHit ? 3 : b.mult }; }), balls: boss.vars && boss.vars.balls ? boss.vars.balls.map(function (b) { return { x: Math.round(b.x), y: Math.round(b.y), struck: b.struck }; }) : undefined } : null; },
       stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
+      portal: function () { return { x: level.door.x, y: level.door.y, portal: !!level.portal, open: portalOpen(), grid: level.grid || null, seen: Object.keys(seenCells).length, rows: level.rows, cols: level.cols, chests: chests.length, creatures: creatures.length }; },
       arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
       command: function (stateName, wait) { if (boss && !boss.dying) return GD.command(boss, stateName, ctx); return null; },
