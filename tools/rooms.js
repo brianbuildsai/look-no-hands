@@ -814,7 +814,7 @@ module.exports = {
       number: 36,
       slug: 'undercroft',
       ready: true,
-      scripts: ['game/pixels.js', 'game/world.js', 'game/actors.js', 'game/relics.js', 'game/guardians.js', 'game/sound.js'],
+      scripts: ['game/pixels.js', 'game/weapons.js', 'game/world.js', 'game/actors.js', 'game/relics.js', 'game/guardians.js', 'game/sound.js'],
       stageAttributes: 'tabindex="0"',
       title: 'Undercroft',
       line: 'Go down. The floors draw themselves, and nothing you carry comes back up except what you learned.',

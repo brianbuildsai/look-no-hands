@@ -39,7 +39,7 @@
     function facing(set, name, k, dir) {
       var img = sprites[set][name][k];
       if (dir >= 0) return img;
-      var key = set + '/' + name + '/' + k;
+      var key = weaponId + '/' + set + '/' + name + '/' + k;
       return flipped[key] || (flipped[key] = P.flipH(img));
     }
 
@@ -226,11 +226,6 @@
        is doing is `act`: null when free, else an attack, dash, cast, hurt or
        death that runs for so many steps and says when it may be cut short. */
 
-    var ATTACKS = [
-      { anim: 'attack1', frames: [3, 3, 3, 4], active: [1, 2], reach: 24, damage: 2, lunge: 0.6, next: 8 },
-      { anim: 'attack2', frames: [3, 3, 3, 4], active: [1, 2], reach: 22, damage: 2, lunge: 0.5, next: 8, lift: true },
-      { anim: 'attack3', frames: [4, 2, 3, 3, 5], active: [1, 2, 3], reach: 34, damage: 4, lunge: 2.2, next: 0 }
-    ];
     var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22, doubleJumped = false;
 
     var hero = {
@@ -290,10 +285,10 @@
 
     // start an act: an attack of the combo, a dash, a cast
     function startAttack() {
-      var n = hero.combo % 3, spec = ATTACKS[n];
-      hero.act = { kind: 'attack', n: n, spec: spec, frame: 0, clock: 0, ticks: 0, hitDone: false };
+      var n = hero.combo % swings.length, spec = swings[n];
+      hero.act = { kind: 'attack', n: n, spec: spec, frame: 0, clock: 0, ticks: 0, hitDone: false, fxDone: false };
       hero.combo = n + 1; hero.queued = false;
-      hero.anim = spec.anim; hero.frame = 0; hero.clock = 0;
+      hero.anim = spec.anim; hero.frame = spec.seq[0]; hero.clock = 0;
       hero.vx = hero.dir * spec.lunge + hero.vx * 0.3;
       sfx('swing');
       if (spec.lift && !hero.onGround) hero.vy = Math.min(hero.vy, -1.5);
@@ -330,23 +325,22 @@
     }
 
     // the sweep of a swing: a box in front of the Warden that strikes what it meets
-    function swingBox(spec) {
-      return { x0: hero.dir > 0 ? hero.x + 2 : hero.x - 2 - spec.reach, x1: hero.dir > 0 ? hero.x + 2 + spec.reach : hero.x - 2, y0: hero.y - 26, y1: hero.y - 2 };
-    }
-
     function stepAct() {
       var a = hero.act;
       a.ticks++;
       if (a.kind === 'attack') {
-        var spec = a.spec, frames = spec.frames;
+        var sw = a.spec;
         hero.vx *= hero.onGround ? 0.86 : 0.96;
         a.clock++;
-        if (a.clock >= Math.max(1, Math.round(frames[a.frame] * mods.comboSpeed))) { a.clock = 0; a.frame++; }
-        if (a.frame >= frames.length) { hero.act = null; hero.anim = 'idle'; hero.frame = 0; if (hero.combo >= 3) hero.combo = 0; return; }
-        hero.frame = a.frame;
-        if (!a.hitDone && spec.active.indexOf(a.frame) >= 0) { if (strike(swingBox(spec), spec.damage + mods.damage, a.n, null)) a.hitDone = true; }
-        if (hit('attack') && a.frame >= 1 && hero.combo < 3) hero.queued = true;
-        if (hero.queued && a.frame >= frames.length - 1) startAttack();
+        if (a.clock >= Math.max(1, Math.round(sw.ticks[a.frame] * mods.comboSpeed))) { a.clock = 0; a.frame++; }
+        if (a.frame >= sw.seq.length) { hero.act = null; hero.anim = 'idle'; hero.frame = 0; if (hero.combo >= swings.length) hero.combo = 0; return; }
+        hero.frame = sw.seq[a.frame];
+        if (sw.active.indexOf(a.frame) >= 0) {
+          if (!a.fxDone) { a.fxDone = true; swingFx(sw, a.n); if (sw.finisher && weapon.finisher) finisher(weapon.finisher); }
+          if (!a.hitDone) { var box = swingBox(sw); if (box && strike(box, weapon.damage[a.n] + mods.damage, sw.finisher || sw.shape === 'slam' ? 2 : a.n, weapon.element || null)) a.hitDone = true; }
+        }
+        if (hit('attack') && a.frame >= 1 && hero.combo < swings.length) hero.queued = true;
+        if (hero.queued && a.frame >= sw.seq.length - 1) startAttack();
         if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
         return;
       }
@@ -395,7 +389,7 @@
           hero.vx *= hero.onGround ? (onIce ? 0.975 : FRICTION) : AIR_FRICTION;
           if (Math.abs(hero.vx) < 0.05) hero.vx = 0;
         }
-        if (hit('attack')) { if (hero.combo >= 3) hero.combo = 0; startAttack(); }
+        if (hit('attack')) { if (hero.combo >= swings.length) hero.combo = 0; startAttack(); }
         else if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
         else if (hit('cast') && hero.energy > 0) startCast();
       } else stepAct();
@@ -561,7 +555,7 @@
             break;
           }
         }
-        if (e.dying === 2 && !e.boss) { kills++; spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
+        if (e.dying === 2 && !e.boss) { kills++; if (weapon.ability === 'reap') { reaped++; if (reaped % 3 === 0 && hero.hp < hero.maxHp) { hero.hp++; number(hero.x, hero.y - 34, '+1', '#ff3b4e'); } } spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
         if (e.dying > (e.boss ? 90 : 22)) creatures.splice(k, 1);
         if (e.y > level.rows * TILE + 40) creatures.splice(k, 1);
       }
@@ -623,7 +617,8 @@
         var c = crescents[k], t = 1 - c.life / c.max, a0 = -1.9 + t * 1.2, a1 = a0 + 1.6 + t * 0.8;
         fpen.save(); fpen.translate(Math.round(c.x) - cx, Math.round(c.y) - cy); if (c.dir < 0) fpen.scale(-1, 1);
         fpen.globalAlpha = Math.min(1, c.life / c.max * 1.6);
-        fpen.strokeStyle = c.colour; fpen.lineWidth = 5 * (1 - t) + 1; fpen.beginPath(); fpen.arc(-4, 0, c.r, a0, a1); fpen.stroke();
+        if (c.big) { fpen.strokeStyle = c.colour; fpen.globalAlpha *= 0.4; fpen.lineWidth = 12 * (1 - t) + 2; fpen.beginPath(); fpen.arc(-4, 0, c.r - 2, a0 - 0.2, a1 + 0.2); fpen.stroke(); fpen.globalAlpha = Math.min(1, c.life / c.max * 1.6); }
+        fpen.strokeStyle = c.colour; fpen.lineWidth = (c.big ? 7 : 5) * (1 - t) + 1; fpen.beginPath(); fpen.arc(-4, 0, c.r, a0, a1); fpen.stroke();
         fpen.strokeStyle = '#ffffff'; fpen.lineWidth = 1.5; fpen.beginPath(); fpen.arc(-4, 0, c.r + 1, a0 + 0.2, a1 - 0.1); fpen.stroke();
         fpen.restore(); fpen.globalAlpha = 1;
         if (--c.life <= 0) crescents.splice(k, 1);
@@ -679,7 +674,7 @@
           scale = e.size; w = img.width * scale; h = img.height * scale;
           x = Math.round(e.x) - (e.dir >= 0 ? set.anchor.x : img.width - set.anchor.x) * scale - cx; y = Math.round(e.y) - set.anchor.y * scale - cy;
         }
-        if (e.boss && e.kind === 'mirror') { x = Math.round(e.x) - 16 - cx; y = Math.round(e.y) - 31 - cy; w = 32; h = 32; }
+        if (e.boss && e.kind === 'mirror') { x = Math.round(e.x) - P.warden.anchor.x - cx; y = Math.round(e.y) - P.warden.anchor.y - cy; w = P.warden.width; h = P.warden.height; }
         var glow = WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow;
         if (e.dying) { var t = Math.min(1, e.dying / (e.boss ? 60 : 22)); fpen.globalAlpha = 1 - t; fpen.drawImage(P.silhouette(img, '#ffffff'), x + w * t / 2, y + h * t / 2, w * (1 - t), h * (1 - t)); fpen.globalAlpha = 1; continue; }
         if (e.flash > 0) fpen.drawImage(P.silhouette(img, '#ffffff'), x, y, w, h);
@@ -690,7 +685,7 @@
         if (e.hp < e.maxHp && !e.boss) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
         light(e.x, e.spec.flying && !e.boss ? e.y : e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
-      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.icicle) { fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 5 - cy, 3, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - 4 - cy, 1, 4); fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) + 2 - cy, 1, 2); } else if (p.ember) { fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 2 - cy, 4, 4); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 1 - cy, 2, 2); } else if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.flame) { var fx = Math.round(p.x) - cx, fy = Math.round(p.y) - cy; fpen.fillStyle = '#ff6a2b'; fpen.beginPath(); fpen.arc(fx, fy, 7, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffb347'; fpen.beginPath(); fpen.arc(fx + (p.vx > 0 ? 2 : -2), fy, 5, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffdc9a'; fpen.beginPath(); fpen.arc(fx + (p.vx > 0 ? 3 : -3), fy, 2, 0, 6.2832); fpen.fill(); for (var fl = 0; fl < 2; fl++) particles.push({ x: p.x - p.vx * 2, y: p.y + (random() - 0.5) * 10, vx: -p.vx * 0.2, vy: -0.4 - random() * 0.6, life: 12 + random() * 8, max: 20, colour: random() < 0.5 ? '#ff8c42' : '#ffdc9a', size: random() < 0.4 ? 2 : 1, gravity: -0.02 }); } else if (p.icicle) { fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 5 - cy, 3, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - 4 - cy, 1, 4); fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) + 2 - cy, 1, 2); } else if (p.ember) { fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 2 - cy, 4, 4); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 1 - cy, 2, 2); } else if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
       for (k = 0; k < zaps.length; k++) { var z = zaps[k]; if (z.beam) { fpen.strokeStyle = z.colour; fpen.globalAlpha = 0.5; fpen.lineWidth = 6; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); fpen.globalAlpha = 1; fpen.strokeStyle = '#ffffff'; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light((z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2, 40, 0.7); light(z.x1, z.y1, 24, 0.8); continue; } fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
     }
 
@@ -821,6 +816,161 @@
       if (--flash.life <= 0) flash = null;
     }
 
+    /* ---- the weapon in her hand: its swings, what they leave in the air, and what it does at the end ---- */
+
+    var WP = window.Weapons;
+    if (!WP) { env.fail('The undercroft’s weapons did not load. The other rooms still run.'); return null; }
+    var weaponId = 'shortsword', weapon = WP.WEAPONS.shortsword, swings = WP.MOVESETS.sword;
+    var ribbon = [], droplets = [], flock = [], pillars = [], rings = [], spikes = [], lash = null, delayed = [], reaped = 0;
+
+    function equip(id) {
+      if (!WP.WEAPONS[id]) return false;
+      weaponId = id; weapon = WP.WEAPONS[id]; swings = WP.MOVESETS[weapon.moveset];
+      sprites.warden = P.warden.build(id, WP.views(id));
+      hero.combo = 0; hero.queued = false; ribbon = [];
+      return true;
+    }
+    function rarityOf(w) { return WP.RARITY[w.rarity]; }
+
+    // where a swing strikes, by its shape
+    function swingBox(sw) {
+      var r = weapon.reach * sw.reach, d = hero.dir, x = hero.x, y = hero.y;
+      function ahead(near, far, up, down) { return { x0: d > 0 ? x + near : x - far, x1: d > 0 ? x + far : x - near, y0: y - up, y1: y - down }; }
+      if (sw.shape === 'arc') return ahead(2, 2 + r, 28, 2);
+      if (sw.shape === 'rise') return ahead(2, 2 + r, 38, 4);
+      if (sw.shape === 'thrust') return ahead(4, 4 + r, 21, 7);
+      if (sw.shape === 'slam') return ahead(-2, 6 + r, 42, -2);
+      if (sw.shape === 'wide') return { x0: x - (d > 0 ? r * 0.7 : r), x1: x + (d > 0 ? r : r * 0.7), y0: y - 32, y1: y - 2 };
+      if (sw.shape === 'lash') return ahead(6, r, 23, 7);
+      return null;
+    }
+
+    // what a swing leaves in the air
+    function swingFx(sw, n) {
+      var r = weapon.reach * sw.reach, c = weapon.trail, d = hero.dir, legendary = weapon.rarity === 'legendary';
+      if (sw.shape === 'arc' || sw.shape === 'rise' || sw.shape === 'wide') {
+        crescents.push({ x: hero.x + d * 4, y: hero.y - (sw.shape === 'rise' ? 20 : 15), dir: d, r: r * 0.8, colour: c, life: legendary ? 16 : 10, max: legendary ? 16 : 10, big: legendary });
+        if (sw.shape === 'wide') crescents.push({ x: hero.x - d * 4, y: hero.y - 15, dir: -d, r: r * 0.6, colour: c, life: 10, max: 10 });
+      } else if (sw.shape === 'thrust') {
+        for (var k = 0; k < 10; k++) particles.push({ x: hero.x + d * (8 + random() * r), y: hero.y - 14 + (random() - 0.5) * 4, vx: d * (1 + random() * 2), vy: 0, life: 8 + random() * 6, max: 14, colour: k % 3 ? c : '#ffffff', size: 1, gravity: 0 });
+      } else if (sw.shape === 'slam') {
+        var ix = hero.x + d * (r * 0.7);
+        shake(n ? 5 : 3); dust(ix, hero.y, 1, 6); dust(ix, hero.y, -1, 6);
+        rings.push({ x: ix, y: hero.y, r: 4, grow: 2.4, life: 14, max: 14, colour: c });
+        spark(ix, hero.y - 2, c, 14, 2.2, 18, 0.06);
+        sfx('heavy');
+      } else if (sw.shape === 'lash') {
+        lash = { life: 12, max: 12, reach: r, dir: d, n: n };
+      } else if (sw.shape === 'shot') {
+        loose(sw.finisher ? 16 : 5);
+      }
+      if (legendary) for (var m = 0; m < 8; m++) particles.push({ x: hero.x + d * random() * r, y: hero.y - 8 - random() * 22, vx: (random() - 0.5) * 0.6, vy: -0.3 - random() * 0.5, life: 24 + random() * 20, max: 44, colour: random() < 0.5 ? '#ffd24d' : '#fff3b0', size: 1, gravity: -0.004 });
+    }
+
+    // the Murmuration's flock: lights that wheel together and fall on what she faces
+    function loose(count) {
+      sfx('shot');
+      for (var k = 0; k < count; k++) flock.push({ x: hero.x + hero.dir * 14, y: hero.y - 16, vx: hero.dir * (2.2 + random() * 1.4), vy: (random() - 0.5) * 2.4, life: 130 + random() * 30, phase: random() * 6.28, damage: weapon.damage[0] + mods.damage > 2 ? 2 : 1, trail: [] });
+    }
+    function nearestCreature(x, y, range, ahead) {
+      var best = null, bd = range;
+      for (var j = 0; j < creatures.length; j++) { var c = creatures[j]; if (c.dying) continue; if (ahead && (c.x - hero.x) * ahead < -20) continue; var dx = c.x - x, dy = (c.y - c.h / 2) - y, dd = Math.sqrt(dx * dx + dy * dy); if (dd < bd) { bd = dd; best = c; } }
+      return best;
+    }
+
+    // what a weapon does at the end of its combo
+    function finisher(name) {
+      var d = hero.dir, k;
+      if (name === 'quake') { for (k = -1; k <= 1; k += 2) projectiles.push({ x: hero.x + d * 20 + k * 6, y: hero.y - 4, vx: k * 3, vy: 0, life: 36, colour: '#c4c1ba', size: 8, damage: 4 + mods.damage, element: null, gravity: 0, from: 'hero', pierce: true, wave: true }); shake(6); }
+      else if (name === 'flamewave') { projectiles.push({ x: hero.x + d * 16, y: hero.y - 8, vx: d * 3.4, vy: 0, life: 46, colour: '#ff8c42', size: 12, damage: 4 + mods.damage, element: 'ember', gravity: 0, from: 'hero', pierce: true, flame: true }); sfx('castember'); flash = { colour: '#ff8c42', life: 5 }; }
+      else if (name === 'icespikes') { for (k = 0; k < 5; k++) delayed.push({ t: k * 5, x: hero.x + d * (26 + k * 16), y: hero.y, fn: 'spike' }); sfx('castfrost'); }
+      else if (name === 'arc') { var from = { x: hero.x + d * 30, y: hero.y - 14 }, done = []; for (k = 0; k < 3; k++) { var best = nearestCreature(from.x, from.y, k ? 80 : 110, 0); if (!best || done.indexOf(best) >= 0) break; zaps.push({ x0: from.x, y0: from.y, x1: best.x, y1: best.y - best.h / 2, colour: '#ffffff', life: 10 }); wound(best, 3 + mods.damage, from.x, 'storm'); done.push(best); from = { x: best.x, y: best.y - best.h / 2 }; } sfx('caststorm'); }
+      else if (name === 'whirl') { strike({ x0: hero.x - 42, x1: hero.x + 42, y0: hero.y - 36, y1: hero.y }, 5 + mods.damage, 2, null); crescents.push({ x: hero.x, y: hero.y - 15, dir: d, r: 38, colour: '#ff3b4e', life: 16, max: 16, big: true }, { x: hero.x, y: hero.y - 15, dir: -d, r: 38, colour: '#ff3b4e', life: 16, max: 16, big: true }); flash = { colour: '#ff3b4e', life: 5 }; }
+      else if (name === 'drag') { for (k = 0; k < creatures.length; k++) { var c = creatures[k]; if (c.dying || c.boss || c.elder) continue; if ((c.x - hero.x) * d > 0 && Math.abs(c.x - hero.x) < 100 && Math.abs(c.y - hero.y) < 50) { c.vx = -d * 3.4; c.vy = -2; c.status.poison = 250; if (c.attack) { c.attack = null; c.boxes = []; c.cooldown = 50; } } } }
+      else if (name === 'sunpillar') {
+        var px = hero.x + d * 30;
+        pillars.push({ x: px, life: 46, max: 46 });
+        delayed.push({ t: 4, x: px, y: hero.y, fn: 'sun' });
+        for (k = -1; k <= 1; k += 2) projectiles.push({ x: px, y: hero.y - 5, vx: k * 3.2, vy: 0, life: 44, colour: '#ffd24d', size: 10, damage: 5 + mods.damage, element: null, gravity: 0, from: 'hero', pierce: true, wave: true, gold: true });
+        flash = { colour: '#ffd24d', life: 12 }; shake(8); hitstop(6); sfx('boom');
+        for (k = 0; k < 70; k++) particles.push({ x: px + (random() - 0.5) * 40, y: hero.y - random() * 120, vx: (random() - 0.5) * 0.8, vy: -0.4 - random() * 1.4, life: 40 + random() * 50, max: 90, colour: random() < 0.4 ? '#ffffff' : random() < 0.6 ? '#fff3b0' : '#ffd24d', size: random() < 0.3 ? 2 : 1, gravity: -0.006 });
+      }
+      else if (name === 'droplets') { for (k = 0; k < 8; k++) droplets.push({ a: k / 8 * 6.2832, r: 6, life: 150, x: hero.x, y: hero.y - 14, vx: 0, vy: 0, seeking: false }); sfx('pickup'); }
+    }
+    function runDelayed() {
+      for (var k = delayed.length - 1; k >= 0; k--) {
+        var q = delayed[k];
+        if (--q.t > 0) continue;
+        if (q.fn === 'spike') { spikes.push({ x: q.x, y: q.y, life: 34, max: 34 }); strike({ x0: q.x - 8, x1: q.x + 8, y0: q.y - 34, y1: q.y }, 3 + mods.damage, 1, 'frost'); spark(q.x, q.y - 6, '#d8f1ff', 8, 1.8, 16, 0.05); }
+        else if (q.fn === 'sun') strike({ x0: q.x - 24, x1: q.x + 24, y0: q.y - 220, y1: q.y + 4 }, 12 + mods.damage, 2, null);
+        delayed.splice(k, 1);
+      }
+    }
+
+    function stepWeapons() {
+      var k, b, t;
+      runDelayed();
+      for (k = pillars.length - 1; k >= 0; k--) if (--pillars[k].life <= 0) pillars.splice(k, 1);
+      for (k = rings.length - 1; k >= 0; k--) { rings[k].r += rings[k].grow; if (--rings[k].life <= 0) rings.splice(k, 1); }
+      for (k = spikes.length - 1; k >= 0; k--) if (--spikes[k].life <= 0) spikes.splice(k, 1);
+      if (lash && --lash.life <= 0) lash = null;
+      // the flock: each light keeps with the others, wheels, and turns toward what she faces
+      for (k = flock.length - 1; k >= 0; k--) {
+        b = flock[k]; t = nearestCreature(b.x, b.y, 170, 0);
+        var tx = t ? t.x : b.x + b.vx * 30, ty = t ? t.y - t.h / 2 : b.y + Math.sin(b.phase + tick * 0.1) * 20;
+        var dx = tx - b.x, dy = ty - b.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+        b.vx += dx / len * 0.22 + Math.cos(b.phase + tick * 0.13) * 0.12; b.vy += dy / len * 0.22 + Math.sin(b.phase + tick * 0.17) * 0.14;
+        var sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy); if (sp > 3.4) { b.vx *= 3.4 / sp; b.vy *= 3.4 / sp; }
+        b.trail.push(b.x, b.y); if (b.trail.length > 10) b.trail.splice(0, 2);
+        b.x += b.vx; b.y += b.vy;
+        var gone = --b.life <= 0 || tileAt(Math.floor(b.x / TILE), Math.floor(b.y / TILE)) === 1;
+        if (t && !gone) { var hb = boxesOf(t); for (var q = 0; q < hb.length; q++) if (b.x > hb[q].x0 && b.x < hb[q].x1 && b.y > hb[q].y0 && b.y < hb[q].y1) { wound(t, b.damage, b.x, null); gone = true; break; } }
+        if (gone) { spark(b.x, b.y, '#ffd24d', 3, 1, 10, 0); flock.splice(k, 1); }
+      }
+      // quicksilver's drops: they orbit her, then each goes looking
+      for (k = droplets.length - 1; k >= 0; k--) {
+        b = droplets[k]; b.life--;
+        if (!b.seeking) { b.a += 0.16; b.r = Math.min(24, b.r + 0.8); b.x = hero.x + Math.cos(b.a) * b.r; b.y = hero.y - 14 + Math.sin(b.a) * b.r * 0.6; if (b.life < 114) { b.seeking = true; b.vx = Math.cos(b.a) * 2; b.vy = Math.sin(b.a) * 2; } }
+        else { t = nearestCreature(b.x, b.y, 200, 0); if (t) { var ddx = t.x - b.x, ddy = t.y - t.h / 2 - b.y, l2 = Math.max(1, Math.sqrt(ddx * ddx + ddy * ddy)); b.vx += ddx / l2 * 0.35; b.vy += ddy / l2 * 0.35; } b.vx *= 0.95; b.vy *= 0.95; b.x += b.vx; b.y += b.vy;
+          if (t) { var tb = boxesOf(t); for (var w = 0; w < tb.length; w++) if (b.x > tb[w].x0 - 2 && b.x < tb[w].x1 + 2 && b.y > tb[w].y0 - 2 && b.y < tb[w].y1 + 2) { wound(t, 3 + mods.damage, b.x, null); b.life = 0; break; } } }
+        if (b.life <= 0) { spark(b.x, b.y, '#f4f8ff', 5, 1.4, 12, 0.04); droplets.splice(k, 1); }
+      }
+      // a flowing blade leaves a ribbon where its tip has been
+      if (weapon.flowing && hero.act && hero.act.kind === 'attack') {
+        var a = hero.act, prog = (a.frame + a.clock / 4) / a.spec.seq.length, ang = -2.2 + prog * 3.2, rr = weapon.reach * a.spec.reach;
+        ribbon.push(hero.x + hero.dir * (6 + Math.cos(ang) * rr * (a.spec.shape === 'thrust' ? 0.2 : 1) + (a.spec.shape === 'thrust' ? prog * rr : 0)), hero.y - 15 + Math.sin(ang) * rr * (a.spec.shape === 'thrust' ? 0.15 : 0.7));
+      }
+      if (ribbon.length > 28 || (!(hero.act && hero.act.kind === 'attack') && ribbon.length)) ribbon.splice(0, 2);
+      // the daggers' dash cuts through what it passes
+      if (weapon.ability === 'dashslash' && hero.act && hero.act.kind === 'dash' && hero.act.ticks % 3 === 1) { if (strike({ x0: hero.x - 12, x1: hero.x + 12, y0: hero.y - 24, y1: hero.y - 2 }, 2 + mods.damage, 0, null)) crescents.push({ x: hero.x, y: hero.y - 14, dir: hero.dir, r: 16, colour: weapon.trail, life: 8, max: 8 }); }
+      // the rarer the weapon, the more it gives off
+      var rank = rarityOf(weapon).rank;
+      if (rank >= 2 && tick % (9 - rank * 2) === 0 && hero.alive) particles.push({ x: hero.x + hero.dir * (6 + random() * 6), y: hero.y - 10 - random() * 14, vx: (random() - 0.5) * 0.3, vy: -0.25 - random() * 0.3, life: 20 + random() * 16, max: 36, colour: rarityOf(weapon).colour, size: 1, gravity: -0.003 });
+    }
+
+    function drawWeaponFx() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, b;
+      // the sun's pillar: a column of light from the vault to the floor, with rays either side
+      for (k = 0; k < pillars.length; k++) {
+        b = pillars[k]; var t = b.life / b.max, wdt = 8 + 30 * Math.sin(t * Math.PI), x = Math.round(b.x) - cx;
+        var g = fpen.createLinearGradient(x - wdt, 0, x + wdt, 0);
+        g.addColorStop(0, 'rgba(255,210,77,0)'); g.addColorStop(0.35, 'rgba(255,210,77,' + (0.55 * t).toFixed(2) + ')'); g.addColorStop(0.5, 'rgba(255,255,255,' + Math.min(1, t * 1.4).toFixed(2) + ')'); g.addColorStop(0.65, 'rgba(255,210,77,' + (0.55 * t).toFixed(2) + ')'); g.addColorStop(1, 'rgba(255,210,77,0)');
+        fpen.fillStyle = g; fpen.fillRect(x - wdt, 0, wdt * 2, H);
+        fpen.globalAlpha = 0.18 * t; fpen.fillStyle = '#fff3b0';
+        for (var ray = -3; ray <= 3; ray++) { if (!ray) continue; fpen.beginPath(); fpen.moveTo(x, Math.round(hero.y) - cy); fpen.lineTo(x + ray * 60 - 14, 0); fpen.lineTo(x + ray * 60 + 14, 0); fpen.fill(); }
+        fpen.globalAlpha = 1;
+        light(b.x, hero.y - 40, 150, 1);
+      }
+      for (k = 0; k < rings.length; k++) { b = rings[k]; fpen.globalAlpha = b.life / b.max; fpen.strokeStyle = b.colour; fpen.lineWidth = 2; fpen.beginPath(); fpen.ellipse(Math.round(b.x) - cx, Math.round(b.y) - cy, b.r, b.r * 0.3, 0, 0, 6.2832); fpen.stroke(); fpen.globalAlpha = 1; }
+      for (k = 0; k < spikes.length; k++) { b = spikes[k]; var up = Math.sin(Math.min(1, (b.max - b.life) / 6) * Math.PI / 2) * (b.life < 8 ? b.life / 8 : 1), hh = Math.round(30 * up), sx = Math.round(b.x) - cx, sy = Math.round(b.y) - cy; fpen.fillStyle = '#9fd8ff'; fpen.beginPath(); fpen.moveTo(sx - 6, sy); fpen.lineTo(sx, sy - hh); fpen.lineTo(sx + 6, sy); fpen.fill(); fpen.fillStyle = '#e6f6ff'; fpen.beginPath(); fpen.moveTo(sx - 2, sy); fpen.lineTo(sx, sy - hh); fpen.lineTo(sx + 1, sy); fpen.fill(); light(b.x, b.y - 12, 22, 0.6); }
+      // the whip: a living curve from the hand, cracking at its end
+      if (lash) { var p = 1 - lash.life / lash.max, ext = Math.sin(Math.min(1, p * 1.6) * Math.PI / 2) * lash.reach, hx = Math.round(hero.x) + lash.dir * 8 - cx, hy = Math.round(hero.y) - 16 - cy; fpen.strokeStyle = '#4e9a52'; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(hx, hy); for (var s2 = 1; s2 <= 12; s2++) { var f = s2 / 12; fpen.lineTo(hx + lash.dir * ext * f, hy + Math.sin(f * 7 - p * 12) * 6 * (1 - f) * (1 - p) - f * 4 + f * f * 8); } fpen.stroke(); fpen.fillStyle = '#c5ff9a'; fpen.fillRect(hx + lash.dir * ext - 1, hy + 3, 3, 3); if (lash.life === lash.max - 5) spark(hero.x + lash.dir * (8 + ext), hero.y - 12, '#c5ff9a', 8, 1.8, 12, 0); }
+      // the flowing blade's ribbon, chrome with a blue edge
+      if (ribbon.length >= 4) { for (var pass = 0; pass < 2; pass++) { fpen.strokeStyle = pass ? '#f4f8ff' : '#3d5bff'; fpen.lineWidth = pass ? 2 : 4; fpen.globalAlpha = pass ? 1 : 0.5; fpen.beginPath(); fpen.moveTo(ribbon[0] - cx, ribbon[1] - cy); for (k = 2; k < ribbon.length; k += 2) fpen.lineTo(ribbon[k] - cx, ribbon[k + 1] - cy); fpen.stroke(); } fpen.globalAlpha = 1; }
+      for (k = 0; k < droplets.length; k++) { b = droplets[k]; fpen.fillStyle = '#aab4c8'; fpen.beginPath(); fpen.arc(Math.round(b.x) - cx, Math.round(b.y) - cy, 3, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(b.x) - 1 - cx, Math.round(b.y) - 2 - cy, 1, 1); light(b.x, b.y, 12, 0.5); }
+      for (k = 0; k < flock.length; k++) { b = flock[k]; fpen.strokeStyle = 'rgba(255,210,77,0.5)'; fpen.lineWidth = 1; fpen.beginPath(); for (var q = 0; q < b.trail.length; q += 2) { if (q) fpen.lineTo(b.trail[q] - cx, b.trail[q + 1] - cy); else fpen.moveTo(b.trail[q] - cx, b.trail[q + 1] - cy); } fpen.stroke(); fpen.fillStyle = '#fff3b0'; fpen.fillRect(Math.round(b.x) - 1 - cx, Math.round(b.y) - 1 - cy, 2, 2); light(b.x, b.y, 10, 0.5); }
+    }
+
     /* ---- effects: particles, hit-stop, shaking, light ---- */
 
     var particles = [], numbers = [], afterimages = [], freeze = 0;
@@ -864,7 +1014,7 @@
         p = afterimages[k];
         fpen.globalAlpha = p.life / 12 * 0.5;
         var img = p.dir >= 0 ? p.img : P.flipH(p.img);
-        fpen.drawImage(img, Math.round(p.x) - 16 - cx, Math.round(p.y) - 31 - cy);
+        fpen.drawImage(img, Math.round(p.x) - P.warden.anchor.x - cx, Math.round(p.y) - P.warden.anchor.y - cy);
       }
       fpen.globalAlpha = 1;
       for (k = 0; k < particles.length; k++) {
@@ -1053,7 +1203,7 @@
       var img = facing('warden', hero.anim in sprites.warden ? hero.anim : 'idle', k, hero.dir);
       if (hero.invuln > 0 && hero.alive && !(hero.act && hero.act.kind === 'dash') && (tick >> 2) % 2 === 0) fpen.globalAlpha = 0.45;
       if (!hero.alive && hero.deadFor > 70) fpen.globalAlpha = Math.max(0, 1 - (hero.deadFor - 70) / 40);
-      var x = Math.round(hero.x) - 16 - Math.round(cam.x), y = Math.round(hero.y) - 31 - Math.round(cam.y);
+      var x = Math.round(hero.x) - P.warden.anchor.x - Math.round(cam.x), y = Math.round(hero.y) - P.warden.anchor.y - Math.round(cam.y);
       fpen.drawImage(hero.flash > 0 ? P.silhouette(img, '#ffffff') : img, x, y);
       if (afflictions.chill > 0) { fpen.globalAlpha = 0.45; fpen.drawImage(P.silhouette(img, '#9fd8ff'), x, y); fpen.globalAlpha = 1; }
       fpen.globalAlpha = 1;
@@ -1074,7 +1224,8 @@
       var pw = RL.POWERS[power];
       fpen.fillStyle = pw.colour; fpen.fillRect(4 + hero.maxEnergy * 6 + 4, 16, 4, 4);
       text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
-      if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 23, 8, 2); }
+      text(weapon.name, 4, 24, rarityOf(weapon).colour);
+      if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 32, 8, 2); }
       for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
       if (state === 'title') drawTitle();
       else if (state === 'summary') drawSummary();
@@ -1112,6 +1263,7 @@
       drawHazards();
       drawCreatures();
       drawHero();
+      drawWeaponFx();
       drawCrescents();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
@@ -1246,6 +1398,7 @@
       state = 'run';
       run.floor = 1; run.section = 0; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; applyRelics();
+      equip('shortsword'); reaped = 0; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
@@ -1262,6 +1415,7 @@
       if (stepTransition()) { stepFx(); return; }
       if (freeze > 0) { freeze--; return; }
       stepHero();
+      stepWeapons();
       stepAfflictions();
       stepCreatures();
       stepHazards();
@@ -1323,7 +1477,7 @@
       zones: function (force) { if (force) { touchy = true; layoutZones(); } return ZONES.map(function (z) { return { name: z.name, x: z.x, y: z.y, w: z.w, h: z.h }; }); },
       sound: function () { return { on: !!(SND && SND.isOn()), effects: SND ? SND.effects : [] }; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status, anim: e.anim, frame: e.frame, attack: e.attack ? e.attack.def.name + ':' + e.attack.phase : null, boxes: e.boxes ? e.boxes.length : 0 }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, weapon: weaponId, fx: { flock: flock.length, droplets: droplets.length, pillars: pillars.length, spikes: spikes.length, crescents: crescents.length }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status, anim: e.anim, frame: e.frame, attack: e.attack ? e.attack.def.name + ':' + e.attack.phase : null, boxes: e.boxes ? e.boxes.length : 0 }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -1343,6 +1497,8 @@
       arena: function (floor) { if (floor) run.floor = floor; run.section = 3; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
       command: function (stateName, wait) { if (boss && !boss.dying) { boss.state = stateName; boss.wait = wait || 40; boss.cooldown = 0; } return boss ? boss.state : null; },
+      equip: function (id) { return equip(id) ? { id: weaponId, name: weapon.name, rarity: weapon.rarity, swings: swings.length } : null; },
+      weapons: function () { return WP.ORDER.slice(); },
       setPower: function (name) { if (RL.POWERS[name]) power = name; return power; },
       relics: function () { return { power: power, held: held.slice(), mods: mods, choice: choice ? { index: choice.index, offered: choice.relics.map(function (r) { return r.id; }) } : null, casts: casts, shieldUp: shieldUp }; },
       take: function (id) { takeRelic(id); return held.slice(); },

@@ -70,8 +70,8 @@
     var W = window.Pixels.warden.build(), mirror = { idle: [], attack: [], flipped: { idle: [], attack: [] } };
     function shade(img) {
       var c = window.Pixels.silhouette(img, '#1e1a2c'), g = c.getContext('2d');
-      g.fillStyle = '#ffffff'; g.fillRect(17, 9, 1, 1);
-      g.fillStyle = '#5b3fa0'; g.fillRect(8, 22, 5, 4);
+      g.fillStyle = '#ffffff'; g.fillRect(37, 29, 1, 1);
+      g.fillStyle = '#5b3fa0'; g.fillRect(28, 42, 5, 4);
       return c;
     }
     mirror.idle = W.idle.map(shade); mirror.attack = W.attack1.map(shade).concat(W.attack3.map(shade)); mirror.dash = W.dash.map(shade); mirror.cast = W.cast.map(shade);

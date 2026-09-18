@@ -21,7 +21,15 @@
     p: '#ff4f7b', P: '#ff8aa6',   // the scarf, rose
     e: '#0b0b12',            // an eye
     m: '#8f8d88', M: '#c4c1ba', n: '#5c5a56', N: '#3a3936',   // stone
-    x: '#e9e6df'             // bone white
+    x: '#e9e6df',            // bone white
+    y: '#ffd24d', Y: '#fff3b0',   // gold
+    v: '#b06cff', V: '#d9b8ff',   // violet
+    c: '#c4202f', C: '#ff3b4e',   // crimson
+    i: '#9fd8ff', I: '#e6f6ff',   // ice
+    f: '#ff8c42', F: '#ffdc9a',   // flame
+    z: '#8fa3ff', Z: '#ffffff',   // storm
+    u: '#4e9a52', U: '#9ae66e',   // green
+    j: '#aab4c8', J: '#f4f8ff'    // quicksilver
   };
 
   var cache = {};
@@ -89,6 +97,32 @@
     pen.fillStyle = colour;
     pen.fillRect(0, 0, c.width, c.height);
     return c;
+  }
+
+  // turn a canvas by 45 degrees clockwise, pixel for pixel, and say where a marked point went
+  function rotate45(img, gx, gy) {
+    var w = img.width, h = img.height, n = Math.ceil((w + h) * 0.7072) + 2;
+    var tmp = blank(w, h), tg = tmp.getContext('2d', { willReadFrequently: true });
+    tg.drawImage(img, 0, 0);
+    var src = tg.getImageData(0, 0, w, h).data;
+    var c = blank(n, n), g = c.getContext('2d'), out = g.createImageData(n, n), cx = (w - 1) / 2, cy = (h - 1) / 2, mx = (n - 1) / 2, my = (n - 1) / 2, r = 0.70710678;
+    for (var ty = 0; ty < n; ty++) for (var tx = 0; tx < n; tx++) {
+      var dx = tx - mx, dy = ty - my, sx = Math.round(dx * r + dy * r + cx), sy = Math.round(-dx * r + dy * r + cy);
+      if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+      var si = (sy * w + sx) * 4, ti = (ty * n + tx) * 4;
+      out.data[ti] = src[si]; out.data[ti + 1] = src[si + 1]; out.data[ti + 2] = src[si + 2]; out.data[ti + 3] = src[si + 3];
+    }
+    g.putImageData(out, 0, 0);
+    var px = gx - cx, py = gy - cy;
+    return { img: c, gx: Math.round(px * r - py * r + mx), gy: Math.round(px * r + py * r + my) };
+  }
+  // a weapon drawn pointing up, with the pixel of its grip: its three views, each with its grip
+  function weaponViews(rows, gx, gy, handDrawn) {
+    var up = art(rows), h = up.height, flatImg = compose(h, up.width, [{ img: up, x: 0, y: 0, rot: 1 }]);
+    var set = { up: { img: up, gx: gx, gy: gy }, flat: { img: flatImg, gx: h - 1 - gy, gy: gx } };
+    if (handDrawn) { set.diag = { img: art(SWORD_DIAG), gx: 1, gy: 7 }; set.flat = { img: art(SWORD_FLAT), gx: 2, gy: 2 }; }
+    else set.diag = rotate45(up, gx, gy);
+    return set;
   }
 
   // how many opaque pixels a frame has (for checking that nothing compiled blank)
@@ -164,6 +198,9 @@
      cloak, back leg, back arm and lantern, torso, front leg, head, scarf,
      front arm and sword. Offsets are from the frame's top left. */
 
+  // the Warden's frames are 72 by 56, her body where it was in a 32 by 32 frame but moved 20 right and 20 down,
+  // so that a long weapon has room on every side
+  var FW = 72, FH = 56, OX = 20, OY = 20, currentWeapon = null;
   function pose(o) {
     o = o || {};
     var bob = o.bob || 0, lean = o.lean || 0;
@@ -193,21 +230,24 @@
     var fa = o.frontArm || { x: 0, y: 0 };
     layers.push({ img: A(ARM), x: 17 + fa.x + lean, y: 13 + fa.y + bob, rot: fa.rot || 0 });
     var sw = o.sword;
-    if (sw !== null) {
+    if (sw !== null && currentWeapon) {
       sw = sw || { kind: 'up', x: 0, y: 0 };
-      var img = sw.kind === 'flat' ? A(SWORD_FLAT) : sw.kind === 'diag' ? A(SWORD_DIAG) : A(SWORD);
-      // the grip sits in the front hand, which is the bottom of the front arm
-      var reaching = fa.rot === 3;
-      var sx = sw.kind === 'flat' ? (reaching ? 21 : 16) : 17, sy = sw.kind === 'flat' ? (reaching ? 12 : 15) : sw.kind === 'diag' ? 11 : 7;
-      layers.push({ img: img, x: sx + sw.x + fa.x + lean, y: sy + sw.y + fa.y + bob, rot: sw.rot || 0, flip: sw.flip });
+      var view = currentWeapon[sw.kind === 'flat' ? 'flat' : sw.kind === 'diag' ? 'diag' : 'up'], img = view.img, rot = sw.rot || 0;
+      var iw = img.width, ih = img.height, rgx = view.gx, rgy = view.gy;
+      if (rot === 1) { rgx = ih - 1 - view.gy; rgy = view.gx; } else if (rot === 2) { rgx = iw - 1 - view.gx; rgy = ih - 1 - view.gy; } else if (rot === 3) { rgx = view.gy; rgy = iw - 1 - view.gx; }
+      if (sw.flip) rgx = (rot % 2 ? ih : iw) - 1 - rgx;
+      // the grip sits in the front hand: the bottom of the arm, or its far end when the arm reaches out
+      var reaching = fa.rot === 3, hx = 17 + fa.x + lean + (reaching ? 6 : 1), hy = 13 + fa.y + bob + (reaching ? 1 : 5);
+      layers.push({ img: img, x: hx - rgx + (sw.x || 0), y: hy - rgy + (sw.y || 0), rot: rot, flip: sw.flip });
     }
-    return Pixels.compose(32, 32, layers);
+    for (var n = 0; n < layers.length; n++) { layers[n].x += OX; layers[n].y += OY; }
+    return Pixels.compose(FW, FH, layers);
   }
 
   // the Warden lying on the ground, composed by hand: the cloak spread, the body turned, the lantern set down
   function lying(raise) {
-    var A = Pixels.art;
-    return Pixels.compose(32, 32, [
+    var A = Pixels.art, flat = currentWeapon ? currentWeapon.flat.img : A(SWORD_FLAT);
+    var layers = [
       { img: A(CLOAK), x: 3, y: 18 - raise, rot: 1 },
       { img: A(LEG), x: 1, y: 25 - raise, rot: 3 },
       { img: A(LEG), x: 3, y: 27 - raise, rot: 3 },
@@ -215,9 +255,11 @@
       { img: A(ARM), x: 12, y: 25 - raise, rot: 1 },
       { img: A(HEAD), x: 20, y: 21 - raise, rot: 3 },
       { img: A(SCARF), x: 16, y: 18 - raise },
-      { img: A(SWORD_FLAT), x: 18, y: 28 },
+      { img: flat, x: 18, y: 31 - flat.height },
       { img: A(LANTERN), x: 26, y: 23 }
-    ]);
+    ];
+    for (var n = 0; n < layers.length; n++) { layers[n].x += OX; layers[n].y += OY; }
+    return Pixels.compose(FW, FH, layers);
   }
 
   // a training dummy: a sack on a post, for swinging at
@@ -291,7 +333,7 @@
     ];
     // attack two: a rising cut from low to high
     F.attack2 = [
-      pose({ bob: 1, lean: 0, frontArm: { x: 1, y: 3 }, sword: { kind: 'diag', rot: 1, x: -2, y: 5 }, front: { x: 1, y: 1, bent: true }, back: { x: -1, y: 1, bent: true } }),
+      pose({ bob: 1, lean: 0, frontArm: { x: 1, y: 3 }, sword: { kind: 'diag', rot: 1 }, front: { x: 1, y: 1, bent: true }, back: { x: -1, y: 1, bent: true } }),
       pose({ lean: 1, trail: 2, frontArm: { x: 1, y: -1, rot: 3 }, sword: { kind: 'flat', x: 0, y: -1 }, scarf: { x: -2, y: 1 } }),
       pose({ bob: -1, lean: 1, trail: 2, frontArm: { x: 2, y: -3 }, sword: { kind: 'diag', x: 4, y: -7 }, scarf: { x: -2, y: 2 }, front: { x: 1, y: -1 } }),
       pose({ lean: 0, frontArm: { x: 0, y: -1 }, sword: { kind: 'up', x: 1, y: -2 } })
@@ -313,18 +355,40 @@
     F.cast = [];
     for (k = 0; k < 5; k++) {
       var lift = [-8, -11, -13, -12, -10][k];
-      F.cast.push(pose({ bob: k === 2 ? -1 : 0, backArm: { x: -1, y: -6, rot: 2 }, lantern: { x: -2, y: lift }, frontArm: { x: 0, y: 2 }, sword: { kind: 'diag', rot: 1, x: -1, y: 5 }, scarf: { x: -1, y: -1 }, front: { x: 1, y: 0 }, back: { x: -1, y: 0 } }));
+      F.cast.push(pose({ bob: k === 2 ? -1 : 0, backArm: { x: -1, y: -6, rot: 2 }, lantern: { x: -2, y: lift }, frontArm: { x: 0, y: 2 }, sword: { kind: 'diag', rot: 1 }, scarf: { x: -1, y: -1 }, front: { x: 1, y: 0 }, back: { x: -1, y: 0 } }));
     }
     // hurt: thrown back
     F.hurt = [
       pose({ lean: -2, headX: -1, headY: 1, frontArm: { x: 2, y: -2 }, backArm: { x: -2, y: -2 }, scarf: { x: 2, y: -1 }, sword: { kind: 'up', x: 2, y: 1 }, front: { x: 2, y: 0 }, back: { x: -2, y: 0 } }),
       pose({ lean: -3, headX: -1, headY: 1, frontArm: { x: 3, y: -3 }, backArm: { x: -3, y: -3 }, scarf: { x: 3, y: -2 }, sword: { kind: 'up', x: 3, y: 2 }, front: { x: 3, y: 0 }, back: { x: -3, y: 0 } })
     ];
+    // a heavy blow: the weapon carried up and behind, then brought down in front
+    F.heavy1 = [
+      pose({ lean: -2, frontArm: { x: -2, y: -3 }, sword: { kind: 'diag', flip: true }, scarf: { x: 1, y: 0 }, front: { x: -1, y: 0 } }),
+      pose({ bob: -1, lean: -2, frontArm: { x: -2, y: -4 }, sword: { kind: 'diag', flip: true, y: -1 }, scarf: { x: 1, y: 1 }, front: { x: -1, y: 0 } }),
+      pose({ bob: 1, lean: 3, trail: 3, frontArm: { x: 2, y: 3, rot: 3 }, sword: { kind: 'flat', y: 2 }, scarf: { x: -3, y: 0 }, front: { x: 3, y: 1 }, back: { x: -2, y: 1 } }),
+      pose({ bob: 2, lean: 3, trail: 2, frontArm: { x: 2, y: 4, rot: 3 }, sword: { kind: 'flat', y: 3 }, scarf: { x: -2, y: 1 }, front: { x: 3, y: 2, bent: true }, back: { x: -2, y: 2, bent: true } }),
+      pose({ lean: 1, frontArm: { x: 1, y: 2 }, sword: { kind: 'diag', rot: 1 }, scarf: { x: -1, y: 0 } })
+    ];
+    // the second: a crouch, a rise onto the toes, and everything brought down
+    F.heavy2 = [
+      pose({ bob: 2, lean: -1, frontArm: { x: -1, y: -2 }, sword: { kind: 'up', y: -2 }, front: { x: 0, y: 2, bent: true }, back: { x: -2, y: 2, bent: true }, scarf: { x: 1, y: 0 } }),
+      pose({ bob: -3, lean: -2, frontArm: { x: -2, y: -5 }, sword: { kind: 'diag', flip: true, y: -2 }, front: { x: 1, y: -2 }, back: { x: -1, y: -1 }, scarf: { x: 0, y: 3 }, cloakLift: 2 }),
+      pose({ bob: 2, lean: 4, trail: 4, frontArm: { x: 3, y: 4, rot: 3 }, sword: { kind: 'flat', y: 3 }, scarf: { x: -4, y: -1 }, front: { x: 4, y: 2, bent: true }, back: { x: -3, y: 2, bent: true }, cloakLift: -2 }),
+      pose({ bob: 3, lean: 4, trail: 3, frontArm: { x: 3, y: 5, rot: 3 }, sword: { kind: 'flat', y: 4 }, scarf: { x: -3, y: 0 }, front: { x: 4, y: 3, bent: true }, back: { x: -3, y: 3, bent: true } }),
+      pose({ bob: 1, lean: 1, frontArm: { x: 1, y: 2 }, sword: { kind: 'diag', rot: 1 }, scarf: { x: -1, y: 0 } })
+    ];
+    // a bow: held out upright, the string hand drawn back, and let go
+    F.bow = [
+      pose({ lean: -1, frontArm: { x: 1, y: 0, rot: 3 }, sword: { kind: 'up' }, backArm: { x: -1, y: -1 }, scarf: { x: 0, y: 0 } }),
+      pose({ lean: -2, frontArm: { x: 1, y: 0, rot: 3 }, sword: { kind: 'up' }, backArm: { x: -3, y: -1 }, lantern: { x: -1, y: 0 }, scarf: { x: 1, y: 0 }, back: { x: -1, y: 0 } }),
+      pose({ lean: 1, frontArm: { x: 2, y: 0, rot: 3 }, sword: { kind: 'up' }, backArm: { x: 0, y: 0 }, scarf: { x: -2, y: -1 }, front: { x: 1, y: 0 } })
+    ];
     // death: to the knees, then down, the lantern set by the hand
     F.death = [
       F.hurt[1],
-      pose({ bob: 4, front: { x: 1, y: 4, bent: true }, back: { x: -2, y: 4, bent: true }, sword: { kind: 'diag', rot: 1, x: -1, y: 6 }, frontArm: { x: 0, y: 2 }, headY: 1 }),
-      pose({ bob: 6, front: { x: 1, y: 6, bent: true }, back: { x: -2, y: 6, bent: true }, sword: { kind: 'diag', rot: 1, x: -1, y: 6 }, frontArm: { x: 0, y: 2 }, headY: 2, headX: 1 }),
+      pose({ bob: 4, front: { x: 1, y: 4, bent: true }, back: { x: -2, y: 4, bent: true }, sword: { kind: 'diag', rot: 1 }, frontArm: { x: 0, y: 2 }, headY: 1 }),
+      pose({ bob: 6, front: { x: 1, y: 6, bent: true }, back: { x: -2, y: 6, bent: true }, sword: { kind: 'diag', rot: 1 }, frontArm: { x: 0, y: 2 }, headY: 2, headX: 1 }),
       pose({ bob: 8, front: { x: 1, y: 8, bent: true }, back: { x: -2, y: 8, bent: true }, sword: null, frontArm: { x: 1, y: 3 }, backArm: { x: -1, y: 3 }, lantern: { x: 0, y: 2 }, headY: 4, headX: 2 }),
       lying(1),
       lying(0)
@@ -332,7 +396,17 @@
     return F;
   }
 
-  var warden = { frames: null, build: function () { if (!warden.frames) warden.frames = wardenFrames(); return warden.frames; } };
+  // the Warden's frames, built once for each weapon she holds
+  var warden = {
+    sets: {}, anchor: { x: 16 + OX, y: 31 + OY }, width: FW, height: FH,
+    build: function (id, viewSet) {
+      id = id || 'shortsword';
+      if (warden.sets[id]) return warden.sets[id];
+      currentWeapon = viewSet || weaponViews(SWORD, 1, 11, true);
+      warden.sets[id] = wardenFrames();
+      return warden.sets[id];
+    }
+  };
 
-  window.Pixels = { PALETTE: PALETTE, art: art, compose: compose, flipH: flipH, silhouette: silhouette, count: count, blank: blank, warden: warden, DUMMY: DUMMY };
+  window.Pixels = { PALETTE: PALETTE, art: art, compose: compose, flipH: flipH, silhouette: silhouette, count: count, blank: blank, warden: warden, weaponViews: weaponViews, DUMMY: DUMMY };
 })();
