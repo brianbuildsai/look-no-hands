@@ -34,8 +34,8 @@
      is the vault's ceiling. Each chunk writes its columns and hands on the
      ground height it ends at. */
 
-  function Level(cols, element, floor, section) {
-    this.cols = cols; this.rows = ROWS; this.tiles = new Uint8Array(cols * ROWS);
+  function Level(cols, element, floor, section, rows) {
+    this.cols = cols; this.rows = rows || ROWS; this.tiles = new Uint8Array(cols * this.rows);
     this.element = element; this.floor = floor; this.section = section;
     this.spawn = { x: 24, y: 0 }; this.door = { x: 0, y: 0 };
     this.enemies = []; this.relics = []; this.lights = []; this.chests = []; this.spots = [];
@@ -43,10 +43,10 @@
   Level.prototype.get = function (x, y) {
     if (x < 0 || x >= this.cols) return STONE;
     if (y < 0) return STONE;
-    if (y >= ROWS) return STONE;
+    if (y >= this.rows) return STONE;
     return this.tiles[y * this.cols + x];
   };
-  Level.prototype.set = function (x, y, t) { if (x >= 0 && x < this.cols && y >= 0 && y < ROWS) this.tiles[y * this.cols + x] = t; };
+  Level.prototype.set = function (x, y, t) { if (x >= 0 && x < this.cols && y >= 0 && y < this.rows) this.tiles[y * this.cols + x] = t; };
   // cut the grid down to the columns actually written
   Level.prototype.trim = function (cols) {
     var tiles = new Uint8Array(cols * ROWS);
@@ -203,8 +203,8 @@
      to six columns at the same height or lower. A conservative model of the
      engine: if this says yes, the engine agrees. */
 
-  function reachable(L) {
-    var cols = L.cols, k;
+  function reachable(L, wantSeen) {
+    var cols = L.cols, ROWS = L.rows, k;
     function solid(x, y) { var t = L.get(x, y); return t === STONE; }
     function standing(x, y) { var t = L.get(x, y), below = L.get(x, y + 1); return t === AIR && (below === STONE || below === LEDGE) && !solid(x, y - 1); }
     function open(x, y) { var t = L.get(x, y); return t !== STONE; }
@@ -213,6 +213,7 @@
     var dx = Math.floor(L.door.x / TILE), dy = Math.floor(L.door.y / TILE) - 1;
     if (!standing(sx, sy)) return false;
     seen[sy * cols + sx] = 1; queue.push(sx, sy);
+    var found = false;
     function land(x, y) {
       // where a fall from (x, y) ends
       var yy = y;
@@ -233,7 +234,7 @@
     }
     while (queue.length) {
       var y = queue.pop(), x = queue.pop();
-      if (x === dx && y === dy) return true;
+      if (x === dx && y === dy) { found = true; if (!wantSeen) return true; }
       var dir, reach, rise, tx, ty;
       for (dir = -1; dir <= 1; dir += 2) {
         // walking, and stepping off an edge
@@ -264,7 +265,7 @@
       // jumping straight up through a ledge
       for (rise = 1; rise <= 2; rise++) { ty = y - rise; if (L.get(x, ty) === LEDGE && open(x, ty - 1) && standing(x, ty - 1)) visit(x, ty - 1); if (standing(x, ty) && open(x, ty - 1)) visit(x, ty); }
     }
-    return false;
+    return wantSeen ? (found ? seen : null) : found;
   }
 
   // the guardian's arena: a hall with walls at both ends, two ledges, and a door that opens when it is over
@@ -349,5 +350,5 @@
     return L;
   }
 
-  window.World = { arena: arena, TILE: TILE, ROWS: ROWS, AIR: AIR, STONE: STONE, LEDGE: LEDGE, SPIKES: SPIKES, HAZARD: HAZARD, ELEMENTS: ELEMENTS, generate: generate, reachable: reachable, makeRandom: makeRandom };
+  window.World = { Level: Level, hashSeed: hashSeed, byName: byName, arena: arena, TILE: TILE, ROWS: ROWS, AIR: AIR, STONE: STONE, LEDGE: LEDGE, SPIKES: SPIKES, HAZARD: HAZARD, ELEMENTS: ELEMENTS, generate: generate, reachable: reachable, makeRandom: makeRandom };
 })();
