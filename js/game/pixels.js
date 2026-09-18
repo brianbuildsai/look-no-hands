@@ -28,9 +28,9 @@
 
   // text to canvas: one character a pixel; '.' and ' ' are clear
   function art(rows, palette) {
-    var key = rows.join('|');
-    if (cache[key]) return cache[key];
     palette = palette || PALETTE;
+    var key = rows.join('|') + (palette === PALETTE ? '' : '#' + (palette.p || '') + (palette.k || ''));
+    if (cache[key]) return cache[key];
     var w = 0, h = rows.length, y, x;
     for (y = 0; y < h; y++) w = Math.max(w, rows[y].length);
     var c = document.createElement('canvas');

@@ -214,6 +214,7 @@
       hero.anim = 'idle'; hero.frame = 0; hero.clock = 0; hero.landed = 0;
       hero.hp = hero.maxHp; hero.energy = hero.maxEnergy;
       hero.act = null; hero.combo = 0; hero.queued = false; hero.dashCd = 0; hero.airDash = true; hero.invuln = 0; hero.flash = 0; hero.alive = true; hero.deadFor = 0;
+      afflictions.burn = 0; afflictions.chill = 0; afflictions.poison = 0;
     }
 
     // does the box [x0, x1) by [y0, y1) overlap a solid tile, or (when asked) a ledge?
@@ -304,7 +305,7 @@
         if (a.clock >= frames[a.frame]) { a.clock = 0; a.frame++; }
         if (a.frame >= frames.length) { hero.act = null; hero.anim = 'idle'; hero.frame = 0; if (hero.combo >= 3) hero.combo = 0; return; }
         hero.frame = a.frame;
-        if (!a.hitDone && spec.active.indexOf(a.frame) >= 0) { if (strike(swingBox(spec), spec.damage, a.n)) a.hitDone = true; }
+        if (!a.hitDone && spec.active.indexOf(a.frame) >= 0) { if (strike(swingBox(spec), spec.damage, a.n, null)) a.hitDone = true; }
         if (hit('attack') && a.frame >= 1 && hero.combo < 3) hero.queued = true;
         if (hero.queued && a.frame >= frames.length - 1) startAttack();
         if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
@@ -342,7 +343,7 @@
     function castPower() {
       spark(hero.x + hero.dir * 4, hero.y - 26, '#ffb347', 40, 2.4, 30, 0.02);
       shake(2);
-      strike({ x0: hero.x - 40, x1: hero.x + 40, y0: hero.y - 44, y1: hero.y + 4 }, 3, 3);
+      strike({ x0: hero.x - 40, x1: hero.x + 40, y0: hero.y - 44, y1: hero.y + 4 }, 3, 3, null);
     }
 
     function stepHero() {
@@ -352,10 +353,11 @@
       if (hero.invuln > 0 && hero.alive) hero.invuln--;
       if (hero.flash > 0) hero.flash--;
       if (free) {
-        var accel = hero.onGround ? ACCEL : AIR_ACCEL;
+        var accel = (hero.onGround ? ACCEL : AIR_ACCEL) * (afflictions.chill > 0 ? 0.55 : 1);
         if (move !== 0) {
           hero.vx += move * (onIce ? accel * 0.35 : accel);
-          if (Math.abs(hero.vx) > RUN_MAX) hero.vx = move * RUN_MAX;
+          var top = RUN_MAX * (afflictions.chill > 0 ? 0.6 : 1);
+          if (Math.abs(hero.vx) > top) hero.vx = move * top;
           hero.dir = move;
         } else {
           hero.vx *= hero.onGround ? (onIce ? 0.975 : FRICTION) : AIR_FRICTION;
@@ -429,46 +431,110 @@
       }
     }
 
-    /* ---- things to hit: training dummies until the enemies arrive ---- */
+    /* ---- the creatures, and what flies between them and the Warden ---- */
 
-    var dummies = [];
-    function placeDummies() {
-      dummies = level.enemies.map(function (e) { return { x: e.x * TILE + 8, y: e.y * TILE, hp: 12, wobble: 0, dir: 1 }; });
+    var AC = window.Actors;
+    if (!AC) { env.fail('The undercroft’s creatures did not load. The other rooms still run.'); return null; }
+    var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build();
+    var ctx = {
+      hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
+      hurtHero: function (fromX, damage) { return hurtHero(fromX, damage); },
+      afflict: function (elementName) { afflict(elementName); },
+      projectile: function (p) { p.from = 'enemy'; projectiles.push(p); },
+      zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); }
+    };
+    function placeCreatures() {
+      creatures = []; projectiles = []; zaps = [];
+      var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
+      for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
     }
-    function stepDummies() {
-      for (var k = 0; k < dummies.length; k++) {
-        var d = dummies[k];
-        if (d.wobble > 0) d.wobble--;
-        if (d.hp <= 0 && d.gone === undefined) { d.gone = 90; }
-        if (d.gone !== undefined && --d.gone <= 0) { d.hp = 12; delete d.gone; }
+    function stepCreatures() {
+      var k, e;
+      for (k = creatures.length - 1; k >= 0; k--) {
+        e = creatures[k];
+        if (Math.abs(e.x - hero.x) > W * 1.2 && !e.seen) continue;   // asleep until the Warden is near
+        AC.step(e, ctx);
+        if (e.dying === 2) { kills++; spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
+        if (e.dying > 22) creatures.splice(k, 1);
+        if (e.y > level.rows * TILE + 40) creatures.splice(k, 1);
       }
+      for (k = projectiles.length - 1; k >= 0; k--) {
+        var p = projectiles[k];
+        if (p.seek) { var dx = hero.x - p.x, dy = hero.y - 11 - p.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)); p.vx += dx / len * p.seek; p.vy += dy / len * p.seek; }
+        p.x += p.vx; p.y += p.vy; p.vy += p.gravity || 0;
+        if (tick % 2 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 8, max: 8, colour: p.colour, size: 1, gravity: 0 });
+        var gone = --p.life <= 0 || tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1;
+        if (p.from === 'enemy' && hero.alive && Math.abs(p.x - hero.x) < hero.w / 2 + p.size && p.y > hero.y - hero.h - p.size && p.y < hero.y + p.size) {
+          if (hurtHero(p.x, p.damage)) afflict(p.element);
+          gone = true;
+        }
+        if (p.from === 'hero') { for (var j = 0; j < creatures.length; j++) { var c = creatures[j]; if (!c.dying && Math.abs(p.x - c.x) < c.w / 2 + p.size && p.y > c.y - c.h - p.size && p.y < c.y + p.size) { wound(c, p.damage, p.x, p.element); if (!p.pierce) gone = true; break; } } }
+        if (gone) { spark(p.x, p.y, p.colour, 5, 1, 12, 0); projectiles.splice(k, 1); }
+      }
+      for (k = zaps.length - 1; k >= 0; k--) if (--zaps[k].life <= 0) zaps.splice(k, 1);
+    }
+    // a wound on a creature, with the Warden's element laid on it
+    function wound(e, damage, fromX, elementName) {
+      if (!AC.hurt(e, damage, fromX, ctx)) return false;
+      hero.hits++;
+      if (hero.energy < hero.maxEnergy && hero.hits % 4 === 0) hero.energy++;
+      spark(e.x, e.y - e.h / 2, '#ffffff', 8, 1.6, 16, 0.06);
+      number(e.x, e.y - e.h - 6, damage, elementName ? AC.STATUS[elementName].colour : '#e9e6df');
+      if (elementName === 'ember') e.status.burn = 180;
+      else if (elementName === 'frost') e.status.freeze = 90;
+      else if (elementName === 'storm') e.status.shock = 60;
+      else if (elementName === 'bloom') e.status.poison = 250;
+      return true;
     }
     // a box strikes whatever stands in it; returns whether anything was hit
-    function strike(box, damage, kind) {
+    function strike(box, damage, kind, elementName) {
       var any = false;
-      for (var k = 0; k < dummies.length; k++) {
-        var d = dummies[k];
-        if (d.gone !== undefined) continue;
-        if (d.x + 6 < box.x0 || d.x - 6 > box.x1 || d.y < box.y0 || d.y - 16 > box.y1) continue;
-        d.hp -= damage; d.wobble = 12; d.dir = hero.dir; any = true;
-        var hx = hero.dir > 0 ? Math.max(d.x - 6, box.x0) : Math.min(d.x + 6, box.x1);
-        spark(hx, d.y - 10, kind === 3 ? '#ffb347' : '#ffffff', kind === 2 ? 14 : 8, kind === 2 ? 2.2 : 1.6, 16, 0.06);
-        number(d.x, d.y - 22, damage, kind === 2 ? '#ffb347' : '#e9e6df');
-        hero.hits++;
-        if (hero.energy < hero.maxEnergy && hero.hits % 4 === 0) hero.energy++;
+      for (var k = 0; k < creatures.length; k++) {
+        var e = creatures[k];
+        if (e.dying) continue;
+        if (e.x + e.w / 2 < box.x0 || e.x - e.w / 2 > box.x1 || e.y < box.y0 || e.y - e.h > box.y1) continue;
+        if (wound(e, damage, hero.x, elementName)) any = true;
       }
       if (any) { hitstop(kind === 2 ? 5 : 3); shake(kind === 2 ? 3 : 1.5); }
       return any;
     }
-    function drawDummies() {
-      var cx = Math.round(cam.x), cy = Math.round(cam.y);
-      for (var k = 0; k < dummies.length; k++) {
-        var d = dummies[k];
-        if (d.gone !== undefined) continue;
-        var tilt = d.wobble > 0 ? Math.round(Math.sin(d.wobble * 0.9) * 2 * d.dir) : 0;
-        fpen.drawImage(P.art(P.DUMMY), Math.round(d.x) - 6 + tilt - cx, Math.round(d.y) - 16 - cy);
-        if (d.hp < 12) { fpen.fillStyle = '#3a3936'; fpen.fillRect(Math.round(d.x) - 6 - cx, Math.round(d.y) - 21 - cy, 12, 2); fpen.fillStyle = '#ff4f7b'; fpen.fillRect(Math.round(d.x) - 6 - cx, Math.round(d.y) - 21 - cy, Math.round(12 * d.hp / 12), 2); }
+    function drawCreatures() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, e;
+      for (k = 0; k < creatures.length; k++) {
+        e = creatures[k];
+        if (e.x < cam.x - 40 || e.x > cam.x + W + 40) continue;
+        var set = actorSprites[e.kind], frames = (e.dir >= 0 ? set : set.flipped)[e.anim], img = frames[Math.min(e.frame, frames.length - 1)];
+        var scale = e.elder ? 1.5 : 1, w = img.width * scale, h = img.height * scale;
+        var x = Math.round(e.x) - w / 2 - cx, y = Math.round(e.y) - h - cy + (e.spec.flying ? h / 2 : 0);
+        var glow = WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow;
+        if (e.dying) { var t = e.dying / 22; fpen.globalAlpha = 1 - t; fpen.drawImage(P.silhouette(img, '#ffffff'), x + w * t / 2, y + h * t / 2, w * (1 - t), h * (1 - t)); fpen.globalAlpha = 1; continue; }
+        if (e.flash > 0) fpen.drawImage(P.silhouette(img, '#ffffff'), x, y, w, h);
+        else fpen.drawImage(img, x, y, w, h);
+        if (e.status.freeze > 0) { fpen.globalAlpha = 0.5; fpen.drawImage(P.silhouette(img, '#d8f1ff'), x, y, w, h); fpen.globalAlpha = 1; }
+        if (e.status.burn > 0 && tick % 3 === 0) ember(e.x + (random() - 0.5) * w, e.y - h / 2);
+        if (e.status.poison > 0 && tick % 6 === 0) particles.push({ x: e.x + (random() - 0.5) * w, y: e.y - h / 2, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 });
+        if (e.hp < e.maxHp) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
+        light(e.x, e.y - h / 2, e.elder ? 30 : 18, 0.55);
       }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
+      for (k = 0; k < zaps.length; k++) { var z = zaps[k]; fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
+    }
+
+    /* ---- what the elements do to the Warden ---- */
+
+    var afflictions = { burn: 0, chill: 0, poison: 0 };
+    function afflict(elementName) {
+      var st = AC.STATUS[elementName];
+      if (!st) return;
+      if (st.name === 'drain') { if (hero.energy > 0) { hero.energy--; number(hero.x, hero.y - 32, '-', '#a48cff'); } return; }
+      if (st.name === 'shock') { hero.vx *= 0.2; return; }
+      afflictions[st.name] = st.time;
+    }
+    function stepAfflictions() {
+      if (afflictions.burn > 0) { afflictions.burn--; if (afflictions.burn % 60 === 30) { hero.invuln = 0; hurtHero(hero.x + 1, 1); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 3 === 0) ember(hero.x + (random() - 0.5) * 8, hero.y - 14); }
+      if (afflictions.poison > 0) { afflictions.poison--; if (afflictions.poison % 120 === 60) { hero.invuln = 0; hurtHero(hero.x + 1, 1); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 5 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 16, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 }); }
+      if (afflictions.chill > 0) afflictions.chill--;
+      if (element.hazard === 'ice' && onIce && tick % 6 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y, vx: -hero.vx * 0.3, vy: -0.4, life: 14, max: 14, colour: '#d8f1ff', size: 1, gravity: 0.02 });
     }
 
     /* ---- effects: particles, hit-stop, shaking, light ---- */
@@ -705,6 +771,7 @@
       if (!hero.alive && hero.deadFor > 70) fpen.globalAlpha = Math.max(0, 1 - (hero.deadFor - 70) / 40);
       var x = Math.round(hero.x) - 16 - Math.round(cam.x), y = Math.round(hero.y) - 31 - Math.round(cam.y);
       fpen.drawImage(hero.flash > 0 ? P.silhouette(img, '#ffffff') : img, x, y);
+      if (afflictions.chill > 0) { fpen.globalAlpha = 0.45; fpen.drawImage(P.silhouette(img, '#9fd8ff'), x, y); fpen.globalAlpha = 1; }
       fpen.globalAlpha = 1;
       // the lantern's light travels with the hand
       if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, 78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0), 1);
@@ -739,7 +806,7 @@
         run.section++;
         if (run.section >= 3) { run.section = 0; run.floor++; }
         if (run.floor > 5) { run.floor = 1; state = 'title'; }
-        loadSection(); placeDummies(); spawnHero(); stepCamera(true);
+        loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
         particles.length = 0; afterimages.length = 0; numbers.length = 0;
       }
       if (transition >= 48) transition = 0;
@@ -756,7 +823,7 @@
       cam.x += sx; cam.y += sy;
       drawBackdrop();
       drawTiles();
-      drawDummies();
+      drawCreatures();
       drawHero();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
@@ -777,7 +844,7 @@
     function begin() {
       state = 'run';
       run.floor = 1; run.section = 0; transition = 0;
-      loadSection(); placeDummies(); spawnHero(); stepCamera(true);
+      loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
 
@@ -790,7 +857,8 @@
       if (stepTransition()) { stepFx(); return; }
       if (freeze > 0) { freeze--; return; }
       stepHero();
-      stepDummies();
+      stepAfflictions();
+      stepCreatures();
       stepFx();
       stepCamera(false);
     }
@@ -811,7 +879,7 @@
     }
 
     loadSection();
-    placeDummies();
+    placeCreatures();
     spawnHero();
     stepCamera(true);
 
@@ -839,7 +907,7 @@
       still: function () { if (state === 'run') state = 'paused'; render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, dummies: dummies.map(function (d) { return d.hp; }), particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -852,17 +920,20 @@
       generate: function (seed, floor, section) { var L = WD.generate(seed, floor, section); return { cols: L.cols, reachable: WD.reachable(L), enemies: L.enemies.length, relics: L.relics.length, tries: L.tries }; },
       warp: function (x, y) { hero.x = x; hero.y = y === undefined ? level.door.y : y; hero.vy = 0; hero.vx = 0; stepCamera(true); },
       find: function (kind) { for (var ty = 0; ty < level.rows; ty++) for (var tx = 0; tx < level.cols; tx++) if (tileAt(tx, ty) === kind) return { x: tx * TILE + 8, y: ty * TILE, tx: tx, ty: ty }; return null; },
+      begin: function (seed) { if (seed !== undefined) run.seed = seed; begin(); kills = 0; return run; },
       hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
       sprites: function () {
         var out = {};
         Object.keys(sprites.warden).forEach(function (name) { out[name] = sprites.warden[name].map(function (img) { return P.count(img); }); });
+        Object.keys(actorSprites).forEach(function (name) { out[name] = actorSprites[name].walk.concat(actorSprites[name].attack).map(function (img) { return P.count(img); }); });
         return out;
       },
+      summon: function (kind, dx) { var e = AC.spawn({ x: Math.floor((hero.x + (dx || 40)) / TILE), y: Math.floor(hero.y / TILE), kind: AC.KINDS[kind].flying ? 'flyer' : 'walker' }, AC.KINDS[kind].element, run.floor, random); e.kind = kind; e.spec = AC.KINDS[kind]; e.element = AC.KINDS[kind].element; creatures.push(e); return creatures.length; },
       // draw every frame of the Warden large on the stage, for looking at the art; sheet(false) puts the game back
       sheet: function (on, scale, only, set) {
         sheetMode = on !== false;
         if (!sheetMode) return;
-        var ratio = canvas.width / size.w, S = scale || 5, group = sprites[set || 'warden'];
+        var ratio = canvas.width / size.w, S = scale || 5, group = set === 'creatures' ? (function () { var g = {}; Object.keys(actorSprites).forEach(function (n) { g[n] = actorSprites[n].walk.concat(actorSprites[n].attack); }); return g; })() : sprites[set || 'warden'];
         pen.setTransform(ratio, 0, 0, ratio, 0, 0);
         pen.fillStyle = '#101018'; pen.fillRect(0, 0, size.w, size.h);
         pen.imageSmoothingEnabled = false;
