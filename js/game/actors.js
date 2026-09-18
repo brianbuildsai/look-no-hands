@@ -24,7 +24,10 @@
     frost: { k: '#0a1220', p: '#7fb4d8', q: '#3f6f94', l: '#e6f6ff', e: '#ffffff', w: '#d8f1ff' },
     storm: { k: '#0e0a1c', p: '#6b5aa8', q: '#3a2f6a', l: '#c9b8ff', e: '#ffffff', w: '#8fa3ff' },
     bloom: { k: '#06120a', p: '#4e9a52', q: '#2c5e31', l: '#c5ff9a', e: '#f0ffd8', w: '#9ae66e' },
-    void:  { k: '#000000', p: '#1e1a2c', q: '#0d0b14', l: '#5b3fa0', e: '#ffffff', w: '#a48cff' }
+    void:  { k: '#000000', p: '#1e1a2c', q: '#0d0b14', l: '#5b3fa0', e: '#ffffff', w: '#a48cff' },
+    tide:  { k: '#03100f', p: '#2f8f86', q: '#1a5550', l: '#9ff5e6', e: '#ffffff', w: '#d6fff8' },
+    gear:  { k: '#140d04', p: '#b08a3c', q: '#6e5220', l: '#efd27a', e: '#fff3b0', w: '#ffdc9a' },
+    glass: { k: '#140a12', p: '#d88ab4', q: '#8a4f72', l: '#ffe8f4', e: '#ffffff', w: '#ffd0e6' }
   };
 
   /* ---- the kinds ----
@@ -461,6 +464,8 @@
       during: function (e, ctx) { ctx.beam(e.x, e.y, e.x + Math.cos(e.vars.angle) * e.vars.len, e.y + Math.sin(e.vars.angle) * e.vars.len, '#a48cff'); } }] };
 
   BY_ELEMENT.storm = ['hound', 'jelly']; BY_ELEMENT.bloom = ['toad', 'puff']; BY_ELEMENT.void = ['shade', 'watcher'];
+  // until their own are written, the newer floors borrow
+  BY_ELEMENT.tide = ['crab', 'puff']; BY_ELEMENT.gear = ['hound', 'lantern']; BY_ELEMENT.glass = ['shade', 'watcher'];
 
   // compile every kind's rig into frames, and their mirror images
   var SPRITES = null;
@@ -500,7 +505,7 @@
   function statusName(element) { return STATUS[element].name; }
 
   function make(name, x, groundY, elder, floor, rnd) {
-    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.22, size = elder ? 1.4 : 1;
+    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.17, size = elder ? 1.4 : 1;
     var hp = Math.round(K.hp * scale * (elder ? 3 : 1));
     return {
       kind: name, spec: K, element: K.element, elder: !!elder, size: size,

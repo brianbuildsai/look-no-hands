@@ -152,7 +152,8 @@
       });
       // who lives here: nobody at the start, more the further in, an elder in a dead end
       if (q !== start) {
-        var count = Math.min(3, 1 + Math.floor(q.depth / 2 + difficulty * 0.5 + rnd() * 0.8));
+        // the largest stages hold two to a chamber except in dead ends, or nine floors of them would be a slog
+        var count = Math.min(GW * GH > 15 && !leaf ? 2 : 3, 1 + Math.floor(q.depth / 2 + Math.min(2, difficulty * 0.5) + rnd() * 0.8));
         for (k = 0; k < count; k++) { a = 2 + Math.floor(rnd() * (IW - 4)); if (L.get(X + a, g) !== STONE || L.get(X + a, g - 1) !== AIR) continue; L.enemies.push({ x: X + a, y: g, kind: rnd() < 0.3 ? 'flyer' : 'walker' }); }
         if (leaf && !isPortal && rnd() < 0.6) { a = Math.floor(IW / 2); if (L.get(X + a, g) === STONE && L.get(X + a, g - 1) === AIR) L.enemies.push({ x: X + a, y: g, kind: 'brute' }); }
       }

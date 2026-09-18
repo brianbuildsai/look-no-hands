@@ -19,7 +19,10 @@
     { name: 'frost', title: 'The Cellars', stone: ['#2c3644', '#3f4d60', '#6f83a0', '#1d242e'], top: '#dfe9f5', hazard: 'ice', hazardColours: ['#9fd8ff', '#d8f1ff', '#ffffff'], sky: ['#070a12', '#101a2c'], glow: '#9fd8ff', accent: '#6ec6ff' },
     { name: 'storm', title: 'The Galleries', stone: ['#2e2a3c', '#443e58', '#7a7099', '#1e1a28'], top: '#cfc6ee', hazard: 'rail', hazardColours: ['#3d5bff', '#8fa3ff', '#ffffff'], sky: ['#0a0812', '#1a1430'], glow: '#8fa3ff', accent: '#a48cff' },
     { name: 'bloom', title: 'The Cisterns', stone: ['#243328', '#365040', '#5e8a66', '#182219'], top: '#bfe3b0', hazard: 'spores', hazardColours: ['#7cd66a', '#c5ff9a', '#f0ffd8'], sky: ['#050d08', '#0d1f12'], glow: '#7cd66a', accent: '#9ae66e' },
-    { name: 'void', title: 'The Vault', stone: ['#1c1a24', '#2b2836', '#4a4560', '#100e16'], top: '#8f8d88', hazard: 'void', hazardColours: ['#5b3fa0', '#a48cff', '#ffffff'], sky: ['#020204', '#0a0812'], glow: '#a48cff', accent: '#ff4f7b' }
+    { name: 'void', title: 'The Vault', stone: ['#1c1a24', '#2b2836', '#4a4560', '#100e16'], top: '#8f8d88', hazard: 'void', hazardColours: ['#5b3fa0', '#a48cff', '#ffffff'], sky: ['#020204', '#0a0812'], glow: '#a48cff', accent: '#ff4f7b' },
+    { name: 'tide', title: 'The Drowned Stacks', stone: ['#1f3336', '#2f4b4e', '#5a8a86', '#142224'], top: '#a8e0d4', hazard: 'brine', hazardColours: ['#1f7a70', '#5fd4c4', '#d6fff8'], sky: ['#040c0d', '#0a1c1e'], glow: '#5fd4c4', accent: '#2fae9e' },
+    { name: 'gear', title: 'The Works', stone: ['#3a3022', '#574632', '#94784a', '#261f15'], top: '#e6c98a', hazard: 'cogs', hazardColours: ['#7a5a1e', '#c9a44c', '#efd27a'], sky: ['#0d0a05', '#1f170a'], glow: '#e0b04a', accent: '#efd27a' },
+    { name: 'glass', title: 'The Hall of Glass', stone: ['#352a34', '#4f3f4e', '#8a7088', '#221a22'], top: '#f0d4e6', hazard: 'shards', hazardColours: ['#c46a98', '#ff9ecb', '#ffe8f4'], sky: ['#0c070b', '#1e1220'], glow: '#ff9ecb', accent: '#ffe8f4' }
   ];
 
   function makeRandom(seed) {

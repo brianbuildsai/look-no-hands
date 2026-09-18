@@ -173,10 +173,11 @@
     if (!WD) { env.fail('The undercroft’s floors did not load. The other rooms still run.'); return null; }
     var level = null, run = { seed: 36, floor: 1, section: 0, stage: 0 }, flames = 3;
     // the way down: two sections and a guardian on each of three floors, then the vault
-    // five floors, one to an element and each with its guardian, and under them the Vault; stages grow as they go down
+    // eight floors, one to an element and each with its guardian, and under them the Vault; stages grow as they go down
     var FLOORS = [
       { element: 'ember', boss: 'golem', grid: [4, 3] }, { element: 'frost', boss: 'wyrm', grid: [4, 3] }, { element: 'bloom', boss: 'thornmother', grid: [5, 3] },
-      { element: 'storm', boss: 'herald', grid: [5, 3] }, { element: 'void', boss: 'orrery', grid: [5, 4] }, { element: 'void', boss: 'lightless', grid: null }
+      { element: 'tide', boss: 'bellkeeper', grid: [5, 3] }, { element: 'storm', boss: 'herald', grid: [5, 3] }, { element: 'gear', boss: 'regulator', grid: [5, 4] },
+      { element: 'glass', boss: 'reflected', grid: [5, 4] }, { element: 'void', boss: 'orrery', grid: [5, 4] }, { element: 'void', boss: 'lightless', grid: null }
     ];
     var STAGES = [];
     FLOORS.forEach(function (F, n) {
@@ -186,7 +187,7 @@
       STAGES.push({ floor: floor, boss: F.boss, element: F.element });
     });
     // until a guardian's own file is written, another stands in for it
-    function guardianFor(st) { var GR = window.Guardians.REG; return GR[st.boss] ? st.boss : st.boss === 'thornmother' ? 'wyrm' : st.boss === 'orrery' ? 'herald' : 'golem'; }
+    function guardianFor(st) { var GR = window.Guardians.REG; return GR[st.boss] ? st.boss : { thornmother: 'wyrm', orrery: 'herald', bellkeeper: 'wyrm', regulator: 'herald', reflected: 'orrery' }[st.boss] || 'golem'; }
 
 
     function syncStage() { var st = STAGES[run.stage]; run.floor = st.floor; run.section = st.boss ? 3 : st.section || 0; }
@@ -245,6 +246,9 @@
         hp.fillRect((3 + v * 5) % 16, 6 + v, 1, 1); hp.fillRect((11 + v * 3) % 16, 9 - v, 1, 1);
         if (el.hazard === 'ice') { hp.fillStyle = el.hazardColours[1]; hp.fillRect(0, 4, TILE, 12); hp.fillStyle = el.hazardColours[2]; hp.fillRect(2 + v * 4, 5, 3, 1); hp.fillRect(9 - v * 2, 8, 2, 1); hp.fillStyle = el.hazardColours[0]; hp.fillRect(0, 14, TILE, 2); }
         if (el.hazard === 'rail') { hp.clearRect(0, 0, TILE, TILE); hp.fillStyle = el.stone[1]; hp.fillRect(0, 10, TILE, 6); hp.fillStyle = v === 1 ? el.hazardColours[2] : el.hazardColours[0]; hp.fillRect(0, 8, TILE, 2); hp.fillStyle = el.hazardColours[1]; hp.fillRect(v * 5, 6, 2, 2); hp.fillRect(12 - v * 3, 5, 1, 3); }
+        // cogs: two toothed wheels half sunk in the floor, turning; shards: a row of glass teeth that glint
+        if (el.hazard === 'cogs') { hp.clearRect(0, 0, TILE, TILE); hp.fillStyle = el.stone[3]; hp.fillRect(0, 12, TILE, 4); for (k = 0; k < 2; k++) { var gx = 4 + k * 8, ga = v * 0.35 * (k ? -1 : 1); hp.fillStyle = el.hazardColours[k ? 0 : 1]; hp.beginPath(); for (var gt = 0; gt < 12; gt++) { var gr = gt % 2 ? 3.4 : 5.4, gan = ga + gt / 12 * 6.2832; if (gt) hp.lineTo(gx + Math.cos(gan) * gr, 10 + Math.sin(gan) * gr); else hp.moveTo(gx + Math.cos(gan) * gr, 10 + Math.sin(gan) * gr); } hp.fill(); hp.fillStyle = el.hazardColours[2]; hp.fillRect(gx - 1, 9, 2, 2); } }
+        if (el.hazard === 'shards') { hp.clearRect(0, 0, TILE, TILE); var sh = [[1, 9], [5, 5], [9, 8], [13, 4]]; for (k = 0; k < 4; k++) { hp.fillStyle = el.hazardColours[k % 2]; hp.beginPath(); hp.moveTo(sh[k][0] - 2, 16); hp.lineTo(sh[k][0] + 1, sh[k][1]); hp.lineTo(sh[k][0] + 3, 16); hp.fill(); hp.fillStyle = el.hazardColours[2]; hp.fillRect(sh[k][0] + 1, sh[k][1] + ((v + k) % 3) * 2, 1, 2); } }
         hz.push(h);
       }
       TILES = { stone: out, top: top, ledge: ledge, spikes: spikes, hazard: hz };
@@ -272,7 +276,7 @@
       hero.anim = 'idle'; hero.frame = 0; hero.clock = 0; hero.landed = 0;
       hero.hp = hero.maxHp; hero.energy = hero.maxEnergy;
       hero.act = null; hero.combo = 0; hero.queued = false; hero.dashCd = 0; hero.airDash = true; hero.invuln = 0; hero.flash = 0; hero.alive = true; hero.deadFor = 0; hero.wall = 0; pounding = false;
-      afflictions.burn = 0; afflictions.chill = 0; afflictions.poison = 0;
+      afflictions.burn = 0; afflictions.chill = 0; afflictions.poison = 0; afflictions.soak = 0; afflictions.jam = 0; afflictions.cut = 0;
     }
 
     // does the box [x0, x1) by [y0, y1) overlap a solid tile, or (when asked) a ledge?
@@ -339,6 +343,7 @@
       hero.act = { kind: 'dash', ticks: 0 };
       hero.anim = 'dash'; hero.frame = 0; hero.clock = 0;
       hero.act.speed = klass.dash === 'charge' ? 3.5 : klass.dash === 'flicker' ? -3.8 : klass.dash === 'blink' ? 1.4 : DASH_SPEED; hero.act.frames = klass.dash === 'blink' ? 7 : Math.round((klass.dash === 'charge' ? 17 : klass.dash === 'flicker' ? 10 : DASH_FRAMES) * mods.dashLength); hero.act.struck = [];
+      if (afflictions.soak > 0) hero.act.frames = Math.max(4, Math.round(hero.act.frames * 0.65));
       if (klass.dash === 'blink') blink();
       if (klass.dash === 'flicker') { delayed.push({ t: 26, x: hero.x, y: hero.y - 12, fn: 'flare' }); flares.push({ x: hero.x, y: hero.y - 12, t: 26 }); }
       hero.vx = hero.dir * hero.act.speed; hero.vy = 0;
@@ -362,6 +367,7 @@
         return false;
       }
       if (cause) lastHurtBy = cause;
+      if (afflictions.cut > 0 && cause !== 'burn' && cause !== 'poison') { damage += 1; afflictions.cut = 0; number(hero.x, hero.y - 40, 'DEEPER', '#ff9ecb'); }
       if (mods.shield && shieldUp <= 0) { shieldUp = mods.shield; hero.invuln = 30; spark(hero.x, hero.y - 12, '#ffdc9a', 16, 1.6, 20, 0); number(hero.x, hero.y - 32, 'BUBBLE', '#ffdc9a'); return false; }
       hero.hp -= damage;
       hero.invuln = 60; hero.flash = 6;
@@ -454,7 +460,7 @@
         }
         if (hit('attack')) { if (hero.combo >= swings.length) hero.combo = 0; startAttack(); }
         else if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
-        else if (hit('cast') && hero.energy > 0) startCast();
+        else if (hit('cast') && hero.energy > 0) { if (afflictions.jam > 0) { number(hero.x, hero.y - 32, 'JAMMED', '#e0b04a'); sfx('clink'); } else startCast(); }
         else if (hit('swap')) changeHands();
       } else stepAct();
       // jumping, with a little forgiveness either side of the edge
@@ -465,12 +471,12 @@
       if (mayJump && hero.buffer > 0 && hero.wall && !hero.onGround) { hero.vy = JUMP_V * 0.95; hero.vx = -hero.wall * 2.6; hero.dir = -hero.wall; hero.jumping = true; hero.buffer = 0; hero.wall = 0; if (klass.flips) hero.flip = 18; sfx('jump'); dust(hero.x, hero.y - 8, hero.dir, 4); }
       // everyone has a second jump, from the air; the Boots give a third
       if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && !hero.wall && airJumped < mods.airJumps && hero.vy > -2) {
-        hero.vy = JUMP_V * 0.9; hero.jumping = true; airJumped++; hero.buffer = 0; sfx(klass.flips ? 'flip' : 'jump'); if (klass.flips) hero.flip = 18;
+        hero.vy = JUMP_V * 0.9 * (afflictions.soak > 0 ? 0.84 : 1); hero.jumping = true; airJumped++; hero.buffer = 0; sfx(klass.flips ? 'flip' : 'jump'); if (klass.flips) hero.flip = 18;
         spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02); rings.push({ x: hero.x, y: hero.y, r: 2, grow: 1.4, life: 8, max: 8, colour: '#9fd8ff' });
       }
       if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
         if (down('down') && hero.onGround && standingOnLedge()) hero.drop = 8;
-        else { hero.vy = JUMP_V; hero.jumping = true; hero.onGround = false; hero.coyote = 0; dust(hero.x, hero.y, -hero.dir, 3); sfx('jump'); }
+        else { hero.vy = JUMP_V * (afflictions.soak > 0 ? 0.84 : 1); hero.jumping = true; hero.onGround = false; hero.coyote = 0; dust(hero.x, hero.y, -hero.dir, 3); sfx('jump'); }
         hero.buffer = 0;
       }
       if (hero.jumping && !down('jump') && hero.vy < JUMP_CUT) hero.vy = JUMP_CUT;
@@ -493,7 +499,7 @@
       if (hero.landed > 0) hero.landed--;
       if (hero.alive) touchHazards();
       if (shieldUp > 0) shieldUp--;
-      if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('font'); }
+      if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; afflictions.soak = 0; afflictions.jam = 0; afflictions.cut = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('font'); }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
       if (!level.portal && hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
       stepPortal(); stepPerks();
@@ -522,8 +528,10 @@
         if (t === 3 && (inBody || underfoot && hero.onGround)) { if (hurtHero(tx * TILE + 8, 1, 'spikes')) { hero.vy = -3.2; } return; }
         if (t === 4 && (inBody || underfoot)) {
           if (element.hazard === 'ice') { onIce = true; continue; }
+          // brine does not wound: it soaks, and wading is slow
+          if (element.hazard === 'brine') { if (!(afflictions.soak > 120)) { if (!(afflictions.soak > 0)) { number(hero.x, hero.y - 32, 'SOAKED', '#5fd4c4'); sfx('land'); } afflictions.soak = 170; } hero.vx *= 0.86; if (tick % 4 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 1, vx: (random() - 0.5) * 0.8, vy: -0.8 - random(), life: 12, max: 12, colour: '#9ff5e6', size: 1, gravity: 0.1 }); continue; }
           if (element.hazard === 'rail' && tick % 150 >= 75) continue;
-          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1, element.hazard === 'void' ? 'voidpool' : element.hazard)) { hero.vy = -3.2; status(element.name); }
+          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1, element.hazard === 'void' ? 'voidpool' : element.hazard)) { hero.vy = -3.2; status(element.name); if (element.hazard === 'cogs') hero.vx = (tx % 2 ? -1 : 1) * 3.4; if (element.hazard === 'shards') afflict('glass'); }
           return;
         }
       }
@@ -723,7 +731,7 @@
       if (mods.breaker && !e.boss && e.attack && e.attack.phase === 'windup') { if (e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; e.cooldown = 50; number(e.x, e.y - e.h - 14, 'BROKEN', '#ffb347'); }
       if (mods.slowOnHit) e.status.shock = Math.max(e.status.shock || 0, mods.slowOnHit);
       hero.hits++; countHit();
-      if (hero.energy < hero.maxEnergy && hero.hits % mods.hitsPerEnergy === 0) hero.energy++;
+      if (hero.energy < hero.maxEnergy && hero.hits % mods.hitsPerEnergy === 0 && !(afflictions.jam > 0)) hero.energy++;
       sfx(e.boss || e.elder ? 'heavy' : 'hit'); if (elementName === 'frost') sfx('freeze');
       var at = e.struckAt || { x: e.x, y: e.y - e.h / 2 }; e.struckAt = null;
       spark(at.x, at.y, '#ffffff', 8, 1.6, 16, 0.06);
@@ -843,18 +851,23 @@
 
     /* ---- what the elements do to the Warden ---- */
 
-    var afflictions = { burn: 0, chill: 0, poison: 0 };
+    var afflictions = { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0 };
     function afflict(elementName) {
       var st = AC.STATUS[elementName];
       if (!st) return;
       if (st.name === 'drain') { if (hero.energy > 0) { hero.energy--; number(hero.x, hero.y - 32, '-', '#a48cff'); } return; }
       if (st.name === 'shock') { hero.vx *= 0.2; return; }
+      if (!(afflictions[st.name] > 0) && (st.name === 'soak' || st.name === 'jam' || st.name === 'cut')) number(hero.x, hero.y - 32, st.name === 'soak' ? 'SOAKED' : st.name === 'jam' ? 'JAMMED' : 'CUT', st.colour);
       afflictions[st.name] = st.time;
     }
     function stepAfflictions() {
       if (afflictions.burn > 0) { afflictions.burn--; if (afflictions.burn % 60 === 30) { hero.invuln = 0; hurtHero(hero.x + 1, 1, 'burn'); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 3 === 0) ember(hero.x + (random() - 0.5) * 8, hero.y - 14); }
       if (afflictions.poison > 0) { afflictions.poison--; if (afflictions.poison % 120 === 60) { hero.invuln = 0; hurtHero(hero.x + 1, 1, 'poison'); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 5 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 16, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 }); }
       if (afflictions.chill > 0) afflictions.chill--;
+      // soaked: jumps and dashes fall short. Jammed: the power will not fire, and blows give no energy. Cut: the next wound is one deeper
+      if (afflictions.soak > 0) { afflictions.soak--; if (tick % 7 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 8 - random() * 10, vx: 0, vy: 0.5, life: 14, max: 14, colour: '#5fd4c4', size: 1, gravity: 0.06 }); }
+      if (afflictions.jam > 0) { afflictions.jam--; if (tick % 9 === 0) particles.push({ x: hero.x + (random() - 0.5) * 10, y: hero.y - 20, vx: (random() - 0.5) * 0.6, vy: -0.4, life: 14, max: 14, colour: '#e0b04a', size: 1, gravity: 0 }); }
+      if (afflictions.cut > 0) { afflictions.cut--; if (tick % 8 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 6 - random() * 14, vx: 0, vy: 0.3, life: 12, max: 12, colour: '#ff9ecb', size: 1, gravity: 0.03 }); }
       if (element.hazard === 'ice' && onIce && tick % 6 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y, vx: -hero.vx * 0.3, vy: -0.4, life: 14, max: 14, colour: '#d8f1ff', size: 1, gravity: 0.02 });
     }
 
@@ -1686,6 +1699,21 @@
             fpen.fillStyle = (tick + k * 17) % 90 < 4 ? element.hazardColours[2] : element.hazardColours[0];
             fpen.fillRect(ax - 40, 100 - oy, 80, 1);
             fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax - 1, 100 - oy, 2, 12); fpen.fillRect(ax - 3, 111 - oy, 6, 2);
+          } else if (name === 'brine') {
+            // the stacks: shelves of drowned books in every arch, and a drip
+            for (var sh = 0; sh < 3; sh++) { var shy = 44 + sh * 22 - oy; fpen.fillStyle = element.stone[3]; fpen.fillRect(ax - 30, shy + 12, 60, 2); for (var bk = 0; bk < 11; bk++) { var bh = 7 + ((seed + bk * 3 + sh * 5) % 5); if ((seed + bk + sh) % 7 === 0) continue; fpen.fillStyle = ['#1f4a46', '#2a3f52', '#3f3a2a', '#24504a'][(seed + bk * 2 + sh) % 4]; fpen.fillRect(ax - 28 + bk * 5, shy + 12 - bh, 4, bh); } }
+            var dr = (tick + seed * 23) % 110; if (dr < 40) { fpen.fillStyle = element.hazardColours[1]; fpen.fillRect(ax + 12 - seed * 5, 30 + dr * 2 - oy, 1, 2); }
+          } else if (name === 'cogs') {
+            // the works: a great wheel in every arch, turning one way and then the next
+            var ca = tick * 0.006 * (k % 2 ? 1 : -1) + seed, cr = 26 + seed * 2; fpen.fillStyle = element.stone[3]; fpen.beginPath();
+            for (var ct = 0; ct < 24; ct++) { var crr = ct % 2 ? cr : cr - 5, can = ca + ct / 24 * 6.2832; if (ct) fpen.lineTo(ax + Math.cos(can) * crr, 84 - oy + Math.sin(can) * crr); else fpen.moveTo(ax + Math.cos(can) * crr, 84 - oy + Math.sin(can) * crr); }
+            fpen.fill(); fpen.fillStyle = element.sky[0]; fpen.beginPath(); fpen.arc(ax, 84 - oy, cr - 12, 0, 6.2832); fpen.fill();
+            fpen.fillStyle = element.stone[3]; for (var cs = 0; cs < 3; cs++) { fpen.save(); fpen.translate(ax, 84 - oy); fpen.rotate(ca + cs * 2.0944); fpen.fillRect(-2, -cr + 6, 4, cr * 2 - 12); fpen.restore(); }
+          } else if (name === 'shards') {
+            // the hall of glass: a tall pane in every arch, and a glint that crosses it now and then
+            fpen.fillStyle = '#2a1f2c'; fpen.fillRect(ax - 13, 40 - oy, 26, 76); fpen.fillStyle = '#3d2c40'; fpen.fillRect(ax - 11, 42 - oy, 22, 72);
+            fpen.fillStyle = '#4f3a52'; fpen.fillRect(ax - 11, 42 - oy, 22, 1); fpen.fillRect(ax - 11, 42 - oy, 1, 72);
+            var gl = (tick + seed * 41 + k * 29) % 200; if (gl < 30) { fpen.globalAlpha = 0.5; fpen.fillStyle = element.hazardColours[2]; fpen.beginPath(); fpen.moveTo(ax - 1 + gl * 0.3, 42 - oy); fpen.lineTo(ax + 2 + gl * 0.3, 42 - oy); fpen.lineTo(ax - 8 + gl * 0.3, 114 - oy); fpen.lineTo(ax - 11 + gl * 0.3, 114 - oy); fpen.fill(); fpen.globalAlpha = 1; }
           } else if (name === 'spores') {
             fpen.fillStyle = element.hazardColours[0];
             for (var v = 0; v < 3; v++) { var vh = 20 + ((seed + v * 5) % 5) * 8, vx = ax - 24 + v * 20; fpen.fillRect(vx, 30 - oy, 1, vh); fpen.fillRect(vx - 1, 30 - oy + vh - 4, 3, 2); if (v === 1) fpen.fillRect(vx + 1, 30 - oy + (vh >> 1), 2, 1); }
@@ -1717,7 +1745,7 @@
         else if (t === 4) {
           var hf = element.hazard === 'rail' ? (tick % 150 < 75 ? 1 : 0) : (Math.floor(tick / 12) + tx) % 3;
           fpen.drawImage(TILES.hazard[hf], px, py);
-          if (element.hazard !== 'ice') light(tx * TILE + 8, ty * TILE + 8, 22, 0.5);
+          if (element.hazard !== 'ice') light(tx * TILE + 8, ty * TILE + 8, 22, element.hazard === 'brine' ? 0.3 : 0.5);
         }
       }
       drawFurniture();
@@ -1760,6 +1788,7 @@
       var x = Math.round(hero.x) - P.warden.anchor.x - Math.round(cam.x), y = Math.round(hero.y) - P.warden.anchor.y - Math.round(cam.y);
       fpen.drawImage(hero.flash > 0 ? P.silhouette(img, '#ffffff') : img, x, y);
       if (afflictions.chill > 0) { fpen.globalAlpha = 0.45; fpen.drawImage(P.silhouette(img, '#9fd8ff'), x, y); fpen.globalAlpha = 1; }
+      if (afflictions.soak > 0) { fpen.globalAlpha = 0.3; fpen.drawImage(P.silhouette(img, '#2fae9e'), x, y); fpen.globalAlpha = 1; }
       fpen.globalAlpha = 1;
       // the lantern's light travels with the hand
       if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, Math.round((78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0)) * mods.lantern), 1, true);
@@ -1801,7 +1830,8 @@
         fpen.fillStyle = '#0b0b12'; fpen.fillRect(4 + k * 9, 4, 1, 1); fpen.fillRect(7 + k * 9, 4, 1, 1); fpen.fillRect(10 + k * 9, 4, 1, 1);
       }
       for (k = 0; k < Math.max(3, flames); k++) { var flx = 8 + hero.maxHp * 9 + k * 7; fpen.fillStyle = k < flames ? '#ffb347' : '#3a3936'; fpen.fillRect(flx, 7, 3, 5); fpen.fillRect(flx + 1, 5, 1, 2); if (k < flames) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(flx + 1, 9, 1, 2); } }
-      for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
+      for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? (afflictions.jam > 0 ? '#7a5a1e' : '#ffb347') : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
+      if (afflictions.cut > 0 && (tick >> 3) % 2 === 0 && hero.hp > 0) { fpen.fillStyle = '#ff9ecb'; fpen.fillRect(4 + (hero.hp - 1) * 9, 13, 7, 1); }
       text(level.sanctuary ? 'A STILL PLACE' : element.title + '  ' + run.floor + '-' + (run.section >= 3 ? 'GUARDIAN' : (run.section + 1)), W - 4, 4, '#8f8d88', 1, 'right');
       text(timeText(Math.floor(clockSeconds)) + '  SEED ' + run.seed, W - 4, 12, '#5c5a56', 1, 'right');
       var pw = RL.POWERS[power];
@@ -1919,7 +1949,7 @@
     document.addEventListener('visibilitychange', function () { if (document.hidden && SND && SND.isOn()) SND.stop(); else if (!document.hidden && SND && SND.isOn() && state === 'run') SND.music(element.name); });
     window.addEventListener('pagehide', function () { if (SND) SND.stop(); });
     var LESSONS = {
-      spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
+      cogs: 'The works do not stop for you.', shards: 'Glass remembers being sharp.', spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
       fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', jelly: 'Never stand under a jelly whose arms have gone stiff.', puff: 'Pop it while it swells, or stand well back.', watcher: 'The line it draws is the line it burns.', toad: 'The toad\u2019s tongue is longer than you think.', shade: 'When the shade vanishes, turn round.', 
       thornmother: 'She cannot come to you. Everything she has must.', orrery: 'What orbits can be walked between.', pod: 'A pod is a bramble that has not landed yet.', pollen: 'Pollen is slow. So is forgetting it is there.',
       golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', lightless: 'It was you, and then it was not.', coal: 'Where a coal lands, the floor burns.', icicle: 'What hangs will fall.',
@@ -1951,7 +1981,7 @@
       var y = 34;
       text(summary.won ? 'YOU CAME BACK UP' : summary.floor === FLOORS.length ? 'YOU FELL IN THE VAULT' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
       text(summary.lesson, W / 2, y, '#e9e6df', 1, 'center'); y += 18;
-      text((summary.won ? 'FIVE FLOORS AND THE VAULT' : (summary.floor === FLOORS.length ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
+      text((summary.won ? 'EIGHT FLOORS AND THE VAULT' : (summary.floor === FLOORS.length ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
       text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
       if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
       if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }
