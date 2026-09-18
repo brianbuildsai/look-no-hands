@@ -136,6 +136,7 @@
     function loadSection() {
       level = run.section >= 3 ? WD.arena(run.seed, run.floor) : WD.generate(run.seed, run.floor, run.section);
       element = level.element;
+      if (SND && SND.isOn()) { SND.music(element.name); SND.tension(run.section >= 3 ? 0.4 : 0); }
       makeTiles(element);
       env.live('floor', run.floor);
       env.live('seed', run.seed);
@@ -262,6 +263,7 @@
       hero.combo = n + 1; hero.queued = false;
       hero.anim = spec.anim; hero.frame = 0; hero.clock = 0;
       hero.vx = hero.dir * spec.lunge + hero.vx * 0.3;
+      sfx('swing');
       if (spec.lift && !hero.onGround) hero.vy = Math.min(hero.vy, -1.5);
     }
     function startDash() {
@@ -271,11 +273,13 @@
       hero.dashCd = Math.round(DASH_COOLDOWN * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, Math.round(DASH_FRAMES * mods.dashLength) + 2);
       if (!hero.onGround) hero.airDash = false;
       dust(hero.x, hero.y, -hero.dir, 6);
+      sfx('dash');
     }
     function startCast() {
       hero.act = { kind: 'cast', ticks: 0, done: false };
       hero.anim = 'cast'; hero.frame = 0; hero.clock = 0;
       if (!(mods.freeCast && (casts + 1) % mods.freeCast === 0)) hero.energy--;
+      sfx('cast' + RL.POWERS[power].element);
     }
     function hurtHero(fromX, damage, cause) {
       if (!hero.alive || hero.invuln > 0) return false;
@@ -286,10 +290,10 @@
       hero.vx = (hero.x < fromX ? -1 : 1) * 2.2; hero.vy = -2.6;
       hero.act = { kind: 'hurt', ticks: 0 };
       hero.anim = 'hurt'; hero.frame = 0; hero.clock = 0; hero.combo = 0; hero.queued = false;
-      hitstop(5); shake(3);
+      hitstop(5); shake(3); sfx('hurt');
       spark(hero.x, hero.y - 12, '#ff4f7b', 10, 1.4, 20, 0.05);
       if (hero.hp <= 0 && mods.secondWind > 0) { mods.secondWind--; held = held.filter(function (id) { return id !== 'secondwind'; }); hero.hp = 3; hero.invuln = 120; spark(hero.x, hero.y - 12, '#ffdc9a', 40, 2.4, 40, -0.02); number(hero.x, hero.y - 34, 'SECOND WIND', '#ffdc9a'); }
-      if (hero.hp <= 0) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 0 }; hero.anim = 'death'; hero.frame = 0; hero.clock = 0; hero.invuln = 9999; }
+      if (hero.hp <= 0) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 0 }; hero.anim = 'death'; hero.frame = 0; hero.clock = 0; hero.invuln = 9999; sfx('death'); if (SND) SND.tension(0); }
       return true;
     }
 
@@ -367,12 +371,12 @@
       var mayJump = !hero.act || hero.act.kind === 'attack';
       if (hit('jump')) hero.buffer = BUFFER;
       if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && mods.doubleJump && !doubleJumped && hero.vy > -2) {
-        hero.vy = JUMP_V * 0.9; hero.jumping = true; doubleJumped = true; hero.buffer = 0;
+        hero.vy = JUMP_V * 0.9; hero.jumping = true; doubleJumped = true; hero.buffer = 0; sfx('jump');
         spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02);
       }
       if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
         if (down('down') && hero.onGround && standingOnLedge()) hero.drop = 8;
-        else { hero.vy = JUMP_V; hero.jumping = true; hero.onGround = false; hero.coyote = 0; dust(hero.x, hero.y, -hero.dir, 3); }
+        else { hero.vy = JUMP_V; hero.jumping = true; hero.onGround = false; hero.coyote = 0; dust(hero.x, hero.y, -hero.dir, 3); sfx('jump'); }
         hero.buffer = 0;
       }
       if (hero.jumping && !down('jump') && hero.vy < JUMP_CUT) hero.vy = JUMP_CUT;
@@ -384,13 +388,13 @@
       var touched = moveBody(hero);
       hero.onGround = touched.floor;
       if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; doubleJumped = false; } else if (hero.coyote > 0) hero.coyote--;
-      if (hero.onGround && !wasGround) { hero.landed = 8; dust(hero.x, hero.y, 1, 2); dust(hero.x, hero.y, -1, 2); }
+      if (hero.onGround && !wasGround) { hero.landed = 8; dust(hero.x, hero.y, 1, 2); dust(hero.x, hero.y, -1, 2); sfx('land'); }
       if (hero.landed > 0) hero.landed--;
       if (hero.alive) touchHazards();
       for (var rk = 0; rk < level.relics.length; rk++) { var rl = level.relics[rk]; if (!rl.taken && Math.abs(hero.x - (rl.x * TILE + 8)) < 10 && Math.abs(hero.y - rl.y * TILE) < 20) { rl.taken = true; spark(hero.x, hero.y - 14, '#ffdc9a', 24, 1.8, 30, -0.01); openChoice(1); } }
       if (shieldUp > 0) shieldUp--;
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
-      if (hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) transition = 1;
+      if (hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
       if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) endRun(false);
       if (!hero.act) animateHero();
       if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
@@ -443,7 +447,7 @@
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
       hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage, e ? e.kind : ''); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
-      projectile: function (p) { p.from = 'enemy'; projectiles.push(p); },
+      projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (Math.abs(p.x - hero.x) < W) sfx('shot'); },
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
       hazard: function (h) { hazards.push(h); },
       telegraph: function (x, y, w, h, life, colour) { telegraphs.push({ x: x, y: y, w: w, h: h, life: life, max: life, colour: colour }); },
@@ -467,7 +471,7 @@
       var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
       for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
       boss = null; hazards = []; telegraphs = [];
-      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd); creatures.push(boss); }
+      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd); creatures.push(boss); sfx('roar'); }
     }
     function stepHazards() {
       var k, h;
@@ -479,8 +483,9 @@
       }
       for (k = telegraphs.length - 1; k >= 0; k--) if (--telegraphs[k].life <= 0) telegraphs.splice(k, 1);
       // the guardian falls: the way opens, and there is choosing to do
+      if (boss && !boss.dying && SND) SND.tension(0.4 + 0.6 * (1 - boss.hp / boss.maxHp));
       if (boss && boss.dying === 60) {
-        level.locked = false; kills++;
+        level.locked = false; kills++; sfx('boom'); if (SND) SND.tension(0);
         spark(boss.x, boss.y - boss.h / 2, '#ffffff', 60, 3, 50, 0.02); spark(boss.x, boss.y - boss.h / 2, element.glow, 40, 2.4, 60, -0.01); shake(6);
         afterChoice = 'altar';
         openChoice(3);
@@ -533,6 +538,7 @@
       if (mods.slowOnHit) e.status.shock = Math.max(e.status.shock || 0, mods.slowOnHit);
       hero.hits++;
       if (hero.energy < hero.maxEnergy && hero.hits % mods.hitsPerEnergy === 0) hero.energy++;
+      sfx(e.boss || e.elder ? 'heavy' : 'hit'); if (elementName === 'frost') sfx('freeze');
       spark(e.x, e.y - e.h / 2, '#ffffff', 8, 1.6, 16, 0.06);
       number(e.x, e.y - e.h - 6, damage, elementName ? AC.STATUS[elementName].colour : '#e9e6df');
       if (elementName === 'ember') { e.status.burn = 180; e.status.burnDamage = mods.burnDamage; if (mods.burnSpread) for (var n = 0; n < creatures.length; n++) { var o = creatures[n]; if (o !== e && !o.dying && Math.abs(o.x - e.x) < 40 && Math.abs(o.y - e.y) < 30) { o.status.burn = 120; o.status.burnDamage = mods.burnDamage; } } }
@@ -612,6 +618,7 @@
       applyRelics();
       number(hero.x, hero.y - 34, RL.BY_ID[id].name.toUpperCase(), '#ffdc9a');
       spark(hero.x, hero.y - 14, '#ffdc9a', 30, 2, 36, -0.01);
+      sfx('pickup');
     }
     // three relics laid out to choose from; arrows to look, attack or jump to take
     function openChoice(count) {
@@ -629,8 +636,8 @@
     function stepChoice() {
       choosing++;
       if (choosing < 12) return;
-      if (hit('left')) choice.index = (choice.index + choice.relics.length - 1) % choice.relics.length;
-      if (hit('right')) choice.index = (choice.index + 1) % choice.relics.length;
+      if (hit('left')) { choice.index = (choice.index + choice.relics.length - 1) % choice.relics.length; sfx('select'); }
+      if (hit('right')) { choice.index = (choice.index + 1) % choice.relics.length; sfx('select'); }
       if (hit('attack') || hit('jump') || hit('start') || hit('cast')) {
         if (choice.powers) { power = choice.powers[choice.index]; number(hero.x, hero.y - 34, RL.POWERS[power].name.toUpperCase(), RL.POWERS[power].colour); choice = null; state = 'run'; return; }
         takeRelic(choice.relics[choice.index].id); choice = null; state = 'run';
@@ -1012,6 +1019,8 @@
 
     /* ---- the run: its seed, its clock, its end, and what is kept between runs ---- */
 
+    var SND = window.Sound;
+    function sfx(name) { if (SND) SND.play(name); }
     var STORE = 'undercroft';
     var kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false };
     function load() {
@@ -1019,6 +1028,7 @@
     }
     function save() { try { window.localStorage.setItem(STORE, JSON.stringify(kept)); } catch (e) { /* not fatal */ } }
     load();
+    if (kept.sound && soundButton) soundButton.textContent = 'Let it sound again';
 
     // today's seed: the same for everyone who comes down today
     function dailySeed() { var d = new Date(); return (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) % 100000; }
@@ -1036,6 +1046,20 @@
     if (seedField) { seedField.addEventListener('input', noteSeed); noteSeed(); }
 
     var clockSeconds = 0, lastHurtBy = '', summary = null, startPower = 0;
+    var soundButton = env.room.querySelector('[data-undercroft-sound]');
+    function showSound() { if (!soundButton) return; var isOn = SND && SND.isOn(); soundButton.setAttribute('aria-pressed', String(!!isOn)); soundButton.textContent = isOn ? 'Silence it' : 'Let it sound'; }
+    if (soundButton) {
+      if (!SND || !(window.AudioContext || window.webkitAudioContext)) { soundButton.disabled = true; soundButton.textContent = 'No sound in this browser'; }
+      else soundButton.addEventListener('click', function () {
+        var isOn = SND.setOn(!SND.isOn());
+        kept.sound = isOn; save(); showSound();
+        if (isOn && state !== 'title') SND.music(element.name);
+        try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
+      });
+      showSound();
+    }
+    document.addEventListener('visibilitychange', function () { if (document.hidden && SND && SND.isOn()) SND.stop(); else if (!document.hidden && SND && SND.isOn() && state === 'run') SND.music(element.name); });
+    window.addEventListener('pagehide', function () { if (SND) SND.stop(); });
     var LESSONS = {
       spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
       fall: 'The floor is optional. So is the bottom.', cinder: 'Beetles hop.', wisp: 'Wisps dive.', crawler: 'Slugs have a cold touch.', moth: 'Moths throw hail.', hound: 'Hounds charge; jump.', bat: 'Bats zap what stands still.', toad: 'Toads carry poison.', spore: 'Look up in the cisterns.', shade: 'Shades are nearer than they were.', eye: 'The eye follows.',
@@ -1076,8 +1100,8 @@
     // the title: the seed, the best, and the starting power to choose among what is unlocked
     function stepTitle() {
       var options = kept.unlocked;
-      if (hit('left')) startPower = (startPower + options.length - 1) % options.length;
-      if (hit('right')) startPower = (startPower + 1) % options.length;
+      if (hit('left')) { startPower = (startPower + options.length - 1) % options.length; sfx('select'); }
+      if (hit('right')) { startPower = (startPower + 1) % options.length; sfx('select'); }
       power = options[Math.min(startPower, options.length - 1)];
       if (hit('start') || hit('jump') || hit('attack')) { var c = chosenSeed(); run.seed = c.seed; begin(); }
     }
@@ -1173,8 +1197,9 @@
         cost = cost * 0.9 + (performance.now() - t0) * 0.1;
       },
       // With motion paused: the game pauses and the frame is held
-      still: function () { if (state === 'run') state = 'paused'; render(); },
-      motion: function (on) { if (!on && state === 'run') state = 'paused'; },
+      still: function () { if (state === 'run') state = 'paused'; if (SND) SND.stop(); render(); },
+      motion: function (on) { if (!on && state === 'run') state = 'paused'; if (!on && SND) SND.stop(); else if (on && SND && SND.isOn() && state !== 'title') SND.music(element.name); },
+      sound: function () { return { on: !!(SND && SND.isOn()), effects: SND ? SND.effects : [] }; },
       state: function () {
         return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },

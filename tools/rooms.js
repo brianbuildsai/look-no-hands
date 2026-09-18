@@ -814,7 +814,7 @@ module.exports = {
       number: 36,
       slug: 'undercroft',
       ready: true,
-      scripts: ['game/pixels.js', 'game/world.js', 'game/actors.js', 'game/relics.js', 'game/guardians.js'],
+      scripts: ['game/pixels.js', 'game/world.js', 'game/actors.js', 'game/relics.js', 'game/guardians.js', 'game/sound.js'],
       stageAttributes: 'tabindex="0"',
       title: 'Undercroft',
       line: 'Go down. The floors draw themselves, and nothing you carry comes back up except what you learned.',
@@ -831,6 +831,7 @@ module.exports = {
   <div class="controls__row">
     <button class="btn" type="button" data-undercroft-start>Go down</button>
     <button class="btn" type="button" data-undercroft-daily>Today’s seed</button>
+    <button class="btn" type="button" data-undercroft-sound aria-pressed="false">Let it sound</button>
     <button class="btn" type="button" data-undercroft-full>Full screen</button>
   </div>
 </div>`,
