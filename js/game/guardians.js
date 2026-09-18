@@ -66,8 +66,8 @@
     return { x0: x0, x1: x1, y0: e.y - up, y1: e.y + (down || 0) };
   }
 
-  function spawn(floor, arena, rnd) {
-    var kind = BY_FLOOR[Math.max(0, Math.min(3, floor - 1))], D = REG[kind];
+  function spawn(floor, arena, rnd, which) {
+    var kind = which && REG[which] ? which : BY_FLOOR[Math.max(0, Math.min(3, floor - 1))], D = REG[kind];
     if (!D) return null;
     var e = {
       boss: true, kind: kind, spec: D, element: D.element, name: D.name, title: D.title || '',

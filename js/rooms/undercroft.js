@@ -172,12 +172,21 @@
     if (!WD) { env.fail('The undercroft’s floors did not load. The other rooms still run.'); return null; }
     var level = null, run = { seed: 36, floor: 1, section: 0, stage: 0 }, flames = 3;
     // the way down: two sections and a guardian on each of three floors, then the vault
-    var STAGES = [
-      { floor: 1, section: 0, element: 'ember' }, { floor: 1, sanctuary: true, element: 'ember' }, { floor: 1, boss: true },
-      { floor: 2, sanctuary: true, element: 'frost', boost: true }, { floor: 2, section: 0, element: 'frost' }, { floor: 2, sanctuary: true, element: 'bloom' }, { floor: 2, section: 1, element: 'bloom' }, { floor: 2, sanctuary: true, element: 'frost' }, { floor: 2, boss: true },
-      { floor: 3, sanctuary: true, element: 'storm', boost: true }, { floor: 3, section: 0, element: 'storm' }, { floor: 3, sanctuary: true, element: 'void' }, { floor: 3, section: 1, element: 'void' }, { floor: 3, sanctuary: true, element: 'storm' }, { floor: 3, boss: true },
-      { floor: 4, sanctuary: true, element: 'void', boost: true }, { floor: 4, boss: true }
+    // five floors, one to an element and each with its guardian, and under them the Vault; stages grow as they go down
+    var FLOORS = [
+      { element: 'ember', boss: 'golem', grid: [4, 3] }, { element: 'frost', boss: 'wyrm', grid: [4, 3] }, { element: 'bloom', boss: 'thornmother', grid: [5, 3] },
+      { element: 'storm', boss: 'herald', grid: [5, 3] }, { element: 'void', boss: 'orrery', grid: [5, 4] }, { element: 'void', boss: 'lightless', grid: null }
     ];
+    var STAGES = [];
+    FLOORS.forEach(function (F, n) {
+      var floor = n + 1;
+      if (n > 0) STAGES.push({ floor: floor, sanctuary: true, element: F.element });
+      if (F.grid) { STAGES.push({ floor: floor, section: 0, element: F.element, grid: F.grid }); STAGES.push({ floor: floor, sanctuary: true, element: F.element }); }
+      STAGES.push({ floor: floor, boss: F.boss, element: F.element });
+    });
+    // until a guardian's own file is written, another stands in for it
+    function guardianFor(st) { var GR = window.Guardians.REG; return GR[st.boss] ? st.boss : st.boss === 'thornmother' ? 'wyrm' : st.boss === 'orrery' ? 'herald' : 'golem'; }
+
 
     function syncStage() { var st = STAGES[run.stage]; run.floor = st.floor; run.section = st.boss ? 3 : st.section || 0; }
     var element = WD.ELEMENTS[0];
@@ -185,7 +194,7 @@
     function loadSection() {
       syncStage();
       var st = STAGES[run.stage];
-      level = st.boss ? WD.arena(run.seed, st.floor) : st.sanctuary ? WD.sanctuary(run.seed, st.floor, st.element) : WD.explore(run.seed, st.floor, st.section, st.element);
+      level = st.boss ? WD.arena(run.seed, st.floor, guardianFor(st)) : st.sanctuary ? WD.sanctuary(run.seed, st.floor, st.element) : WD.explore(run.seed, st.floor, st.section, st.element, st.grid[0], st.grid[1]);
       seenCells = {};
       element = level.element;
       if (SND && SND.isOn()) { SND.music(element.name); SND.tension(run.section >= 3 ? 0.4 : 0); }
@@ -585,7 +594,7 @@
       for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
       boss = null; hazards = []; telegraphs = []; blackout = false; stepLit.lights.length = 0; stepLit.glows.length = 0;
       placeChests(); placePerks();
-      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd); creatures.push(boss); sfx('roar'); }
+      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd, guardianFor(STAGES[run.stage])); creatures.push(boss); sfx('roar'); }
     }
     function stepHazards() {
       var k, h;
@@ -1841,7 +1850,7 @@
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };
     function endRun(wonRun) {
-      var floorsDown = wonRun ? 4 : run.floor;
+      var floorsDown = wonRun ? FLOORS.length : run.floor;
       kept.runs++;
       var unlocked = [];
       if (floorsDown >= 2 && kept.unlocked.indexOf('frostlance') < 0) { kept.unlocked.push('frostlance'); unlocked.push('Frostlance'); }
@@ -1862,9 +1871,9 @@
       if (!summary) return;
       fpen.fillStyle = 'rgba(0,0,0,0.8)'; fpen.fillRect(0, 0, W, H);
       var y = 34;
-      text(summary.won ? 'YOU CAME BACK UP' : summary.floor === 4 ? 'YOU FELL IN THE VAULT' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
+      text(summary.won ? 'YOU CAME BACK UP' : summary.floor === FLOORS.length ? 'YOU FELL IN THE VAULT' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
       text(summary.lesson, W / 2, y, '#e9e6df', 1, 'center'); y += 18;
-      text((summary.won ? 'THREE FLOORS AND THE VAULT' : (summary.floor === 4 ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
+      text((summary.won ? 'FIVE FLOORS AND THE VAULT' : (summary.floor === FLOORS.length ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
       text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
       if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
       if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }

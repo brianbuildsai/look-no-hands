@@ -20,17 +20,17 @@
   if (!WD) return;
   var AIR = WD.AIR, STONE = WD.STONE, LEDGE = WD.LEDGE, SPIKES = WD.SPIKES, HAZARD = WD.HAZARD, TILE = WD.TILE;
 
-  var GW = 4, GH = 3, CW = 20, CH = 14;          // chambers across and down; a chamber's size with its wall (2) and its floor (2)
+  var CW = 20, CH = 14;                          // a chamber's size with its wall (2) and its floor (2); how many across and down is asked for
   var IW = CW - 2, IH = CH - 2;                  // the air inside one
 
-  function explore(seed, floor, section, elementName) {
+  function explore(seed, floor, section, elementName, across, down) {
     var element = WD.byName(elementName) || WD.ELEMENTS[0], tries = 0, L = null;
-    do { L = build(WD.hashSeed(seed, floor, section) + tries * 7919 + 13, element, floor, section, tries >= 8); } while (!L && ++tries < 14);
+    do { L = build(WD.hashSeed(seed, floor, section) + tries * 7919 + 13, element, floor, section, tries >= 8, across || 4, down || 3); } while (!L && ++tries < 14);
     L.tries = tries;
     return L;
   }
 
-  function build(seedValue, element, floor, section, plain) {
+  function build(seedValue, element, floor, section, plain, GW, GH) {
     var rnd = WD.makeRandom(seedValue), cols = GW * CW + 2, rows = GH * CH + 2;
     var L = new WD.Level(cols, element, floor, section, rows), x, y, k, c;
     for (k = 0; k < L.tiles.length; k++) L.tiles[k] = STONE;
@@ -170,7 +170,7 @@
     for (k = 0; L.chests.length < 2 && k < good.length; k++) if (!L.chests.some(function (ch) { return ch.x === good[k].x && ch.y === good[k].y; })) L.chests.push({ x: good[k].x, y: good[k].y });
     L.enemies = L.enemies.filter(function (e) { return e.kind === 'flyer' || got(e.x, e.y); });
     // not a crowd: a dozen or so on the first floor, a few more with each
-    var cap = 9 + Math.min(floor, 3) * 2, brutes = L.enemies.filter(function (e) { return e.kind === 'brute'; }), rest = L.enemies.filter(function (e) { return e.kind !== 'brute'; });
+    var cap = Math.round((7 + floor * 2) * (GW * GH) / 12), brutes = L.enemies.filter(function (e) { return e.kind === 'brute'; }), rest = L.enemies.filter(function (e) { return e.kind !== 'brute'; });
     if (rest.length > cap) { var stride = rest.length / cap, kept = []; for (k = 0; k < cap; k++) kept.push(rest[Math.floor(k * stride)]); rest = kept; }
     L.enemies = rest.concat(brutes.slice(0, 2));
     L.portal = true;
@@ -192,5 +192,5 @@
     return L;
   }
 
-  WD.explore = explore; WD.sanctuary = sanctuary; WD.CHAMBER = { gw: GW, gh: GH, cw: CW, ch: CH };
+  WD.explore = explore; WD.sanctuary = sanctuary; WD.CHAMBER = { cw: CW, ch: CH };
 })();

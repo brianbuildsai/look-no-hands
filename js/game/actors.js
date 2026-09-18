@@ -497,7 +497,7 @@
   function statusName(element) { return STATUS[element].name; }
 
   function make(name, x, groundY, elder, floor, rnd) {
-    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.3, size = elder ? 1.4 : 1;
+    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.22, size = elder ? 1.4 : 1;
     var hp = Math.round(K.hp * scale * (elder ? 3 : 1));
     return {
       kind: name, spec: K, element: K.element, elder: !!elder, size: size,

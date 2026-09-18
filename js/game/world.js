@@ -331,12 +331,11 @@
     L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 22 * TILE, row: g };
     return L;
   }
-  function arena(seed, floor) {
+  var HALLS = { golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
+  function arena(seed, floor, kind) {
+    var hall = HALLS[kind] || HALLS[['golem', 'wyrm', 'herald', 'lightless'][Math.max(0, Math.min(3, floor - 1))]];
+    if (hall) return hall[1](byName(hall[0]), floor);
     var element = byName(ARENA_ELEMENT[Math.max(0, Math.min(3, floor - 1))]);
-    if (floor === 1) return greatKiln(element, floor);
-    if (floor === 2) return frozenCistern(element, floor);
-    if (floor === 3) return galleryOfRails(element, floor);
-    if (floor >= 4) return theVault(element, floor);
     var L = new Level(46, element, floor, 3), g = 11, x, k;
     for (x = 0; x < 46; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }
@@ -350,5 +349,5 @@
     return L;
   }
 
-  window.World = { Level: Level, hashSeed: hashSeed, byName: byName, arena: arena, TILE: TILE, ROWS: ROWS, AIR: AIR, STONE: STONE, LEDGE: LEDGE, SPIKES: SPIKES, HAZARD: HAZARD, ELEMENTS: ELEMENTS, generate: generate, reachable: reachable, makeRandom: makeRandom };
+  window.World = { HALLS: HALLS, Level: Level, hashSeed: hashSeed, byName: byName, arena: arena, TILE: TILE, ROWS: ROWS, AIR: AIR, STONE: STONE, LEDGE: LEDGE, SPIKES: SPIKES, HAZARD: HAZARD, ELEMENTS: ELEMENTS, generate: generate, reachable: reachable, makeRandom: makeRandom };
 })();
