@@ -364,6 +364,20 @@
     pen.restore();
   };
 
+  glyphs.knotwork = function (pen, s) {
+    // two interlaced loops: a small knot, each crossing cut through
+    var r = s * 0.24, dx = s * 0.17, cut = s * 0.07;
+    pen.beginPath(); pen.ellipse(-dx, 0, r, r * 1.35, 0, 0, 6.2832); pen.stroke();
+    pen.beginPath(); pen.ellipse(dx, 0, r, r * 1.35, 0, 0, 6.2832); pen.stroke();
+    // the right loop passes over at the top and under at the bottom
+    pen.save(); pen.globalCompositeOperation = 'destination-out'; pen.lineWidth = cut * 2;
+    pen.beginPath(); pen.ellipse(dx, 0, r, r * 1.35, 0, -2.3, -0.85); pen.stroke();
+    pen.beginPath(); pen.ellipse(-dx, 0, r, r * 1.35, 0, 0.85, 2.3); pen.stroke();
+    pen.restore();
+    pen.beginPath(); pen.ellipse(dx, 0, r, r * 1.35, 0, -2.3, -0.85); pen.stroke();
+    pen.beginPath(); pen.ellipse(-dx, 0, r, r * 1.35, 0, 0.85, 2.3); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

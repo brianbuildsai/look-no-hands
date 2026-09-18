@@ -688,6 +688,32 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Robert Hooke and Isaac Newton both puzzled over the colours of soap bubbles in the 1660s and 1670s, and Newton measured the thickness of a film from its colour, which is very nearly what this room does in reverse. The black at the top, where the film is thinner than any wavelength of light, is what an experienced bubble-blower watches for: it means a few seconds are left.'
+    },
+    {
+      number: 31,
+      slug: 'knotwork',
+      ready: true,
+      title: 'Knotwork',
+      line: 'Touch a tile of an endless knot and watch it re-tie itself around your finger.',
+      description: 'An endless Celtic knot woven live by constraint propagation over sixteen strand tiles. Tap a tile to fix it, run a finger along the weave to untie it, and watch the strands around it resolve again.',
+      canvasLabel: 'A band of interlaced pale strands, each a ribbon of two hairlines, crawling slowly leftward. Newly settled tiles glow amber and cool to bone. At the right, the squares that have not yet decided show every strand they might still become as faint grey ghosts.',
+      medium: '2026. Constraint propagation over sixteen tiles, with no plan and no pattern. <span class="live" data-live="knotwork.tiles">0</span> tiles standing, <span class="live" data-live="knotwork.loops">0</span> of them tied into closed loops, crossing <span class="live" data-live="knotwork.crossings">0</span> times; unpicked <span class="live" data-live="knotwork.unpicked">0</span> times so far when it wove itself into a corner.',
+      text: 'A Celtic knot has one law: over, under, over, under, along every strand, however far it wanders. Nobody drew this one. Each square of the cloth begins able to be any of sixteen tiles, a blank, a straight, a bend, or a crossing with one strand or the other on top, and whichever square has the fewest choices left is settled by lot. Then the news travels: its neighbours lose the choices that no longer fit, and theirs do, until nothing more follows. The law is not enforced from above. It hides in the tiles. The regions between the strands are shaded like a chessboard, and at every crossing the strand on top is the one with a shaded region on its left; keep that one habit at every seam and the whole cloth alternates, in every loop, without anyone counting. Tap a tile to make it something else. Draw a finger along the weave and it unties behind you, and ties itself again.',
+      controls: `
+<div class="controls" role="group" aria-label="Knotwork controls">
+  <label class="dial">
+    <span class="dial__label"><span>How often it crosses itself</span><span data-knotwork-cross-value></span></span>
+    <input class="dial__input" type="range" min="0" max="40" step="1" value="24" data-knotwork-cross>
+  </label>
+  <label class="dial">
+    <span class="dial__label"><span>How open the weave is</span><span data-knotwork-open-value></span></span>
+    <input class="dial__input" type="range" min="0" max="40" step="1" value="6" data-knotwork-open>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-knotwork-again>Weave it again</button>
+  </div>
+</div>`,
+      wall: 'The scribes of the Book of Kells, around the year 800, laid out their knotwork on a grid of dots and let the strands find their own way between them, which is why the great carpet pages look designed by no one. The method here, in which a grid of possibilities is narrowed until only one picture remains, was written down by Maxim Gumin in 2016 for making game maps, and named, as a joke, after quantum mechanics.'
     }
   ]
 };
