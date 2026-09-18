@@ -484,6 +484,10 @@
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
       hazard: function (h) { hazards.push(h); },
       telegraph: function (x, y, w, h, life, colour) { telegraphs.push({ x: x, y: y, w: w, h: h, life: life, max: life, colour: colour }); },
+      telegraphLine: function (x0, y0, x1, y1, life, colour) { telegraphs.push({ line: true, x: x0, y: y0, x1: x1, y1: y1, life: life, max: life, colour: colour }); },
+      telegraphCircle: function (x, y, r, life, colour) { telegraphs.push({ circle: true, x: x, y: y, r: r, life: life, max: life, colour: colour }); },
+      beam: function (x0, y0, x1, y1, colour) { zaps.push({ beam: true, x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 2 }); },
+      crescent: function (x, y, dir, r, colour, life) { crescents.push({ x: x, y: y, dir: dir, r: r, colour: colour, life: life, max: life }); },
       shake: shake,
       count: function () { return creatures.length; },
       summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
@@ -526,7 +530,12 @@
     }
     function drawHazards() {
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, h;
-      for (k = 0; k < telegraphs.length; k++) { h = telegraphs[k]; var a = 0.25 + 0.25 * Math.sin(tick * 0.5); fpen.globalAlpha = a; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x) - cx, Math.round(h.y) - cy, h.w, h.h); fpen.globalAlpha = 1; fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.strokeRect(Math.round(h.x) - cx + 0.5, Math.round(h.y) - cy + 0.5, h.w - 1, h.h - 1); }
+      for (k = 0; k < telegraphs.length; k++) {
+        h = telegraphs[k];
+        if (h.line) { fpen.globalAlpha = 0.35 + 0.25 * Math.sin(tick * 0.6); fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.setLineDash([3, 3]); fpen.beginPath(); fpen.moveTo(h.x - cx, h.y - cy); fpen.lineTo(h.x1 - cx, h.y1 - cy); fpen.stroke(); fpen.setLineDash([]); fpen.globalAlpha = 1; continue; }
+        if (h.circle) { fpen.globalAlpha = 0.3 + 0.25 * Math.sin(tick * 0.5); fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.arc(h.x - cx, h.y - cy, h.r * (1 - 0.5 * h.life / h.max), 0, 6.2832); fpen.stroke(); fpen.globalAlpha = 0.12; fpen.fillStyle = h.colour; fpen.beginPath(); fpen.arc(h.x - cx, h.y - cy, h.r, 0, 6.2832); fpen.fill(); fpen.globalAlpha = 1; continue; }
+      }
+      for (k = 0; k < telegraphs.length; k++) { h = telegraphs[k]; if (h.line || h.circle) continue; var a = 0.25 + 0.25 * Math.sin(tick * 0.5); fpen.globalAlpha = a; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x) - cx, Math.round(h.y) - cy, h.w, h.h); fpen.globalAlpha = 1; fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.strokeRect(Math.round(h.x) - cx + 0.5, Math.round(h.y) - cy + 0.5, h.w - 1, h.h - 1); }
       for (k = 0; k < hazards.length; k++) { h = hazards[k]; fpen.globalAlpha = 0.45; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x0) - cx, Math.round(h.y0) - cy, Math.round(h.x1 - h.x0), Math.round(h.y1 - h.y0)); fpen.globalAlpha = 1; light((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2, 30, 0.6); }
     }
     function drawBossBar() {
@@ -606,7 +615,20 @@
       if (GD.hurtBoxes) return GD.hurtBoxes(e);
       return [{ x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y, mult: 1 }];
     }
-    var lastStrike = null, debugBoxes = false;
+    var lastStrike = null, debugBoxes = false, crescents = [];
+    // the sweep of a blade, drawn as a crescent that opens and fades
+    function drawCrescents() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y);
+      for (var k = crescents.length - 1; k >= 0; k--) {
+        var c = crescents[k], t = 1 - c.life / c.max, a0 = -1.9 + t * 1.2, a1 = a0 + 1.6 + t * 0.8;
+        fpen.save(); fpen.translate(Math.round(c.x) - cx, Math.round(c.y) - cy); if (c.dir < 0) fpen.scale(-1, 1);
+        fpen.globalAlpha = Math.min(1, c.life / c.max * 1.6);
+        fpen.strokeStyle = c.colour; fpen.lineWidth = 5 * (1 - t) + 1; fpen.beginPath(); fpen.arc(-4, 0, c.r, a0, a1); fpen.stroke();
+        fpen.strokeStyle = '#ffffff'; fpen.lineWidth = 1.5; fpen.beginPath(); fpen.arc(-4, 0, c.r + 1, a0 + 0.2, a1 - 0.1); fpen.stroke();
+        fpen.restore(); fpen.globalAlpha = 1;
+        if (--c.life <= 0) crescents.splice(k, 1);
+      }
+    }
     // a box strikes whatever can be struck inside it; returns whether anything was hit
     function strike(box, damage, kind, elementName) {
       var any = false;
@@ -669,7 +691,7 @@
         light(e.x, e.spec.flying && !e.boss ? e.y : e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
       for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.icicle) { fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 5 - cy, 3, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - 4 - cy, 1, 4); fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) + 2 - cy, 1, 2); } else if (p.ember) { fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 2 - cy, 4, 4); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 1 - cy, 2, 2); } else if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
-      for (k = 0; k < zaps.length; k++) { var z = zaps[k]; fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
+      for (k = 0; k < zaps.length; k++) { var z = zaps[k]; if (z.beam) { fpen.strokeStyle = z.colour; fpen.globalAlpha = 0.5; fpen.lineWidth = 6; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); fpen.globalAlpha = 1; fpen.strokeStyle = '#ffffff'; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light((z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2, 40, 0.7); light(z.x1, z.y1, 24, 0.8); continue; } fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
     }
 
     /* ---- what the elements do to the Warden ---- */
@@ -1090,6 +1112,7 @@
       drawHazards();
       drawCreatures();
       drawHero();
+      drawCrescents();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
       drawBoxes();
@@ -1154,7 +1177,7 @@
     window.addEventListener('pagehide', function () { if (SND) SND.stop(); });
     var LESSONS = {
       spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
-      fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', bat: 'Bats zap what stands still.', toad: 'Toads carry poison.', spore: 'Look up in the cisterns.', shade: 'Shades are nearer than they were.', eye: 'The eye follows.',
+      fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', jelly: 'Never stand under a jelly whose arms have gone stiff.', puff: 'Pop it while it swells, or stand well back.', watcher: 'The line it draws is the line it burns.', toad: 'The toad\u2019s tongue is longer than you think.', shade: 'When the shade vanishes, turn round.', 
       golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', heart: 'The heart reaches for your feet.', mirror: 'It was you.',
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };

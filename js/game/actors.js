@@ -14,9 +14,9 @@
 (function () {
   'use strict';
 
-  /* ---- the art ----
-     One palette per element: p the body, q its shadow, l its light, e the
-     eye, k the outline. The same letters in every creature, so each
+  /* ---- the palettes ----
+     One per element: p the body, q its shadow, l its light, e the eye, w its
+     white heat, k the outline. The same letters in every creature, so each
      element's pair share a colour and nothing else. */
 
   var PALETTES = {
@@ -27,118 +27,16 @@
     void:  { k: '#000000', p: '#1e1a2c', q: '#0d0b14', l: '#5b3fa0', e: '#ffffff', w: '#a48cff' }
   };
 
-  // frames are lists of rows; each creature has walk (or hover) frames and an attack frame
-  var ART = {
-    cinder: {   // an ember beetle that hops
-      walk: [
-        ['....kkkkkk....', '..kkpppppplk..', '.kppqpppppplk.', 'kpqqpppepplpk.', 'kppqppppppplk.', '.kppppppppppk.', '..kqqkkkkqqk..', '.kk.kk..kk.kk.'],
-        ['....kkkkkk....', '..kkpppppplk..', '.kppqpppppplk.', 'kpqqpppepplpk.', 'kppqppppppplk.', '.kppppppppppk.', '..kqqkkkkqqk..', '..kk.kk.kk.kk.']
-      ],
-      attack: [['...kkkkkkkk...', '.kkppplllppkk.', 'kppqplllllpppk', 'kpqqpplelppppk', 'kppqppllllpppk', '.kppppppppppk.', '..kqqkkkkqqk..', '.kkkk....kkkk.']]
-    },
-    wisp: {   // a flame with an eye, that dives
-      walk: [
-        ['....kk....', '...kllk...', '..kllllk..', '..klplpk..', '.kpplppqk.', '.kppeppqk.', '.kpppppqk.', '..kppqqk..', '...kqqk...', '....kk....'],
-        ['...kk.....', '..kllk....', '..kllllk..', '..klplplk.', '.kpplpppk.', '.kppeppqk.', '.kpppppqk.', '..kppqqk..', '...kqqk...', '....kk....'],
-        ['.....kk...', '....kllk..', '..kllllk..', '.klplplk..', '.kpplppqk.', '.kppeppqk.', '.kpppppqk.', '..kppqqk..', '...kqqk...', '....kk....']
-      ],
-      attack: [['....kk....', '...kllk...', '..kllllk..', '.kllplllk.', 'kpplllppqk', 'kppeeeppqk', 'kpppppppqk', '.kppqqqqk.', '..kqqqqk..', '...kkkk...']]
-    },
-    crawler: {   // a rime slug that slides
-      walk: [
-        ['.....kkkkkk.....', '...kkllpppplkk..', '..klppqppppppqk.', '.kpppqqppppppqpk', 'kpppppppqqpppepk', 'kqppppppppppppqk', '.kqqqqqqqqqqqqk.', '..kkkkkkkkkkkk..'],
-        ['....kkkkkkk.....', '..kkllppppplkk..', '.klppqpppppppqk.', 'kpppqqpppppppqpk', 'kpppppppqqpppepk', 'kqppppppppppppqk', '.kqqqqqqqqqqqqk.', '..kkkkkkkkkkkk..']
-      ],
-      attack: [['....kkkkkkk.....', '..kkllpwwwwlkk..', '.klppqpwwwwwpqk.', 'kpppqqpwwwwwpqpk', 'kpppppppwwpppepk', 'kqppppppppppppqk', '.kqqqqqqqqqqqqk.', '..kkkkkkkkkkkk..']]
-    },
-    moth: {   // a hail moth, wings beating, that shoots shards
-      walk: [
-        ['kkk........kkk', 'klllk.....kllk', 'kllllk...klllk', '.klllkkkkllkk.', '..kllkppkllk..', '...kkpepepk...', '....kppppk....', '.....kqqk.....', '.....kkkk.....'],
-        ['..............', '..kkkk...kkkk.', '.kllllk.kllllk', '.kllllkkkllllk', '..kllkppkllk..', '...kkpepepk...', '....kppppk....', '.....kqqk.....', '.....kkkk.....']
-      ],
-      attack: [['..............', '..kkkk...kkkk.', '.kllllk.kllllk', '.kllllkkkllllk', '..kllkppkllk..', '...kkpwpwpk...', '....kpwwpk....', '.....kwwk.....', '.....kkkk.....']]
-    },
-    hound: {   // a spark hound that charges
-      walk: [
-        ['......kkkk......', '..kkkkpllpkkk...', '.kppppplpppppkk.', 'kpqppppppppppepk', 'kpppppppppppppkk', '.kqppppppppppk..', '..kqpkkkkkpqk...', '..kpk....kpk....', '..kkk....kkk....'],
-        ['......kkkk......', '..kkkkpllpkkk...', '.kppppplpppppkk.', 'kpqppppppppppepk', 'kpppppppppppppkk', '.kqppppppppppk..', '..kqpkkkkkpqk...', '...kpk..kpk.....', '...kkk..kkk.....']
-      ],
-      attack: [['....kkkkkk......', 'kkkkpllllpkkk...', 'kwwpplllpppppkk.', 'kpwppppppppppepk', 'kppwpppppppppekk', '.kqppppppppppk..', '.kqpkkkkkkkpqk..', 'kpk........kpk..', 'kkk........kkk..']]
-    },
-    bat: {   // a charge bat that zaps
-      walk: [
-        ['kk..........kk', 'kpk........kpk', 'kppk..kk..kppk', '.kppkkppkkppk.', '..kpppeppppk..', '...kpppppqk...', '....kkkkkk....'],
-        ['..............', '..kk......kk..', '.kppk.kk.kppk.', '.kpppkppkpppk.', '..kpppeppppk..', '...kpppppqk...', '....kkkkkk....']
-      ],
-      attack: [['..............', '..kk......kk..', '.kppk.kk.kppk.', '.kpppkppkpppk.', '..kwwpepwwpk..', '...kpwwwwqk...', '....kkkkkk....']]
-    },
-    toad: {   // a thorn toad that hops, poisonous
-      walk: [
-        ['..kk.k....k.kk', '.klkkl....lkkl', 'kppplkkkkklppk', 'kppppppepppppk', 'kqppppppppppqk', '.kqqppppppqqk.', '..kkqqkkqqkk..', '..kkk....kkk..'],
-        ['..kk.k....k.kk', '.klkkl....lkkl', 'kppplkkkkklppk', 'kppppppepppppk', 'kqppppppppppqk', '.kqqppppppqqk.', '.kqqkkkkkkqqk.', '.kkk......kkk.']
-      ],
-      attack: [['..kk.k....k.kk', '.klkkl....lkkl', 'kppplkkkkklppk', 'kppppppepppppk', 'kqppwwwwwwppqk', '.kqqwwwwwwqqk.', '..kkqqkkqqkk..', '..kkk....kkk..']]
-    },
-    spore: {   // a spore fly, a bulb on wings, that drops clouds
-      walk: [
-        ['kkk....kkk', 'kllk..kllk', '.kllkkllk.', '..klppl...', '..kppepk..', '..kppppk..', '..kqppqk..', '...kqqk...', '....kk....'],
-        ['..........', 'kkk....kkk', 'kllkkkkllk', '..klppl...', '..kppepk..', '..kppppk..', '..kqppqk..', '...kqqk...', '....kk....']
-      ],
-      attack: [['..........', 'kkk....kkk', 'kllkkkkllk', '..klppl...', '..kppepk..', '..kpwwpk..', '..kqwwqk..', '...kwwk...', '....kk....']]
-    },
-    shade: {   // a shade that walks, then is suddenly nearer
-      walk: [
-        ['....kkkk....', '...kppppk...', '...kpepppk..', '...kppppk...', '..kkppppkk..', '.kpkppppkpk.', '.kpkppppkpk.', '.kkkppppkkk.', '...kppppk...', '...kppppk...', '...kpkkpk...', '..kpk..kpk..', '..kkk..kkk..'],
-        ['....kkkk....', '...kppppk...', '...kpepppk..', '...kppppk...', '..kkppppkk..', '.kpkppppkpk.', '.kpkppppkpk.', '.kkkppppkkk.', '...kppppk...', '...kppppk...', '...kpkkpk...', '...kpkkpk...', '...kkkkkk...']
-      ],
-      attack: [['....kkkk....', '...kllllk...', '...klelllk..', '...kllllk...', '.kkkllllkkk.', 'kpkkppppkkpk', 'kpk.kppk.kpk', 'kkk.kppk.kkk', '...kppppk...', '...kppppk...', '...kpkkpk...', '..kpk..kpk..', '..kkk..kkk..']]
-    },
-    eye: {   // an eye that hovers and looks, then fires
-      walk: [
-        ['...kkkkkk...', '..kppppppk..', '.kpplwwwppk.', 'kppplweewppk', 'kpppwweewppk', 'kpppplwwppqk', '.kpppppppqk.', '..kqqqqqqk..', '...kkkkkk...'],
-        ['...kkkkkk...', '..kppppppk..', '.kppplwwppk.', 'kpppplweeppk', 'kppppwweeppk', 'kppppplwppqk', '.kpppppppqk.', '..kqqqqqqk..', '...kkkkkk...']
-      ],
-      attack: [['...kkkkkk...', '..kppppppk..', '.kpplllllpk.', 'kpplleeellpk', 'kppllwwwllpk', 'kppplllllpqk', '.kpppppppqk.', '..kqqqqqqk..', '...kkkkkk...']]
-    }
-  };
-
   /* ---- the kinds ----
      A kind says what a creature is made of: its element, the box that stops
      at walls (body), the box it can be struck in (hurt), its life, how it
      gets about, and its attacks, each with a range it begins from, a wind-up,
      active steps, a recovery, and the boxes or missiles it strikes with. */
 
-  function bite(reach) {
-    return { name: 'bite', range: [0, reach + 4], windup: 24, active: 8, recover: 26, cooldown: 60, grounded: true,
-      box: function (e) { return [front(e, 2, reach, 12, 0)]; } };
-  }
   function aim(e, ctx, speed) { var hero = ctx.hero, dx = hero.x - e.x, dy = hero.y - 11 - e.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)); return { vx: dx / len * speed, vy: dy / len * speed, len: len }; }
 
-  var KINDS = {
-    cinder:  { element: 'ember', art: 'cinder', flying: false, body: { w: 12, h: 8 }, hurt: { w: 14, h: 9 }, hp: 6, speed: 0.6, sight: 110, move: 'hop', attacks: [bite(20)] },
-    wisp:    { element: 'ember', art: 'wisp', flying: true, body: { w: 8, h: 10 }, hurt: { w: 10, h: 11 }, hp: 4, speed: 0.9, sight: 130, move: 'hover', stand: 12,
-      attacks: [{ name: 'dive', range: [0, 90], below: 90, windup: 22, active: 34, recover: 30, cooldown: 90, moves: true,
-        fire: function (e, ctx) { var a = aim(e, ctx, 3.2); e.vx = a.vx; e.vy = a.vy; },
-        box: function (e) { return [{ x0: e.x - 5, x1: e.x + 5, y0: e.y - 6, y1: e.y + 6 }]; },
-        resting: function (e) { e.vy -= 0.08; } }] },
-    crawler: { element: 'frost', art: 'crawler', flying: false, body: { w: 14, h: 8 }, hurt: { w: 16, h: 9 }, hp: 8, speed: 0.35, sight: 90, move: 'walk', attacks: [bite(22)] },
-    moth:    { element: 'frost', art: 'moth', flying: true, body: { w: 10, h: 9 }, hurt: { w: 14, h: 10 }, hp: 4, speed: 0.7, sight: 150, move: 'hover',
-      attacks: [{ name: 'shard', range: [20, 130], below: 100, windup: 26, active: 4, recover: 24, cooldown: 110,
-        fire: function (e, ctx) { var a = aim(e, ctx, 2.2); ctx.projectile({ x: e.x, y: e.y, vx: a.vx, vy: a.vy, life: 120, colour: '#d8f1ff', size: 3, damage: 1, element: 'frost', gravity: 0 }); } }] },
-    bat:     { element: 'storm', art: 'bat', flying: true, body: { w: 12, h: 7 }, hurt: { w: 14, h: 8 }, hp: 4, speed: 1.0, sight: 120, move: 'hover',
-      attacks: [{ name: 'zap', range: [0, 70], below: 80, windup: 30, active: 5, recover: 30, cooldown: 110,
-        telling: function (e, ctx, t) { if (t % 4 === 0) ctx.spark(e.x, e.y, '#8fa3ff', 2, 1, 10, 0); },
-        fire: function (e, ctx) { var a = aim(e, ctx, 4.5); ctx.projectile({ x: e.x, y: e.y, vx: a.vx, vy: a.vy, life: 40, colour: '#ffffff', size: 3, damage: 1, element: 'storm', gravity: 0 }); } }] },
-    toad:    { element: 'bloom', art: 'toad', flying: false, body: { w: 12, h: 8 }, hurt: { w: 14, h: 9 }, hp: 8, speed: 0.5, sight: 100, move: 'hop', attacks: [bite(22)] },
-    spore:   { element: 'bloom', art: 'spore', flying: true, body: { w: 8, h: 9 }, hurt: { w: 10, h: 10 }, hp: 4, speed: 0.6, sight: 120, move: 'hover', stand: 0, height: 60,
-      attacks: [{ name: 'drop', range: [0, 40], below: 110, windup: 24, active: 4, recover: 24, cooldown: 110,
-        fire: function (e, ctx) { ctx.projectile({ x: e.x, y: e.y + 4, vx: (ctx.random() - 0.5) * 0.4, vy: 0.3, life: 150, colour: '#9ae66e', size: 4, damage: 1, element: 'bloom', gravity: 0.01, cloud: true }); } }] },
-    shade:   { element: 'void', art: 'shade', flying: false, body: { w: 10, h: 13 }, hurt: { w: 10, h: 14 }, hp: 9, speed: 0.55, sight: 150, move: 'walk', attacks: [bite(22)] },
-    eye:     { element: 'void', art: 'eye', flying: true, body: { w: 10, h: 9 }, hurt: { w: 12, h: 10 }, hp: 6, speed: 0.5, sight: 170, move: 'hover',
-      attacks: [{ name: 'beam', range: [30, 150], below: 110, windup: 30, active: 4, recover: 30, cooldown: 150,
-        fire: function (e, ctx) { var a = aim(e, ctx, 1.4); ctx.projectile({ x: e.x, y: e.y, vx: a.vx, vy: a.vy, life: 200, colour: '#a48cff', size: 3, damage: 1, element: 'void', gravity: 0, seek: 0.03 }); } }] }
-  };
-  var BY_ELEMENT = { ember: ['cinder', 'wisp'], frost: ['crawler', 'moth'], storm: ['hound', 'bat'], bloom: ['toad', 'spore'], void: ['shade', 'eye'] };
+  var KINDS = {};
+  var BY_ELEMENT = {};
 
   /* ---- rigs ----
      A creature is drawn from parts placed by poses, as the Warden is: one set
@@ -318,6 +216,144 @@
     });
   }
 
+  /* The Tesla Jelly: a bell of glass with a coil in it. Its tentacles stiffen, and it discharges straight down. */
+  function jellyRig() {
+    var P = {
+      bell: ['....kkkkkkk....', '..kkplllllpkk..', '.kpllwwlwwllpk.', 'kpllwkkwkkwllpk', 'kplwkllwllkwlpk', 'kpllwkkwkkwllpk', 'kppllwwlwwllppk', '.kppplllllpppk.', '..kkqpqpqpqkk..', '....k.k.k.k....'],
+      bellHot: ['....kkkkkkk....', '..kkwwwwwwwkk..', '.kwwwwwwwwwwwk.', 'kwwwwkkwkkwwwwk', 'kwwwkwwwwwkwwwk', 'kwwwwkkwkkwwwwk', 'kplwwwwwwwwwlpk', '.kppwwwwwwwppk.', '..kkqpqpqpqkk..', '....k.k.k.k....'],
+      tentA: ['.p.', 'p..', '.p.', '..p', '.p.', 'p..', '.p.', '..p', '.l.', 'l..'],
+      tentB: ['.p.', '..p', '.p.', 'p..', '.p.', '..p', '.p.', 'p..', '.l.', '..l'],
+      tentStiff: ['.p.', '.p.', '.p.', '.l.', '.l.', '.l.', '.w.', '.w.', '.w.', '.w.', 'w.w', '.w.'],
+      spark: ['w.w', '.w.', 'w.w']
+    };
+    function jelly(bell, tent, by, stiff) {
+      var xs = [10, 13, 16, 19], out = [], k;
+      for (k = 0; k < 4; k++) out.push([stiff ? 'tentStiff' : (k % 2 ? (tent ? 'tentA' : 'tentB') : (tent ? 'tentB' : 'tentA')), xs[k] - 1, by + 10]);
+      out.push([bell, 8, by]);
+      return out;
+    }
+    return rig('storm', P, 30, 40, { x: 15, y: 12 }, {
+      walk: [jelly('bell', 0, 6), jelly('bell', 1, 7), jelly('bell', 0, 8), jelly('bell', 1, 7)],
+      windup: [jelly('bellHot', 0, 6, true), jelly('bell', 0, 5, true).concat([['spark', 6, 30], ['spark', 21, 28]])],
+      attack: [jelly('bellHot', 0, 5, true).concat([['spark', 9, 31], ['spark', 18, 33]]), jelly('bellHot', 0, 6, true).concat([['spark', 5, 34], ['spark', 22, 31]]), jelly('bell', 0, 7, true)],
+      hurt: [jelly('bell', 1, 9)]
+    });
+  }
+
+  /* The Thorn Toad: squat, thorned, patient. Its throat swells, its mouth opens, and its tongue is longer than you think. */
+  function toadRig() {
+    var P = {
+      body: ['....k..k...k......', '...kwkkwk.kwk.....', '..kkpppppkpppkk...', '.kppppppppppppekk.', 'kpppppppppppppeelk', 'kpplppppppppppppk.', 'kppplllpppppkkkkk.', 'kqppllllllpppppk..', '.kqqlllllllppqk...', '..kkkkkkkkkkkk....'],
+      bodyPuff: ['....k..k...k......', '...kwkkwk.kwk.....', '..kkpppppkpppkk...', '.kppppppppppppekk.', 'kpppppppppppppeelk', 'kpplpppppppppppk..', 'kppllllllppppkkk..', 'kplllllllllpppk...', 'kqlllllllllllqk...', '.kqllllllllqqk....', '..kkkkkkkkkkk.....'],
+      bodyOpen: ['....k..k...k......', '...kwkkwk.kwk.....', '..kkpppppkpppkkk..', '.kpppppppppppeelk.', 'kppppppppppppkkkk.', 'kpplpppppppkPPPk..', 'kppplllppppkPxPk..', 'kqppllllllpkkkkkk.', '.kqqlllllllppppk..', '..kkkkkkkkkkkkk...'],
+      legBack: ['.kkkk.', 'kppppk', 'kpqqpk', 'kkkqqk', '..kkkk'],
+      legBackExt: ['kk......', 'kpkk....', '.kppkk..', '..kqppkk', '...kkqqk', '.....kkk'],
+      legFront: ['kpk', 'kpk', 'kqk', 'kkkk'],
+      tongue: ['kkkkkkkk', 'PPPPPPPP', 'kkkkkkkk'],
+      tongueTip: ['.kkk.', 'kPxPk', 'kPPPk', '.kkk.']
+    };
+    function reach(n) { var out = [], k; for (k = 0; k < n; k++) out.push(['tongue', 30 + k * 8, 17]); out.push(['tongueTip', 30 + n * 8, 16]); return out; }
+    return rig('bloom', P, 78, 28, { x: 20, y: 28 }, {
+      walk: [
+        [['legBack', 8, 23], ['body', 10, 15], ['legFront', 23, 24]],
+        [['legBackExt', 4, 22], ['body', 11, 12], ['legFront', 25, 22]],
+        [['legBack', 9, 19], ['body', 11, 10], ['legFront', 24, 20]],
+        [['legBack', 8, 22], ['body', 10, 14], ['legFront', 23, 24]]
+      ],
+      windup: [
+        [['legBack', 8, 23], ['bodyPuff', 9, 15], ['legFront', 22, 24]],
+        [['legBack', 7, 23], ['bodyPuff', 8, 14], ['legFront', 21, 24]]
+      ],
+      attack: [
+        [['legBack', 9, 23], ['bodyOpen', 12, 15], ['legFront', 25, 24]].concat(reach(1)),
+        [['legBack', 9, 23], ['bodyOpen', 13, 15], ['legFront', 26, 24]].concat(reach(4)),
+        [['legBack', 9, 23], ['bodyOpen', 12, 15], ['legFront', 25, 24]].concat(reach(2))
+      ],
+      hurt: [[['legBackExt', 5, 22], ['body', 9, 13], ['legFront', 22, 22]]]
+    });
+  }
+
+  /* The Puffball: a sulky spore sac. It swells until it cracks, bursts into a ring of spores, and is small for a while. */
+  function puffRig() {
+    var P = {
+      small: ['..kkkkk..', '.kpplppk.', 'kplppppqk', 'kpekpekpk', 'kpppppppk', 'kqpkkkpqk', '.kqpppqk.', '..kkkkk..'],
+      mid: ['....kkkkk....', '..kkpplppkk..', '.kpllpppppqk.', 'kpllppppppppk', 'kplppppppppqk', 'kppekppekpppk', 'kppkkppkkpppk', 'kpppppppppppk', 'kqppkkkkkppqk', 'kqqpppppppqqk', '.kqqqpppqqqk.', '..kkqqqqqkk..', '....kkkkk....'],
+      big: ['......kkkkkkk......', '....kkpplllppkk....', '..kkpllllpppppqkk..', '.kpllllpppppppppqk.', '.kpllppppppppppppk.', 'kpllpppppppppppppqk', 'kplppppppppppppppqk', 'kpppekkpppppekkpppk', 'kpppkkkpppppkkkpppk', 'kpppppppppppppppppk', 'kppppppkkkkkppppppk', 'kqpppppppppppppppqk', 'kqqpppppppppppppqqk', '.kqqpppppppppppqqk.', '.kqqqqpppppppqqqqk.', '..kkqqqqqqqqqqqkk..', '....kkqqqqqqqkk....', '......kkkkkkk......'],
+      bigCracked: ['......kkkkkkk......', '....kkpplwlppkk....', '..kkpllwlpppwpqkk..', '.kpllllwppppwpppqk.', '.kpllppwwpppwwpppk.', 'kpllppppwpppppwppqk', 'kplpppppppppppwppqk', 'kpppekkpppppekkpppk', 'kpppkkkpppppkkkpppk', 'kpwpppppppppppppppk', 'kpwwpppkkkkkppppwpk', 'kqpwpppppppppppwwqk', 'kqqwppppppppppwpqqk', '.kqqpppppppppppqqk.', '.kqqqqpppppppqqqqk.', '..kkqqqqqqqqqqqkk..', '....kkqqqqqqqkk....', '......kkkkkkk......'],
+      tuft: ['k.k.k', '.klk.', '..k..'],
+      roots: ['k.k.k', '.k.k.'],
+      rootsB: ['.k.k.', 'k.k.k'],
+      puff: ['.w.', 'wlw', '.w.']
+    };
+    return rig('bloom', P, 40, 40, { x: 20, y: 20 }, {
+      walk: [
+        [['roots', 17, 26], ['mid', 13, 13], ['tuft', 17, 10]], [['rootsB', 17, 27], ['mid', 13, 14], ['tuft', 17, 11]],
+        [['roots', 17, 28], ['mid', 13, 15], ['tuft', 17, 12]], [['rootsB', 17, 27], ['mid', 13, 14], ['tuft', 17, 11]]
+      ],
+      windup: [[['roots', 17, 29], ['big', 10, 11], ['tuft', 17, 8]], [['rootsB', 17, 29], ['bigCracked', 10, 11], ['tuft', 17, 8]]],
+      attack: [
+        [['puff', 6, 8], ['puff', 30, 8], ['puff', 4, 22], ['puff', 33, 22], ['puff', 12, 32], ['puff', 26, 32], ['small', 15, 16]],
+        [['puff', 2, 5], ['puff', 35, 5], ['puff', 0, 24], ['puff', 37, 24], ['puff', 9, 36], ['puff', 29, 36], ['small', 15, 16]],
+        [['small', 15, 17]]
+      ],
+      hurt: [[['rootsB', 17, 27], ['mid', 12, 13], ['tuft', 16, 10]]],
+      little: [[['small', 15, 16]], [['small', 15, 17]]]
+    });
+  }
+
+  /* The Reaper Shade: a hood with nothing in it but two lights, and a scythe. It is behind you; then it reaps. */
+  function shadeRig() {
+    var P = {
+      robe: ['....kkkk....', '...kppppk...', '..kppppppk..', '..kpqqqqpk..', '..kpqeqeqk..', '..kpqqqqpk..', '.kkppqqppkk.', 'kpppppppppk.', 'kppppppppppk', 'kpplpppppppk', 'kpplppppppqk', 'kpplpppppqqk', 'kppplppppqqk', '.kpplpppqqk.', '.kppplppqqk.', '.kpppppqqqk.', '.kppkppkqpk.', '.kpk.kpk.kk.', '..k...k.....'],
+      robeB: ['....kkkk....', '...kppppk...', '..kppppppk..', '..kpqqqqpk..', '..kpqeqeqk..', '..kpqqqqpk..', '.kkppqqppkk.', 'kpppppppppk.', 'kppppppppppk', 'kpplpppppppk', 'kpplppppppqk', 'kpplpppppqqk', 'kppplppppqqk', '.kpplpppqqk.', '.kppplppqqk.', '.kpppppqqqk.', '.kpkppkpqkk.', '..k.kpk.k...', '.....k......'],
+      robeFlare: ['....kkkk....', '...kppppk...', '..kppppppk..', '..kpqqqqpk..', '..kpwewewk..', '..kpqqqqpk..', '.kkppqqppkk.', 'kpppppppppk.', 'kppppppppppk', 'kpplpppppppk', 'kpplppppppqk', 'kpplpppppqqk', 'kppplppppqqk', '.kpplpppqqk.', '.kppplppqqk.', '.kpppppqqqk.', '.kppkppkqpk.', '.kpk.kpk.kk.', '..k...k.....'],
+      arm: ['kpk', 'kpk', 'kpk', 'kpk', 'klk', 'kkk'],
+      armFwd: ['kkkkkk', 'kpppplk', 'kkkkkk'],
+      // the scythe in three places: over the shoulder, swung out in front, and low
+      scytheUp: ['.....kkkkkkkk.', '...kkwwwwwwwwk', '..kwwllllllkk.', '.kwllkkkkkk...', 'kwlk..........', 'kkM...........', '..M...........', '..M...........', '..M...........', '..M...........', '..M...........', '..M...........', '..M...........', '..M...........'],
+      scytheFwd: ['MMMMMMMMMMMMkk....', '...........kwlk...', '...........kwllk..', '............kwllk.', '............kwllk.', '.............kwlk.', '.............kwlk.', '............kwlk..', '...........kwk....', '...........kk.....'],
+      scytheLow: ['M.............', '.M............', '..M...........', '...M..........', '....M.........', '.....M........', '......Mkkkkk..', '......kwwwwwkk', '.......kllllwk', '........kkklwk', '...........kk.']
+    };
+    return rig('void', P, 60, 40, { x: 30, y: 40 }, {
+      walk: [
+        [['scytheUp', 27, 6], ['robe', 24, 20], ['arm', 33, 28]], [['scytheUp', 27, 7], ['robeB', 24, 21], ['arm', 33, 29]],
+        [['scytheUp', 27, 6], ['robe', 24, 20], ['arm', 33, 28]], [['scytheUp', 27, 5], ['robeB', 24, 19], ['arm', 33, 27]]
+      ],
+      windup: [
+        [['scytheUp', 22, 2], ['robeFlare', 24, 20], ['arm', 31, 24]],
+        [['scytheUp', 19, 0], ['robeFlare', 23, 19], ['arm', 30, 22]]
+      ],
+      attack: [
+        [['robeFlare', 25, 20], ['armFwd', 34, 27], ['scytheFwd', 36, 18]],
+        [['robeFlare', 26, 21], ['armFwd', 35, 29], ['scytheLow', 38, 22]],
+        [['robe', 25, 20], ['arm', 34, 28], ['scytheLow', 36, 24]]
+      ],
+      hurt: [[['scytheUp', 29, 8], ['robeB', 22, 20], ['arm', 31, 28]]]
+    });
+  }
+
+  /* The Watcher: an eye with nothing behind it. It draws a line of sight, then burns along the line, turning slowly. */
+  function watcherRig() {
+    var P = {
+      ball: ['.....kkkkk.....', '...kkxxxxxkk...', '..kxxxxxxxxxk..', '.kxxxxxxxxxxxk.', '.kxxxxxxxxxxxk.', 'kxxxxxxxxxxxxxk', 'kxxxxxxxxxxxxxk', 'kxxxxxxxxxxxxxk', 'kxxxxxxxxxxxxMk', 'kMxxxxxxxxxxxMk', '.kMxxxxxxxxxMk.', '.kMMxxxxxxxMMk.', '..kMMMxxxMMMk..', '...kkMMMMMkk...', '.....kkkkk.....'],
+      iris: ['.kkkkk.', 'klllllk', 'kllkllk', 'klkkklk', 'kllkllk', 'klllllk', '.kkkkk.'],
+      irisNarrow: ['.kkkkk.', 'klwwwlk', 'kwwkwwk', 'kwwkwwk', 'kwwkwwk', 'klwwwlk', '.kkkkk.'],
+      irisHot: ['.kkkkk.', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', 'kwwwwwk', '.kkkkk.'],
+      lidTop: ['.....kkkkk.....', '...kkpppppkk...', '..kpppppppppk..', '.kpppqqqqqpppk.', '.kkkk.....kkkk.'],
+      lidLow: ['.kkkk.....kkkk.', '.kpppqqqqqpppk.', '..kpppppppppk..', '...kkpppppkk...', '.....kkkkk.....'],
+      tendA: ['k..', '.k.', '..k', '.k.', 'k..', '.k.'],
+      tendB: ['..k', '.k.', 'k..', '.k.', '..k', '.k.'],
+      ring: ['...wwwwwwwww...', '..w.........w..', '.w...........w.']
+    };
+    function eye(iris, ix, iy, t, by) { return [[t ? 'tendA' : 'tendB', 5, by + 14], [t ? 'tendB' : 'tendA', 12, by + 16], [t ? 'tendA' : 'tendB', 19, by + 16], [t ? 'tendB' : 'tendA', 26, by + 14], ['ball', 10, by], [iris, 14 + ix, by + 4 + iy], ['lidTop', 10, by - 2], ['lidLow', 10, by + 12]]; }
+    return rig('void', P, 36, 40, { x: 17, y: 14 }, {
+      walk: [eye('iris', 2, 0, 0, 6), eye('iris', 3, 0, 1, 7), eye('iris', 2, 1, 0, 8), eye('iris', 1, 0, 1, 7)],
+      windup: [eye('irisNarrow', 3, 0, 0, 6), eye('irisNarrow', 3, 0, 1, 6).concat([['ring', 10, 3]])],
+      attack: [eye('irisHot', 4, 0, 0, 6), eye('irisHot', 4, 0, 1, 7), eye('irisNarrow', 3, 0, 0, 6)],
+      hurt: [eye('iris', 0, 1, 1, 8)]
+    });
+  }
+
   /* ---- the first five, redrawn ---- */
 
   function flameJet(e, ctx, reach) {
@@ -370,24 +406,70 @@
       box: function (e) { return [front(e, 8, 23, 16, -3)]; },
       resting: function (e) { e.vx *= 0.85; } }] };
 
-  ['cinder', 'wisp', 'crawler', 'moth'].forEach(function (old) { delete KINDS[old]; });
   BY_ELEMENT.ember = ['imp', 'lantern']; BY_ELEMENT.frost = ['crab', 'owl'];
 
-  // compile a kind's frames: the old flat art gives walk frames and one attack frame, used for wind-up and blow alike
+  /* ---- the second five ---- */
+
+  function groundBelow(e, ctx, max) { for (var y = e.y; y < e.y + max; y += 8) if (ctx.tileAt(Math.floor(e.x / 16), Math.floor(y / 16)) === 1) return Math.floor(y / 16) * 16; return e.y + max; }
+  function turnToward(angle, target, most) { var d = target - angle; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return angle + Math.max(-most, Math.min(most, d)); }
+
+  KINDS.jelly = { element: 'storm', flying: true, body: { w: 12, h: 10 }, hurt: { w: 16, h: 13 }, hp: 6, speed: 0.7, sight: 150, move: 'hover', stand: 0, height: 60, rig: jellyRig,
+    attacks: [{ name: 'discharge', range: [0, 18], minBelow: 10, below: 130, windup: 40, active: 16, recover: 40, cooldown: 110,
+      start: function (e, ctx) { e.vars.ground = groundBelow(e, ctx, 140); },
+      telling: function (e, ctx, t, w) { if (t === 1) ctx.telegraph(e.x - 7, e.y + 8, 14, e.vars.ground - e.y - 8, w, '#8fa3ff'); if (t % 6 === 0) ctx.spark(e.x + (ctx.random() - 0.5) * 12, e.y + 14, '#ffffff', 1, 0.8, 10, 0); },
+      box: function (e) { return [{ x0: e.x - 7, x1: e.x + 7, y0: e.y + 8, y1: e.vars.ground }]; },
+      during: function (e, ctx, t) { if (t % 3 === 1) { ctx.zap(e.x, e.y + 10, e.x + (ctx.random() - 0.5) * 8, e.vars.ground, '#ffffff'); ctx.spark(e.x, e.vars.ground, '#8fa3ff', 3, 1.6, 12, 0.05); } ctx.light(e.x, (e.y + e.vars.ground) / 2, 40, 0.8); } }] };
+
+  KINDS.toad = { element: 'bloom', flying: false, body: { w: 16, h: 11 }, hurt: { w: 21, h: 15 }, hp: 10, speed: 0.5, sight: 120, move: 'hop', rig: toadRig,
+    pose: function (e) { e.frame = e.onGround ? (e.wait > 8 ? 0 : 3) : (e.vy < 0 ? 1 : 2); },
+    attacks: [{ name: 'tongue', range: [18, 64], above: 16, below: 16, windup: 30, active: 10, recover: 40, cooldown: 80, grounded: true,
+      box: function (e, t) { var reach = t < 3 ? 22 : t < 8 ? 62 : 38; return [front(e, 8, reach, 13, -6)]; } }] };
+
+  KINDS.puff = { element: 'bloom', flying: true, body: { w: 12, h: 12 }, hurt: { w: 15, h: 15 }, hp: 5, speed: 0.5, sight: 130, move: 'hover', stand: 30, height: 28, rig: puffRig,
+    attacks: [{ name: 'burst', range: [0, 54], above: 60, below: 60, windup: 46, active: 6, recover: 80, cooldown: 140,
+      telling: function (e, ctx, t, w) { if (t === 1) ctx.telegraphCircle(e.x, e.y, 46, w, '#9ae66e'); },
+      fire: function (e, ctx) { for (var n = 0; n < 10; n++) { var a = n / 10 * Math.PI * 2; ctx.projectile({ x: e.x + Math.cos(a) * 8, y: e.y + Math.sin(a) * 8, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6, life: 26, colour: '#c5ff9a', size: 4, damage: 1, element: 'bloom', gravity: 0, cloud: true }); } ctx.spark(e.x, e.y, '#c5ff9a', 16, 1.4, 20, 0); } }] };
+
+  KINDS.shade = { element: 'void', flying: false, body: { w: 10, h: 20 }, hurt: { w: 14, h: 22 }, hp: 10, speed: 0.5, sight: 170, move: 'walk', keep: 30, rig: shadeRig,
+    attacks: [{ name: 'reap', range: [0, 130], windup: 34, active: 10, recover: 44, cooldown: 130, grounded: true,
+      start: function (e, ctx) {
+        var hero = ctx.hero;
+        if (Math.abs(hero.x - e.x) < 44 || !hero.onGround) return;
+        var nx = hero.x - hero.dir * 26, tx = Math.floor(nx / 16), ty = Math.floor((hero.y - 1) / 16), under = ctx.tileAt(tx, ty + 1);
+        if (ctx.tileAt(tx, ty) !== 0 || ctx.tileAt(tx, ty - 1) !== 0 || (under !== 1 && under !== 2)) return;
+        ctx.spark(e.x, e.y - 12, '#a48cff', 14, 1.4, 22, -0.02);
+        e.x = nx; e.y = hero.y; e.vx = 0; e.vy = 0; e.dir = hero.x > e.x ? 1 : -1;
+        ctx.spark(e.x, e.y - 12, '#a48cff', 14, 1.4, 22, -0.02);
+      },
+      fire: function (e, ctx) { ctx.crescent(e.x, e.y - 16, e.dir, 34, '#a48cff', 12); },
+      box: function (e) { return [front(e, -10, 38, 32, 0)]; } }] };
+
+  KINDS.watcher = { element: 'void', flying: true, body: { w: 12, h: 12 }, hurt: { w: 16, h: 16 }, hp: 7, speed: 0.45, sight: 180, move: 'hover', stand: 74, height: 30, rig: watcherRig,
+    attacks: [{ name: 'gaze', range: [40, 160], above: 80, below: 100, windup: 50, active: 44, recover: 40, cooldown: 150,
+      start: function (e, ctx) { e.vars.angle = Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x); },
+      telling: function (e, ctx, t, w) {
+        if (t < w - 16) e.vars.angle = turnToward(e.vars.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.04);
+        ctx.telegraphLine(e.x, e.y, e.x + Math.cos(e.vars.angle) * 190, e.y + Math.sin(e.vars.angle) * 190, 2, '#a48cff');
+      },
+      box: function (e, t, ctx) {
+        e.vars.angle = turnToward(e.vars.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.007);
+        var out = [], c = Math.cos(e.vars.angle), s = Math.sin(e.vars.angle), len = 8;
+        for (; len < 190; len += 8) { var x = e.x + c * len, y = e.y + s * len; if (ctx.tileAt(Math.floor(x / 16), Math.floor(y / 16)) === 1) break; out.push({ x0: x - 4, x1: x + 4, y0: y - 4, y1: y + 4 }); }
+        e.vars.len = len;
+        return out;
+      },
+      during: function (e, ctx) { ctx.beam(e.x, e.y, e.x + Math.cos(e.vars.angle) * e.vars.len, e.y + Math.sin(e.vars.angle) * e.vars.len, '#a48cff'); } }] };
+
+  BY_ELEMENT.storm = ['hound', 'jelly']; BY_ELEMENT.bloom = ['toad', 'puff']; BY_ELEMENT.void = ['shade', 'watcher'];
+
+  // compile every kind's rig into frames, and their mirror images
   var SPRITES = null;
   function build() {
     if (SPRITES) return SPRITES;
     SPRITES = {};
     Object.keys(KINDS).forEach(function (name) {
       var kind = KINDS[name], set;
-      if (kind.rig) set = kind.rig();
-      else {
-        var pal = {}, base = window.Pixels.PALETTE, over = PALETTES[kind.element], key;
-        for (key in base) pal[key] = base[key];
-        for (key in over) pal[key] = over[key];
-        var art = ART[kind.art], walk = art.walk.map(function (rows) { return window.Pixels.art(rows, pal); }), attack = art.attack.map(function (rows) { return window.Pixels.art(rows, pal); });
-        set = { frames: { walk: walk, windup: attack, attack: attack, hurt: [walk[0]] }, anchor: { x: walk[0].width / 2, y: kind.flying ? walk[0].height / 2 : walk[0].height } };
-      }
+      set = kind.rig();
       set.flipped = {};
       Object.keys(set.frames).forEach(function (anim) { set.flipped[anim] = set.frames[anim].map(window.Pixels.flipH); });
       kind.frames = set.frames;
@@ -541,7 +623,7 @@
         var rate = K.flying ? 6 : 8;
         e.anim = e.hurt > 0 ? 'hurt' : 'walk';
         if (e.clock % rate === 0) e.frame = (e.frame + 1) % K.frames.walk.length;
-        if (e.anim === 'hurt') e.frame = 0;
+        if (e.anim === 'hurt') e.frame = 0; else if (K.pose) K.pose(e);
       }
     }
     if (K.always) K.always(e, ctx);
@@ -583,7 +665,7 @@
       var hero = ctx.hero, K = e.spec, speed = K.speed * slow;
       if (e.hurt > 0) { e.vx *= 0.9; e.vy *= 0.9; }
       else {
-        var tx = sees ? hero.x - towards(e, hero) * (K.stand || 46) : e.home.x, ty = sees ? hero.y - (K.height || 42) : e.home.y;
+        var tx = sees ? hero.x - towards(e, hero) * (K.stand === undefined ? 46 : K.stand) : e.home.x, ty = sees ? hero.y - (K.height === undefined ? 42 : K.height) : e.home.y;
         e.vx += (tx - e.x) * 0.004 * speed + Math.sin(e.clock * 0.05) * 0.02; e.vy += (ty - e.y) * 0.004 * speed + Math.cos(e.clock * 0.07) * 0.02;
         e.vx *= 0.93; e.vy *= 0.93;
         var cap = speed * 1.4; if (Math.abs(e.vx) > cap) e.vx = cap * (e.vx > 0 ? 1 : -1); if (Math.abs(e.vy) > cap) e.vy = cap * (e.vy > 0 ? 1 : -1);

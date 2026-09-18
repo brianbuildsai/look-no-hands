@@ -199,7 +199,7 @@
         if (e.wait <= -30) { e.state = 'idle'; e.cooldown = Math.round(120 * quick); }
       } else if (e.state === 'summon') {
         e.anim = 'attack';
-        if (--e.wait === 0) { if (ctx.count() < 5) { ctx.summon('bat', e.x - 30, e.y - 20); ctx.summon('bat', e.x + 30, e.y - 20); } }
+        if (--e.wait === 0) { if (ctx.count() < 5) { ctx.summon('jelly', e.x - 30, e.y - 20); ctx.summon('jelly', e.x + 30, e.y - 20); } }
         if (e.wait <= -20) { e.state = 'idle'; e.cooldown = Math.round(200 * quick); }
       }
       e.x += e.vx; e.y += e.vy;
