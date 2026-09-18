@@ -51,7 +51,7 @@
   });
   CLASSES.smith = {
     id: 'smith', name: 'The Smith', line: 'Slow, and not easily moved',
-    hp: 8, energy: 3, run: 0.84, weapon: 'hammer', dash: 'charge', colour: '#ff8c42',
+    hp: 8, energy: 3, run: 0.84, weapon: 'forgehammer', dash: 'charge', colour: '#ff8c42',
     traits: ['Eight hearts, a heavy step', 'The dash is a shoulder charge that wounds', 'Down and jump in the air: an anvil\'s drop', 'A blow breaks any creature\'s wind-up'],
     apply: function (m) { m.pound = true; m.breaker = true; }
   };

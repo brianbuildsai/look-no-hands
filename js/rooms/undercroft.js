@@ -3,7 +3,9 @@
    A rogue-like platformer, and the last room. The building has an undercroft
    and it draws itself again every time you go down: three floors and a vault,
    stitched from a seeded grammar of chunks in five elements; a Warden with a
-   weapon, a lantern of three flames and one power; creatures that wind up
+   weapon, a lantern of three flames and one power, or one of three others
+   who move and fight differently; stages of chambers to look around in, a
+   portal hidden in each and a still place beyond it; creatures that wind up
    before they strike; weapons and items in four rarities; a guardian in a
    hall of its own at the foot of each floor and a last one under them; and
    nothing carried back up except what was learned.
@@ -1146,7 +1148,7 @@
     // taking a thing: a weapon changes hands (the old one falls), an item joins the others; the rarer, the more is made of it
     function takePickup(p) {
       var r = rarity(p.rarity), loot = { kind: p.kind, id: p.id };
-      if (p.kind === 'weapon') { if (weaponId !== 'shortsword') dropPickup({ kind: 'weapon', id: weaponId }, hero.x - hero.dir * 10, hero.y - 8); equip(p.id); sfx('pickup'); }
+      if (p.kind === 'weapon') { if (WP.WEAPONS[weaponId].rarity !== 'common') dropPickup({ kind: 'weapon', id: weaponId }, hero.x - hero.dir * 10, hero.y - 8); equip(p.id); sfx('pickup'); }
       else if (p.kind === 'relic') takeRelic(p.id);
       if (r.rank >= 4) { ceremony = { t: 0, loot: loot, colour: r.colour }; state = 'ceremony'; sfx('legend'); }
       else if (r.rank >= 2) { banner = { t: 0, text: lootName(loot), sub: r.name, colour: r.colour }; flash = { colour: r.colour, life: 8 }; spark(hero.x, hero.y - 14, r.colour, 40, 2.4, 36, -0.01); }
@@ -1818,7 +1820,7 @@
       if (floorsDown > kept.best) kept.best = floorsDown;
       if (wonRun) { kept.wins++; if (!kept.fastest || clockSeconds < kept.fastest) kept.fastest = Math.round(clockSeconds); }
       save();
-      summary = { won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
+      summary = { who: klass.name, won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
       state = 'summary';
     }
     function stepSummary() {
@@ -1832,7 +1834,7 @@
       var y = 34;
       text(summary.won ? 'YOU CAME BACK UP' : summary.floor === 4 ? 'YOU FELL IN THE VAULT' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
       text(summary.lesson, W / 2, y, '#e9e6df', 1, 'center'); y += 18;
-      text((summary.won ? 'THREE FLOORS AND THE VAULT' : (summary.floor === 4 ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
+      text((summary.won ? 'THREE FLOORS AND THE VAULT' : (summary.floor === 4 ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
       text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
       if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
       if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }

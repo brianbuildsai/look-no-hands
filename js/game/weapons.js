@@ -48,9 +48,9 @@
     ],
     // the lantern on its pole: held out upright, and a bolt of its light goes where she faces; the third goes through
     pole: [
-      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [4, 5, 3, 5], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
-      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [4, 5, 3, 5], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
-      { anim: 'bow', seq: [0, 1, 1, 2, 2], ticks: [5, 7, 7, 3, 8], active: [3], shape: 'bolt', reach: 1, lunge: -1.2, finisher: true }
+      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 8], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
+      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 8], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
+      { anim: 'bow', seq: [0, 1, 1, 2, 2], ticks: [6, 8, 8, 3, 10], active: [3], shape: 'bolt', reach: 1, lunge: -1.2, finisher: true }
     ],
     bow: [
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
@@ -60,7 +60,9 @@
   };
 
   var WEAPONS = {
-    lamppole: { name: 'Lantern Pole', rarity: 'common', moveset: 'pole', damage: [2, 2, 5], reach: 0, trail: '#ffdc9a', line: 'Three bolts of lantern light, the third straight through', grip: [3, 15],
+    forgehammer: { name: 'Forge Hammer', rarity: 'common', moveset: 'heavy', damage: [3, 4], reach: 24, trail: '#ffb347', finisher: 'quake', line: 'Two slow blows; the second cracks the floor both ways', grip: [3, 13],
+      art: ['kkkkkkk', 'kgwggnk', 'kggggnk', 'kgfggnk', 'kggggnk', 'kkkkkkk', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..krk..', '..kkk..'] },
+    lamppole: { name: 'Lantern Pole', rarity: 'common', moveset: 'pole', damage: [1, 1, 3], reach: 0, trail: '#ffdc9a', line: 'Three bolts of lantern light, the third straight through', grip: [3, 15],
       art: ['..kkk..', '.krRrk.', 'kaAAAak', 'kaAFAak', 'kaAAAak', '.krrrk.', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..krk..', '..kkk..'] },
     shortsword: { name: 'Short Sword', rarity: 'common', moveset: 'sword', damage: [2, 2, 4], reach: 24, trail: '#e9e6df', line: 'Three swings, the last a thrust', grip: [1, 11], handDrawn: true,
       art: ['.W.', 'kWk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'rrr', 'krk', 'kbk', 'kkk'] },
@@ -85,7 +87,7 @@
     murmuration: { name: 'Murmuration', rarity: 'legendary', moveset: 'bow', damage: [2, 2, 3], reach: 0, trail: '#ffd24d', finisher: 'flock', line: 'A bow that looses a flock of lights. They wheel, and fall on what you face', grip: [4, 9],
       art: ['..kk...', '.kYyk..', '..kyk..', '...kyk.', '...kyYk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h..kyYk', '...kyk.', '..kyk..', '.kYyk..', '..kk...'] }
   };
-  var ORDER = ['shortsword', 'lamppole', 'daggers', 'hammer', 'emberbrand', 'frostglaive', 'stormrapier', 'scythe', 'thornwhip', 'dawnbreaker', 'quicksilver', 'murmuration'];
+  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'daggers', 'hammer', 'emberbrand', 'frostglaive', 'stormrapier', 'scythe', 'thornwhip', 'dawnbreaker', 'quicksilver', 'murmuration'];
 
   // a weapon by chance: deeper floors and bosses lean toward the rarer
   function roll(rnd, floor, boost, exclude) {

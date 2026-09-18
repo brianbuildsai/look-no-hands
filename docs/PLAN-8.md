@@ -86,3 +86,42 @@ A lost flame still raises you at the head of the floor.
 10. Balance (creatures per chamber, time per stage, each class through a
     guardian by script) and the final pass: copy, README, plan status,
     audits, consoles.
+
+## Status
+
+All ten tasks done on `feat/undercroft-classes`, one commit each, every one
+verified in the browser with a clean console in a fresh tab.
+
+Decided along the way:
+
+- The four share one skeleton: a class is a skin (parts, where they hang,
+  where the hand is, a palette, optional extra frames) plus numbers and
+  switches. The Warden's frames are pixel for pixel what they were. The
+  Lightless begins as whoever came down.
+- The Smith begins with a common Forge Hammer and the Lamplighter with a
+  common Lantern Pole, both new, so neither starts with a rare weapon.
+  Measured against a guardian held still: Warden 3.3 damage a second, Kite
+  3.3, Lamplighter 4.1 from a distance with four hearts, Smith 7.5 with a slow
+  step. By the scripted fighter the Kiln Golem falls to the Warden in 31 s,
+  the Smith in 32 s, the Kite in 32 s; the Kite beats the Lightless in 48 s.
+  The fighter cannot play the Lamplighter (it stands in front of everything).
+- "Heard before it is seen" became seen: a glimmer at the edge of the picture
+  on the side the portal lies, when it is within a chamber or two.
+- A guardian's fall still opens the altar (powers); only the relic cards were
+  retired. A sanctuary risen into again after a death has a font and bare
+  plinths, so dying is not a way to a second perk.
+- The run is seventeen stages: five explored, eight sanctuaries, four
+  guardians.
+- The old corridor generator is still in `world.js` (its chunks and flood
+  fill are what the explorer's checks are built on) but no stage uses it.
+
+Fixed on the way: the keys held down and the relics carried shared one
+variable name, so a window losing focus emptied the relic list.
+
+Generator: 800 seeds in Node, none unreachable, under a millisecond each;
+about fourteen creatures and two or three chests a stage, the portal eight
+chambers from the start on average. Ladders were climbed in the real physics
+with single jumps.
+
+Audits: static audit clean; all 32 pages at 1440 and 375 with no overflow,
+errors or fallbacks; the choosing screen and the game fit a phone.
