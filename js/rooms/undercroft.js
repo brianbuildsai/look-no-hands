@@ -277,8 +277,9 @@
       hero.anim = 'cast'; hero.frame = 0; hero.clock = 0;
       if (!(mods.freeCast && (casts + 1) % mods.freeCast === 0)) hero.energy--;
     }
-    function hurtHero(fromX, damage) {
+    function hurtHero(fromX, damage, cause) {
       if (!hero.alive || hero.invuln > 0) return false;
+      if (cause) lastHurtBy = cause;
       if (mods.shield && shieldUp <= 0) { shieldUp = mods.shield; hero.invuln = 30; spark(hero.x, hero.y - 12, '#ffdc9a', 16, 1.6, 20, 0); number(hero.x, hero.y - 32, 'BUBBLE', '#ffdc9a'); return false; }
       hero.hp -= damage;
       hero.invuln = 60; hero.flash = 6;
@@ -388,9 +389,9 @@
       if (hero.alive) touchHazards();
       for (var rk = 0; rk < level.relics.length; rk++) { var rl = level.relics[rk]; if (!rl.taken && Math.abs(hero.x - (rl.x * TILE + 8)) < 10 && Math.abs(hero.y - rl.y * TILE) < 20) { rl.taken = true; spark(hero.x, hero.y - 14, '#ffdc9a', 24, 1.8, 30, -0.01); openChoice(1); } }
       if (shieldUp > 0) shieldUp--;
-      if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; }
+      if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
       if (hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) transition = 1;
-      if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) begin();
+      if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) endRun(false);
       if (!hero.act) animateHero();
       if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
     }
@@ -403,11 +404,11 @@
       onIce = false;
       for (var ty = ty0; ty <= ty1 + 1; ty++) for (var tx = tx0; tx <= tx1; tx++) {
         var t = tileAt(tx, ty), inBody = ty <= ty1, underfoot = ty === under;
-        if (t === 3 && (inBody || underfoot && hero.onGround)) { if (hurtHero(tx * TILE + 8, 1)) { hero.vy = -3.2; } return; }
+        if (t === 3 && (inBody || underfoot && hero.onGround)) { if (hurtHero(tx * TILE + 8, 1, 'spikes')) { hero.vy = -3.2; } return; }
         if (t === 4 && (inBody || underfoot)) {
           if (element.hazard === 'ice') { onIce = true; continue; }
           if (element.hazard === 'rail' && tick % 150 >= 75) continue;
-          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1)) { hero.vy = -3.2; status(element.name); }
+          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1, element.hazard === 'void' ? 'voidpool' : element.hazard)) { hero.vy = -3.2; status(element.name); }
           return;
         }
       }
@@ -440,7 +441,7 @@
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null, afterChoice = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
-      hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
+      hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage, e ? e.kind : ''); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); },
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
@@ -458,7 +459,7 @@
       flash = { colour: '#a48cff', life: 8 };
       if (power === 'emberwave') { hazards.push({ x0: dir > 0 ? e.x : e.x - 58, x1: dir > 0 ? e.x + 58 : e.x, y0: e.y - 46, y1: e.y + 4, life: 6, damage: 2, element: 'ember', colour: '#ff8c42' }); for (var k = 0; k < 30; k++) { var a = (random() - 0.5) * 0.9, v = 2 + random() * 2.5; particles.push({ x: e.x + dir * 6, y: e.y - 14, vx: Math.cos(a) * v * dir, vy: Math.sin(a) * v - 0.4, life: 18 + random() * 16, max: 30, colour: random() < 0.5 ? '#5b3fa0' : '#a48cff', size: 1, gravity: -0.02 }); } }
       else if (power === 'frostlance') projectiles.push({ x: e.x + dir * 8, y: e.y - 9, vx: dir * 4.5, vy: 0, life: 70, colour: '#a48cff', size: 6, damage: 2, element: 'frost', gravity: 0, from: 'enemy', lance: true });
-      else if (power === 'stormchain') { zaps.push({ x0: e.x, y0: e.y - 14, x1: hero.x, y1: hero.y - 11, colour: '#ffffff', life: 10 }); if (Math.abs(hero.x - e.x) < 140 && hurtHero(e.x, 2)) afflict('storm'); }
+      else if (power === 'stormchain') { zaps.push({ x0: e.x, y0: e.y - 14, x1: hero.x, y1: hero.y - 11, colour: '#ffffff', life: 10 }); if (Math.abs(hero.x - e.x) < 140 && hurtHero(e.x, 2, 'mirror')) afflict('storm'); }
       else { hazards.push({ x0: e.x - 44, x1: e.x + 44, y0: e.y - 40, y1: e.y + 6, life: 6, damage: 2, element: 'bloom', colour: '#9ae66e' }); e.hp = Math.min(e.maxHp, e.hp + 4); for (var k3 = 0; k3 < 24; k3++) { var a3 = k3 / 24 * Math.PI * 2; particles.push({ x: e.x, y: e.y - 12, vx: Math.cos(a3) * 2.4, vy: Math.sin(a3) * 2.4, life: 22, max: 22, colour: '#a48cff', size: 2, gravity: 0 }); } }
     }
     function placeCreatures() {
@@ -472,7 +473,7 @@
       var k, h;
       for (k = hazards.length - 1; k >= 0; k--) {
         h = hazards[k];
-        if (hero.alive && hero.x + hero.w / 2 > h.x0 && hero.x - hero.w / 2 < h.x1 && hero.y > h.y0 && hero.y - hero.h < h.y1) { if (hurtHero((h.x0 + h.x1) / 2, h.damage)) afflict(h.element); }
+        if (hero.alive && hero.x + hero.w / 2 > h.x0 && hero.x - hero.w / 2 < h.x1 && hero.y > h.y0 && hero.y - hero.h < h.y1) { if (hurtHero((h.x0 + h.x1) / 2, h.damage, boss ? boss.kind : h.element)) afflict(h.element); }
         if (h.life % 3 === 0) particles.push({ x: h.x0 + random() * (h.x1 - h.x0), y: h.y0 + random() * (h.y1 - h.y0), vx: 0, vy: -0.4 - random() * 0.6, life: 14, max: 14, colour: h.colour, size: random() < 0.4 ? 2 : 1, gravity: 0 });
         if (--h.life <= 0) hazards.splice(k, 1);
       }
@@ -516,7 +517,7 @@
         if (tick % 2 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 8, max: 8, colour: p.colour, size: 1, gravity: 0 });
         var gone = --p.life <= 0 || (!p.wave && tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1) || (p.wave && tileAt(Math.floor((p.x + p.vx * 3) / TILE), Math.floor(p.y / TILE)) === 1);
         if (p.from === 'enemy' && hero.alive && Math.abs(p.x - hero.x) < hero.w / 2 + p.size && p.y > hero.y - hero.h - p.size && p.y < hero.y + p.size) {
-          if (hurtHero(p.x, p.damage)) afflict(p.element);
+          if (hurtHero(p.x, p.damage, p.wave ? 'wave' : p.seek ? 'beam' : p.cloud ? 'spore' : 'shard')) afflict(p.element);
           gone = true;
         }
         if (p.from === 'hero') { for (var j = 0; j < creatures.length; j++) { var c = creatures[j]; if (!c.dying && Math.abs(p.x - c.x) < c.w / 2 + p.size && p.y > c.y - c.h - p.size && p.y < c.y + p.size) { wound(c, p.damage, p.x, p.element); if (!p.pierce) gone = true; break; } } }
@@ -586,8 +587,8 @@
       afflictions[st.name] = st.time;
     }
     function stepAfflictions() {
-      if (afflictions.burn > 0) { afflictions.burn--; if (afflictions.burn % 60 === 30) { hero.invuln = 0; hurtHero(hero.x + 1, 1); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 3 === 0) ember(hero.x + (random() - 0.5) * 8, hero.y - 14); }
-      if (afflictions.poison > 0) { afflictions.poison--; if (afflictions.poison % 120 === 60) { hero.invuln = 0; hurtHero(hero.x + 1, 1); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 5 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 16, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 }); }
+      if (afflictions.burn > 0) { afflictions.burn--; if (afflictions.burn % 60 === 30) { hero.invuln = 0; hurtHero(hero.x + 1, 1, 'burn'); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 3 === 0) ember(hero.x + (random() - 0.5) * 8, hero.y - 14); }
+      if (afflictions.poison > 0) { afflictions.poison--; if (afflictions.poison % 120 === 60) { hero.invuln = 0; hurtHero(hero.x + 1, 1, 'poison'); hero.invuln = Math.max(hero.invuln, 20); } if (tick % 5 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 16, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 }); }
       if (afflictions.chill > 0) afflictions.chill--;
       if (element.hazard === 'ice' && onIce && tick % 6 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y, vx: -hero.vx * 0.3, vy: -0.4, life: 14, max: 14, colour: '#d8f1ff', size: 1, gravity: 0.02 });
     }
@@ -950,18 +951,15 @@
       }
       for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
       text(element.title + '  ' + run.floor + '-' + (run.section >= 3 ? 'GUARDIAN' : (run.section + 1)), W - 4, 4, '#8f8d88', 1, 'right');
+      text(timeText(Math.floor(clockSeconds)) + '  SEED ' + run.seed, W - 4, 12, '#5c5a56', 1, 'right');
       var pw = RL.POWERS[power];
       fpen.fillStyle = pw.colour; fpen.fillRect(4 + hero.maxEnergy * 6 + 4, 16, 4, 4);
       text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
       if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 23, 8, 2); }
       for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
-      if (state === 'title') {
-        fpen.fillStyle = 'rgba(0,0,0,0.55)'; fpen.fillRect(0, 0, W, H);
-        text('UNDERCROFT', W / 2, 70, '#e9e6df', 3, 'center');
-        text('GO DOWN', W / 2, 104, '#ffb347', 1, 'center');
-        text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 130, '#8f8d88', 1, 'center');
-        text('C OR L DASH   V OR I CAST   ENTER TO BEGIN', W / 2, 140, '#8f8d88', 1, 'center');
-      } else if (state === 'paused') {
+      if (state === 'title') drawTitle();
+      else if (state === 'summary') drawSummary();
+      else if (state === 'paused') {
         fpen.fillStyle = 'rgba(0,0,0,0.5)'; fpen.fillRect(0, 0, W, H);
         text('PAUSED', W / 2, 100, '#e9e6df', 2, 'center');
       }
@@ -974,7 +972,7 @@
       if (transition === 24) {
         run.section++;
         if (run.section >= 4) { run.section = 0; run.floor++; }
-        if (run.floor > 5) { run.floor = 1; won = true; state = 'title'; }
+        if (run.floor > 5) { run.floor = 5; run.section = 3; won = true; endRun(true); return true; }
         loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
         particles.length = 0; afterimages.length = 0; numbers.length = 0;
       }
@@ -1012,11 +1010,102 @@
       cam.x -= sx; cam.y -= sy;
     }
 
+    /* ---- the run: its seed, its clock, its end, and what is kept between runs ---- */
+
+    var STORE = 'undercroft';
+    var kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false };
+    function load() {
+      try { var raw = window.localStorage.getItem(STORE); if (raw) { var got = JSON.parse(raw); Object.keys(kept).forEach(function (k) { if (got[k] !== undefined) kept[k] = got[k]; }); } } catch (e) { /* a private window, or no storage: nothing is kept */ }
+    }
+    function save() { try { window.localStorage.setItem(STORE, JSON.stringify(kept)); } catch (e) { /* not fatal */ } }
+    load();
+
+    // today's seed: the same for everyone who comes down today
+    function dailySeed() { var d = new Date(); return (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) % 100000; }
+    var seedField = env.room.querySelector('[data-undercroft-seed]');
+    var seedNote = env.room.querySelector('[data-undercroft-seed-note]');
+    function chosenSeed() {
+      var typed = seedField ? String(seedField.value).trim() : '';
+      if (!typed) return { seed: dailySeed(), daily: true };
+      var n = 0;
+      if (/^\d+$/.test(typed)) n = parseInt(typed, 10) % 1000000;
+      else { for (var k = 0; k < typed.length; k++) n = (n * 31 + typed.charCodeAt(k)) >>> 0; n = n % 1000000; }
+      return { seed: n, daily: false };
+    }
+    function noteSeed() { if (seedNote) seedNote.textContent = chosenSeed().daily ? 'today’s, ' + dailySeed() : 'yours, ' + chosenSeed().seed; }
+    if (seedField) { seedField.addEventListener('input', noteSeed); noteSeed(); }
+
+    var clockSeconds = 0, lastHurtBy = '', summary = null, startPower = 0;
+    var LESSONS = {
+      spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
+      fall: 'The floor is optional. So is the bottom.', cinder: 'Beetles hop.', wisp: 'Wisps dive.', crawler: 'Slugs have a cold touch.', moth: 'Moths throw hail.', hound: 'Hounds charge; jump.', bat: 'Bats zap what stands still.', toad: 'Toads carry poison.', spore: 'Look up in the cisterns.', shade: 'Shades are nearer than they were.', eye: 'The eye follows.',
+      golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', heart: 'The heart reaches for your feet.', mirror: 'It was you.',
+      burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
+    };
+    function endRun(wonRun) {
+      var floorsDown = wonRun ? 5 : run.floor;
+      kept.runs++;
+      var unlocked = [];
+      if (floorsDown >= 2 && kept.unlocked.indexOf('frostlance') < 0) { kept.unlocked.push('frostlance'); unlocked.push('Frostlance'); }
+      if (floorsDown >= 3 && kept.unlocked.indexOf('stormchain') < 0) { kept.unlocked.push('stormchain'); unlocked.push('Stormchain'); }
+      if (floorsDown >= 4 && kept.unlocked.indexOf('bloomburst') < 0) { kept.unlocked.push('bloomburst'); unlocked.push('Bloomburst'); }
+      if (floorsDown > kept.best) kept.best = floorsDown;
+      if (wonRun) { kept.wins++; if (!kept.fastest || clockSeconds < kept.fastest) kept.fastest = Math.round(clockSeconds); }
+      save();
+      summary = { won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
+      state = 'summary';
+    }
+    function stepSummary() {
+      summary.ticks++;
+      if (summary.ticks > 40 && (hit('start') || hit('jump') || hit('attack'))) { summary = null; state = 'title'; noteSeed(); }
+    }
+    function timeText(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+    function drawSummary() {
+      if (!summary) return;
+      fpen.fillStyle = 'rgba(0,0,0,0.8)'; fpen.fillRect(0, 0, W, H);
+      var y = 34;
+      text(summary.won ? 'YOU CAME BACK UP' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
+      text(summary.lesson, W / 2, y, '#e9e6df', 1, 'center'); y += 18;
+      text((summary.won ? 'FIVE FLOORS' : 'FLOOR ' + summary.floor + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
+      text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
+      if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
+      if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }
+      text('BEST: FLOOR ' + kept.best + (kept.wins ? '   WON ' + kept.wins + (kept.fastest ? ' (BEST ' + timeText(kept.fastest) + ')' : '') : '') + '   RUNS ' + kept.runs, W / 2, y + 6, '#8f8d88', 1, 'center');
+      if (summary.ticks > 40 && (tick >> 4) % 2 === 0) text('PRESS TO GO ON', W / 2, H - 22, '#e9e6df', 1, 'center');
+    }
+    // the title: the seed, the best, and the starting power to choose among what is unlocked
+    function stepTitle() {
+      var options = kept.unlocked;
+      if (hit('left')) startPower = (startPower + options.length - 1) % options.length;
+      if (hit('right')) startPower = (startPower + 1) % options.length;
+      power = options[Math.min(startPower, options.length - 1)];
+      if (hit('start') || hit('jump') || hit('attack')) { var c = chosenSeed(); run.seed = c.seed; begin(); }
+    }
+    function drawTitle() {
+      fpen.fillStyle = 'rgba(0,0,0,0.6)'; fpen.fillRect(0, 0, W, H);
+      text('UNDERCROFT', W / 2, 44, '#e9e6df', 3, 'center');
+      text('GO DOWN', W / 2, 74, '#ffb347', 1, 'center');
+      var c = chosenSeed();
+      text((c.daily ? 'TODAY’S SEED ' : 'SEED ') + c.seed + (kept.best ? '   BEST: FLOOR ' + kept.best : '') + (kept.wins ? '   WON ' + kept.wins : ''), W / 2, 90, '#8f8d88', 1, 'center');
+      // the powers unlocked, the chosen one lit
+      var options = kept.unlocked, n = options.length, x0 = W / 2 - (n * 70) / 2 + 35, k;
+      for (k = 0; k < n; k++) {
+        var pw = RL.POWERS[options[k]], chosen = k === Math.min(startPower, n - 1), x = x0 + k * 70;
+        fpen.fillStyle = pw.colour; fpen.fillRect(x - 3, 106, 6, 6);
+        text(pw.name, x, 116, chosen ? '#ffdc9a' : '#8f8d88', 1, 'center');
+        if (chosen) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(x - 12, 125, 24, 1); }
+      }
+      if (n > 1) text('LEFT AND RIGHT TO CHOOSE A POWER', W / 2, 134, '#8f8d88', 1, 'center');
+      else text('MORE POWERS UNLOCK AS YOU GO DEEPER', W / 2, 134, '#8f8d88', 1, 'center');
+      text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
+      text('C OR L DASH   V OR I CAST   ENTER TO BEGIN', W / 2, 170, '#8f8d88', 1, 'center');
+    }
+
     /* ---- the loop and the room's wiring ---- */
 
     function begin() {
       state = 'run';
-      run.floor = 1; run.section = 0; transition = 0;
+      run.floor = 1; run.section = 0; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; choice = null; afterChoice = null; won = false; applyRelics();
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
@@ -1025,10 +1114,12 @@
     function step() {
       poll();
       tick++;
-      if (state === 'title') { if (hit('start') || hit('jump') || hit('attack')) begin(); return; }
+      if (state === 'title') { stepTitle(); return; }
+      if (state === 'summary') { stepSummary(); return; }
       if (state === 'relic') { stepChoice(); return; }
       if (hit('pause')) state = state === 'paused' ? 'run' : 'paused';
       if (state !== 'run') return;
+      clockSeconds += STEP;
       if (stepTransition()) { stepFx(); return; }
       if (freeze > 0) { freeze--; return; }
       stepHero();
@@ -1042,8 +1133,10 @@
     var startButton = env.room.querySelector('[data-undercroft-start]');
     if (startButton) startButton.addEventListener('click', function () {
       try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
-      begin(); env.redraw();
+      var c = chosenSeed(); run.seed = c.seed; power = kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)]; begin(); env.redraw();
     });
+    var dailyButton = env.room.querySelector('[data-undercroft-daily]');
+    if (dailyButton) dailyButton.addEventListener('click', function () { if (seedField) { seedField.value = ''; noteSeed(); } });
     var fullButton = env.room.querySelector('[data-undercroft-full]');
     if (fullButton) {
       if (!env.stage.requestFullscreen) fullButton.hidden = true;
@@ -1083,7 +1176,7 @@
       still: function () { if (state === 'run') state = 'paused'; render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -1096,6 +1189,9 @@
       generate: function (seed, floor, section) { var L = WD.generate(seed, floor, section); return { cols: L.cols, reachable: WD.reachable(L), enemies: L.enemies.length, relics: L.relics.length, tries: L.tries }; },
       warp: function (x, y) { hero.x = x; hero.y = y === undefined ? level.door.y : y; hero.vy = 0; hero.vx = 0; stepCamera(true); },
       find: function (kind) { for (var ty = 0; ty < level.rows; ty++) for (var tx = 0; tx < level.cols; tx++) if (tileAt(tx, ty) === kind) return { x: tx * TILE + 8, y: ty * TILE, tx: tx, ty: ty }; return null; },
+      summary: function () { return summary; },
+      kept: function (reset) { if (reset) { kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false }; save(); } return kept; },
+      lastHurtBy: function () { return lastHurtBy; },
       guardian: function () { return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y) } : null; },
       arena: function (floor) { if (floor) run.floor = floor; run.section = 3; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },

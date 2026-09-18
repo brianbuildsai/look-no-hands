@@ -824,8 +824,13 @@ module.exports = {
       text: 'Every other room shows you something. This one is a game, and it is the sum of the others: the seeded chance of the marbling and the snow, the steady step of the pendulums and the sand, the light of the lantern room, the rules that make a knot or a bolt of lightning. Go down. Each floor is drawn from a seed as you arrive, so no two descents are the same, and each belongs to an element that changes what the ground does to you and what you can do back. The Warden has a sword, a lantern and one power, finds relics that change the rules, and meets a guardian at the foot of every floor. Death is the end of the run and the start of the next one. Arrows or WASD move, X or K jumps, Z or J attacks, C or L dashes, V or I casts; press the stage first so it hears you.',
       controls: `
 <div class="controls" role="group" aria-label="Undercroft controls">
+  <label class="dial">
+    <span class="dial__label"><span>Seed</span><span data-undercroft-seed-note></span></span>
+    <input class="dial__text" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="leave empty for today’s" data-undercroft-seed>
+  </label>
   <div class="controls__row">
     <button class="btn" type="button" data-undercroft-start>Go down</button>
+    <button class="btn" type="button" data-undercroft-daily>Today’s seed</button>
     <button class="btn" type="button" data-undercroft-full>Full screen</button>
   </div>
 </div>`,
