@@ -620,6 +620,28 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Ernst Chladni drew a violin bow along the edge of a sanded brass plate in 1787 and the sand made figures; in 1809 he showed them to Napoleon, who put up a prize for anyone who could explain them. Sophie Germain, who could not attend the Academy because she was a woman, won it. The figures here follow her equation, near enough, for a square plate held at its middle.'
+    },
+    {
+      number: 28,
+      slug: 'fireflies',
+      ready: true,
+      title: 'Fireflies',
+      line: 'Three thousand fireflies fall into step. Scatter them.',
+      description: 'Three thousand fireflies, each with its own clock and able to see only its nearest neighbours, fall into step until the whole meadow flashes together. Tap to scatter a patch of them and watch it won back.',
+      canvasLabel: 'A dark meadow of tiny specks. Amber flashes appear at random, then in patches, then in waves sweeping across the field, until the whole field flashes in unison.',
+      medium: '2026. <span class="live" data-live="fireflies.count">3,000</span> fireflies, each with a clock of its own and eyes only for its nearest neighbours. In step: <span class="live" data-live="fireflies.together">0</span> out of a hundred.',
+      text: 'Nobody is in charge. Each firefly has a clock that fills and flashes; when it sees a neighbour flash, it sets its own clock a little forward, the more so the nearer it was to flashing itself. Watch what that adds up to: patches, then waves, then all of them together. Tap anywhere to scatter a patch and watch the rest win it back. The dial sets how much notice they take of each other.',
+      controls: `
+<div class="controls" role="group" aria-label="Fireflies controls">
+  <label class="dial">
+    <span class="dial__label"><span>How much they take notice</span><span data-fireflies-listen-value></span></span>
+    <input class="dial__input" type="range" min="0" max="40" step="1" value="9" data-fireflies-listen>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-fireflies-scatter>Scatter them all</button>
+  </div>
+</div>`,
+      wall: 'Travellers on the rivers of Thailand and Malaysia have written for centuries of whole trees of fireflies flashing as one, and were not believed. In 1990 Renato Mirollo and Steven Strogatz proved that clocks which nudge each other this way must always end up in step, however they start. The same arithmetic keeps the cells of your heart beating together.'
     }
   ]
 };

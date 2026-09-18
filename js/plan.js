@@ -325,6 +325,17 @@
     pen.beginPath(); pen.arc(0, 0, 1.6, 0, 6.2832); pen.fill();
   };
 
+  // room 28: a scatter of specks, some of them lit
+  glyphs.fireflies = function (pen, s) {
+    var seed = 5;
+    function r() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    for (var k = 0; k < 42; k++) {
+      var x = (r() - 0.5) * s * 0.92, y = (r() - 0.5) * s * 0.92, lit = k % 4 === 0;
+      pen.beginPath(); pen.arc(x, y, lit ? 2.6 : 1, 0, 6.2832); pen.fill();
+      if (lit) { pen.save(); pen.globalAlpha = 0.35; pen.beginPath(); pen.arc(x, y, 6, 0, 6.2832); pen.stroke(); pen.restore(); }
+    }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
