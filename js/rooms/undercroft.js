@@ -188,18 +188,31 @@
 
     /* ---- the Warden ----
        Position is the feet's middle. The body is a box 10 wide and 22 tall
-       above it. Collision is axis by axis against the tiles. */
+       above it. Collision is axis by axis against the tiles. What the Warden
+       is doing is `act`: null when free, else an attack, dash, cast, hurt or
+       death that runs for so many steps and says when it may be cut short. */
+
+    var ATTACKS = [
+      { anim: 'attack1', frames: [3, 3, 3, 4], active: [1, 2], reach: 24, damage: 2, lunge: 0.6, next: 8 },
+      { anim: 'attack2', frames: [3, 3, 3, 4], active: [1, 2], reach: 22, damage: 2, lunge: 0.5, next: 8, lift: true },
+      { anim: 'attack3', frames: [4, 2, 3, 3, 5], active: [1, 2, 3], reach: 34, damage: 4, lunge: 2.2, next: 0 }
+    ];
+    var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22;
 
     var hero = {
       x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
       onGround: false, coyote: 0, buffer: 0, drop: 0, jumping: false,
-      anim: 'idle', frame: 0, clock: 0, landed: 0
+      anim: 'idle', frame: 0, clock: 0, landed: 0,
+      hp: 5, maxHp: 5, energy: 3, maxEnergy: 3,
+      act: null, combo: 0, queued: false, dashCd: 0, airDash: true, invuln: 0, flash: 0, alive: true, deadFor: 0, hits: 0
     };
 
     function spawnHero() {
       hero.x = level.spawn.x; hero.y = level.spawn.y; hero.vx = 0; hero.vy = 0; hero.dir = 1;
       hero.onGround = false; hero.coyote = 0; hero.buffer = 0; hero.drop = 0; hero.jumping = false;
       hero.anim = 'idle'; hero.frame = 0; hero.clock = 0; hero.landed = 0;
+      hero.hp = hero.maxHp; hero.energy = hero.maxEnergy;
+      hero.act = null; hero.combo = 0; hero.queued = false; hero.dashCd = 0; hero.airDash = true; hero.invuln = 0; hero.flash = 0; hero.alive = true; hero.deadFor = 0;
     }
 
     // does the box [x0, x1) by [y0, y1) overlap a solid tile, or (when asked) a ledge?
@@ -217,20 +230,15 @@
     // move a body by its velocity, stopping at walls, floors and ceilings
     function moveBody(b) {
       var half = b.w / 2, hitWall = false, hitFloor = false, hitCeiling = false;
-      // sideways
       var nx = b.x + b.vx;
       if (b.vx !== 0) {
         var wall = blocked(nx - half, b.y - b.h, nx + half, b.y, false);
-        if (wall) {
-          nx = b.vx > 0 ? wall.tx * TILE - half - 0.001 : (wall.tx + 1) * TILE + half + 0.001;
-          b.vx = 0; hitWall = true;
-        }
+        if (wall) { nx = b.vx > 0 ? wall.tx * TILE - half - 0.001 : (wall.tx + 1) * TILE + half + 0.001; b.vx = 0; hitWall = true; }
       }
       b.x = nx;
-      // up and down
       var ny = b.y + b.vy;
       if (b.vy > 0) {
-        var floor = blocked(b.x - half, ny - b.h, b.x + half, ny, b.drop <= 0, b.y);
+        var floor = blocked(b.x - half, ny - b.h, b.x + half, ny, (b.drop || 0) <= 0, b.y);
         if (floor) { ny = floor.ty * TILE - 0.001; b.vy = 0; hitFloor = true; }
       } else if (b.vy < 0) {
         var ceiling = blocked(b.x - half, ny - b.h, b.x + half, ny, false);
@@ -240,46 +248,148 @@
       return { wall: hitWall, floor: hitFloor, ceiling: hitCeiling };
     }
 
-    function stepHero() {
-      var move = (down('right') ? 1 : 0) - (down('left') ? 1 : 0);
-      var accel = hero.onGround ? ACCEL : AIR_ACCEL;
-      if (move !== 0) {
-        hero.vx += move * accel;
-        if (Math.abs(hero.vx) > RUN_MAX) hero.vx = move * RUN_MAX;
-        hero.dir = move;
-      } else {
-        hero.vx *= hero.onGround ? FRICTION : AIR_FRICTION;
-        if (Math.abs(hero.vx) < 0.05) hero.vx = 0;
-      }
-      // jumping, with a little forgiveness either side of the edge
-      if (hit('jump')) hero.buffer = BUFFER;
-      if (hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
-        if (down('down') && hero.onGround && standingOnLedge()) { hero.drop = 8; }
-        else { hero.vy = JUMP_V; hero.jumping = true; hero.onGround = false; hero.coyote = 0; }
-        hero.buffer = 0;
-      }
-      if (hero.jumping && !down('jump') && hero.vy < JUMP_CUT) hero.vy = JUMP_CUT;
-      if (hero.vy >= 0) hero.jumping = false;
-      hero.vy = Math.min(MAX_FALL, hero.vy + GRAVITY);
-      if (hero.buffer > 0) hero.buffer--;
-      if (hero.drop > 0) hero.drop--;
-      var wasGround = hero.onGround;
-      var touched = moveBody(hero);
-      hero.onGround = touched.floor;
-      if (hero.onGround) hero.coyote = COYOTE; else if (hero.coyote > 0) hero.coyote--;
-      if (hero.onGround && !wasGround) hero.landed = 8;
-      if (hero.landed > 0) hero.landed--;
-      // the ground gives way at the bottom of the floor: back to the start for now
-      if (hero.y > level.rows * TILE + 40) spawnHero();
-      animateHero();
-    }
-
     function standingOnLedge() {
       var ty = Math.floor((hero.y + 1) / TILE);
       return tileAt(Math.floor((hero.x - hero.w / 2) / TILE), ty) === 2 || tileAt(Math.floor((hero.x + hero.w / 2 - 0.001) / TILE), ty) === 2;
     }
 
-    // which animation, and how fast it runs
+    // start an act: an attack of the combo, a dash, a cast
+    function startAttack() {
+      var n = hero.combo % 3, spec = ATTACKS[n];
+      hero.act = { kind: 'attack', n: n, spec: spec, frame: 0, clock: 0, ticks: 0, hitDone: false };
+      hero.combo = n + 1; hero.queued = false;
+      hero.anim = spec.anim; hero.frame = 0; hero.clock = 0;
+      hero.vx = hero.dir * spec.lunge + hero.vx * 0.3;
+      if (spec.lift && !hero.onGround) hero.vy = Math.min(hero.vy, -1.5);
+    }
+    function startDash() {
+      hero.act = { kind: 'dash', ticks: 0 };
+      hero.anim = 'dash'; hero.frame = 0; hero.clock = 0;
+      hero.vx = hero.dir * DASH_SPEED; hero.vy = 0;
+      hero.dashCd = DASH_COOLDOWN; hero.invuln = Math.max(hero.invuln, DASH_FRAMES + 2);
+      if (!hero.onGround) hero.airDash = false;
+      dust(hero.x, hero.y, -hero.dir, 6);
+    }
+    function startCast() {
+      hero.act = { kind: 'cast', ticks: 0, done: false };
+      hero.anim = 'cast'; hero.frame = 0; hero.clock = 0;
+      hero.energy--;
+    }
+    function hurtHero(fromX, damage) {
+      if (!hero.alive || hero.invuln > 0) return false;
+      hero.hp -= damage;
+      hero.invuln = 60; hero.flash = 6;
+      hero.vx = (hero.x < fromX ? -1 : 1) * 2.2; hero.vy = -2.6;
+      hero.act = { kind: 'hurt', ticks: 0 };
+      hero.anim = 'hurt'; hero.frame = 0; hero.clock = 0; hero.combo = 0; hero.queued = false;
+      hitstop(5); shake(3);
+      spark(hero.x, hero.y - 12, '#ff4f7b', 10, 1.4, 20, 0.05);
+      if (hero.hp <= 0) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 0 }; hero.anim = 'death'; hero.frame = 0; hero.clock = 0; hero.invuln = 9999; }
+      return true;
+    }
+
+    // the sweep of a swing: a box in front of the Warden that strikes what it meets
+    function swingBox(spec) {
+      return { x0: hero.dir > 0 ? hero.x + 2 : hero.x - 2 - spec.reach, x1: hero.dir > 0 ? hero.x + 2 + spec.reach : hero.x - 2, y0: hero.y - 26, y1: hero.y - 2 };
+    }
+
+    function stepAct() {
+      var a = hero.act;
+      a.ticks++;
+      if (a.kind === 'attack') {
+        var spec = a.spec, frames = spec.frames;
+        hero.vx *= hero.onGround ? 0.86 : 0.96;
+        a.clock++;
+        if (a.clock >= frames[a.frame]) { a.clock = 0; a.frame++; }
+        if (a.frame >= frames.length) { hero.act = null; hero.anim = 'idle'; hero.frame = 0; if (hero.combo >= 3) hero.combo = 0; return; }
+        hero.frame = a.frame;
+        if (!a.hitDone && spec.active.indexOf(a.frame) >= 0) { if (strike(swingBox(spec), spec.damage, a.n)) a.hitDone = true; }
+        if (hit('attack') && a.frame >= 1 && hero.combo < 3) hero.queued = true;
+        if (hero.queued && a.frame >= frames.length - 1) startAttack();
+        if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
+        return;
+      }
+      if (a.kind === 'dash') {
+        hero.vx = hero.dir * DASH_SPEED; hero.vy = 0;
+        hero.frame = a.ticks % 6 < 3 ? 0 : 1;
+        if (a.ticks % 2 === 0) afterimage(sprites.warden.dash[hero.frame], hero.x, hero.y, hero.dir);
+        if (a.ticks >= DASH_FRAMES) { hero.act = null; hero.vx = hero.dir * RUN_MAX; hero.anim = 'idle'; }
+        if (hit('attack')) { hero.act = null; hero.combo = 0; startAttack(); }
+        return;
+      }
+      if (a.kind === 'cast') {
+        hero.vx *= 0.8;
+        hero.frame = Math.min(4, Math.floor(a.ticks / 4));
+        if (a.ticks === 10 && !a.done) { a.done = true; castPower(); }
+        if (a.ticks >= 24) { hero.act = null; hero.anim = 'idle'; }
+        return;
+      }
+      if (a.kind === 'hurt') {
+        hero.frame = a.ticks < 8 ? 0 : 1;
+        if (a.ticks >= 18) { hero.act = null; hero.anim = 'idle'; }
+        return;
+      }
+      if (a.kind === 'death') {
+        hero.vx *= 0.8;
+        hero.frame = Math.min(5, Math.floor(a.ticks / 9));
+        hero.deadFor = a.ticks;
+        return;
+      }
+    }
+
+    // the placeholder power until the relics arrive: a burst of lantern light
+    function castPower() {
+      spark(hero.x + hero.dir * 4, hero.y - 26, '#ffb347', 40, 2.4, 30, 0.02);
+      shake(2);
+      strike({ x0: hero.x - 40, x1: hero.x + 40, y0: hero.y - 44, y1: hero.y + 4 }, 3, 3);
+    }
+
+    function stepHero() {
+      var free = !hero.act;
+      var move = free || hero.act.kind === 'attack' && !hero.onGround ? (down('right') ? 1 : 0) - (down('left') ? 1 : 0) : 0;
+      if (hero.dashCd > 0) hero.dashCd--;
+      if (hero.invuln > 0 && hero.alive) hero.invuln--;
+      if (hero.flash > 0) hero.flash--;
+      if (free) {
+        var accel = hero.onGround ? ACCEL : AIR_ACCEL;
+        if (move !== 0) {
+          hero.vx += move * accel;
+          if (Math.abs(hero.vx) > RUN_MAX) hero.vx = move * RUN_MAX;
+          hero.dir = move;
+        } else {
+          hero.vx *= hero.onGround ? FRICTION : AIR_FRICTION;
+          if (Math.abs(hero.vx) < 0.05) hero.vx = 0;
+        }
+        if (hit('attack')) { if (hero.combo >= 3) hero.combo = 0; startAttack(); }
+        else if (hit('dash') && hero.dashCd <= 0 && (hero.onGround || hero.airDash)) startDash();
+        else if (hit('cast') && hero.energy > 0) startCast();
+      } else stepAct();
+      // jumping, with a little forgiveness either side of the edge
+      var mayJump = !hero.act || hero.act.kind === 'attack';
+      if (hit('jump')) hero.buffer = BUFFER;
+      if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
+        if (down('down') && hero.onGround && standingOnLedge()) hero.drop = 8;
+        else { hero.vy = JUMP_V; hero.jumping = true; hero.onGround = false; hero.coyote = 0; dust(hero.x, hero.y, -hero.dir, 3); }
+        hero.buffer = 0;
+      }
+      if (hero.jumping && !down('jump') && hero.vy < JUMP_CUT) hero.vy = JUMP_CUT;
+      if (hero.vy >= 0) hero.jumping = false;
+      if (!hero.act || hero.act.kind !== 'dash') hero.vy = Math.min(MAX_FALL, hero.vy + GRAVITY);
+      if (hero.buffer > 0) hero.buffer--;
+      if (hero.drop > 0) hero.drop--;
+      var wasGround = hero.onGround;
+      var touched = moveBody(hero);
+      hero.onGround = touched.floor;
+      if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; } else if (hero.coyote > 0) hero.coyote--;
+      if (hero.onGround && !wasGround) { hero.landed = 8; dust(hero.x, hero.y, 1, 2); dust(hero.x, hero.y, -1, 2); }
+      if (hero.landed > 0) hero.landed--;
+      if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; }
+      if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) begin();
+      if (!hero.act) animateHero();
+      if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
+    }
+
+    // which animation, and how fast it runs, when the Warden is free
     function animateHero() {
       var next, rate;
       if (!hero.onGround) { next = hero.vy < 0 ? 'jump' : 'fall'; rate = 8; }
@@ -295,6 +405,131 @@
       }
     }
 
+    /* ---- things to hit: training dummies until the enemies arrive ---- */
+
+    var dummies = [];
+    function placeDummies() {
+      dummies = [{ x: 130, y: 11 * TILE, hp: 12, wobble: 0, dir: 1 }, { x: 330, y: 11 * TILE, hp: 12, wobble: 0, dir: 1 }, { x: 560, y: 11 * TILE, hp: 12, wobble: 0, dir: 1 }];
+    }
+    function stepDummies() {
+      for (var k = 0; k < dummies.length; k++) {
+        var d = dummies[k];
+        if (d.wobble > 0) d.wobble--;
+        if (d.hp <= 0 && d.gone === undefined) { d.gone = 90; }
+        if (d.gone !== undefined && --d.gone <= 0) { d.hp = 12; delete d.gone; }
+      }
+    }
+    // a box strikes whatever stands in it; returns whether anything was hit
+    function strike(box, damage, kind) {
+      var any = false;
+      for (var k = 0; k < dummies.length; k++) {
+        var d = dummies[k];
+        if (d.gone !== undefined) continue;
+        if (d.x + 6 < box.x0 || d.x - 6 > box.x1 || d.y < box.y0 || d.y - 16 > box.y1) continue;
+        d.hp -= damage; d.wobble = 12; d.dir = hero.dir; any = true;
+        var hx = hero.dir > 0 ? Math.max(d.x - 6, box.x0) : Math.min(d.x + 6, box.x1);
+        spark(hx, d.y - 10, kind === 3 ? '#ffb347' : '#ffffff', kind === 2 ? 14 : 8, kind === 2 ? 2.2 : 1.6, 16, 0.06);
+        number(d.x, d.y - 22, damage, kind === 2 ? '#ffb347' : '#e9e6df');
+        hero.hits++;
+        if (hero.energy < hero.maxEnergy && hero.hits % 4 === 0) hero.energy++;
+      }
+      if (any) { hitstop(kind === 2 ? 5 : 3); shake(kind === 2 ? 3 : 1.5); }
+      return any;
+    }
+    function drawDummies() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y);
+      for (var k = 0; k < dummies.length; k++) {
+        var d = dummies[k];
+        if (d.gone !== undefined) continue;
+        var tilt = d.wobble > 0 ? Math.round(Math.sin(d.wobble * 0.9) * 2 * d.dir) : 0;
+        fpen.drawImage(P.art(P.DUMMY), Math.round(d.x) - 6 + tilt - cx, Math.round(d.y) - 16 - cy);
+        if (d.hp < 12) { fpen.fillStyle = '#3a3936'; fpen.fillRect(Math.round(d.x) - 6 - cx, Math.round(d.y) - 21 - cy, 12, 2); fpen.fillStyle = '#ff4f7b'; fpen.fillRect(Math.round(d.x) - 6 - cx, Math.round(d.y) - 21 - cy, Math.round(12 * d.hp / 12), 2); }
+      }
+    }
+
+    /* ---- effects: particles, hit-stop, shaking, light ---- */
+
+    var particles = [], numbers = [], afterimages = [], freeze = 0;
+
+    function spark(x, y, colour, n, speed, life, gravity) {
+      for (var k = 0; k < n; k++) {
+        var a = random() * Math.PI * 2, v = speed * (0.4 + random() * 0.8);
+        particles.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * (0.6 + random() * 0.6), max: life, colour: colour, size: random() < 0.3 ? 2 : 1, gravity: gravity || 0 });
+      }
+    }
+    function dust(x, y, dir, n) {
+      for (var k = 0; k < n; k++) particles.push({ x: x + (random() - 0.5) * 6, y: y - random() * 3, vx: dir * (0.3 + random() * 0.8) + (random() - 0.5) * 0.4, vy: -random() * 0.6, life: 14 + random() * 12, max: 24, colour: '#8f8d88', size: 1, gravity: -0.01 });
+    }
+    function ember(x, y) {
+      particles.push({ x: x + (random() - 0.5) * 4, y: y, vx: (random() - 0.5) * 0.2, vy: -0.2 - random() * 0.3, life: 30 + random() * 30, max: 60, colour: random() < 0.5 ? '#ffb347' : '#ffdc9a', size: 1, gravity: -0.003 });
+    }
+    function number(x, y, value, colour) {
+      numbers.push({ x: x, y: y, vy: -0.6, life: 36, text: String(value), colour: colour || '#e9e6df' });
+    }
+    function afterimage(img, x, y, dir) {
+      afterimages.push({ img: P.silhouette(img, '#6b84ff'), x: x, y: y, dir: dir, life: 12 });
+    }
+    function shake(amount) { cam.shake = Math.max(cam.shake, amount); }
+    function hitstop(frames) { freeze = Math.max(freeze, frames); }
+
+    function stepFx() {
+      var k, p;
+      for (k = particles.length - 1; k >= 0; k--) {
+        p = particles[k];
+        p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= 0.98;
+        if (--p.life <= 0) particles.splice(k, 1);
+      }
+      for (k = numbers.length - 1; k >= 0; k--) { p = numbers[k]; p.y += p.vy; p.vy *= 0.94; if (--p.life <= 0) numbers.splice(k, 1); }
+      for (k = afterimages.length - 1; k >= 0; k--) if (--afterimages[k].life <= 0) afterimages.splice(k, 1);
+      if (particles.length > 600) particles.splice(0, particles.length - 600);
+    }
+
+    function drawFx() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, p;
+      for (k = 0; k < afterimages.length; k++) {
+        p = afterimages[k];
+        fpen.globalAlpha = p.life / 12 * 0.5;
+        var img = p.dir >= 0 ? p.img : P.flipH(p.img);
+        fpen.drawImage(img, Math.round(p.x) - 16 - cx, Math.round(p.y) - 31 - cy);
+      }
+      fpen.globalAlpha = 1;
+      for (k = 0; k < particles.length; k++) {
+        p = particles[k];
+        fpen.globalAlpha = Math.min(1, p.life / (p.max * 0.4));
+        fpen.fillStyle = p.colour;
+        fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - cy, p.size, p.size);
+      }
+      fpen.globalAlpha = 1;
+      for (k = 0; k < numbers.length; k++) {
+        p = numbers[k];
+        fpen.globalAlpha = Math.min(1, p.life / 12);
+        text(p.text, Math.round(p.x) - cx, Math.round(p.y) - cy, p.colour, 1, 'center');
+      }
+      fpen.globalAlpha = 1;
+    }
+
+    // the dark, and the lantern's light cut out of it in steps, as a lamp lights a vault
+    var dark = P.blank(W, H), dpen = dark.getContext('2d');
+    var lights = [];
+    function light(x, y, radius, strength) { lights.push({ x: x, y: y, r: radius, s: strength || 1 }); }
+    function drawDark(flicker) {
+      dpen.globalCompositeOperation = 'source-over';
+      dpen.fillStyle = 'rgba(2,2,8,0.82)';
+      dpen.fillRect(0, 0, W, H);
+      dpen.globalCompositeOperation = 'destination-out';
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, r;
+      for (k = 0; k < lights.length; k++) {
+        var L = lights[k], x = Math.round(L.x) - cx, y = Math.round(L.y) - cy;
+        var rings = [[1.0, 0.95], [0.78, 0.6], [0.56, 0.35], [0.36, 0.2]];
+        for (r = 3; r >= 0; r--) {
+          dpen.fillStyle = 'rgba(0,0,0,' + (rings[r][1] * L.s).toFixed(2) + ')';
+          dpen.beginPath(); dpen.arc(x, y, L.r * rings[r][0] * flicker, 0, 6.2832); dpen.fill();
+        }
+      }
+      lights.length = 0;
+      fpen.drawImage(dark, 0, 0);
+    }
+
     /* ---- the camera and the picture ---- */
 
     var cam = { x: 0, y: 0, shake: 0 };
@@ -305,6 +540,7 @@
       if (snap) { cam.x = tx; cam.y = ty; return; }
       cam.x += (tx - cam.x) * 0.1;
       cam.y += (ty - cam.y) * 0.08;
+      if (cam.shake > 0) cam.shake = Math.max(0, cam.shake - 0.25);
     }
 
     // a three-by-five pixel font for the frame, capitals and figures
@@ -373,19 +609,32 @@
         if (!t) continue;
         var px = tx * TILE - Math.round(cam.x), py = ty * TILE - Math.round(cam.y);
         if (t === 1) {
-          fpen.drawImage(TILES.stone[(tx * 7 + ty * 13) % 3], px, py);
+          fpen.drawImage(TILES.stone[((tx * 7 + ty * 13) % 3 + 3) % 3], px, py);
           if (tileAt(tx, ty - 1) !== 1) fpen.drawImage(TILES.top, px, py);
         } else if (t === 2) fpen.drawImage(TILES.ledge, px, py);
       }
     }
 
     function drawHero() {
-      var img = facing('warden', hero.anim, hero.frame, hero.dir);
-      fpen.drawImage(img, Math.round(hero.x) - 16 - Math.round(cam.x), Math.round(hero.y) - 31 - Math.round(cam.y));
+      var frames = sprites.warden[hero.anim] || sprites.warden.idle, k = Math.min(hero.frame, frames.length - 1);
+      var img = facing('warden', hero.anim in sprites.warden ? hero.anim : 'idle', k, hero.dir);
+      if (hero.invuln > 0 && hero.alive && !(hero.act && hero.act.kind === 'dash') && (tick >> 2) % 2 === 0) fpen.globalAlpha = 0.45;
+      if (!hero.alive && hero.deadFor > 70) fpen.globalAlpha = Math.max(0, 1 - (hero.deadFor - 70) / 40);
+      var x = Math.round(hero.x) - 16 - Math.round(cam.x), y = Math.round(hero.y) - 31 - Math.round(cam.y);
+      fpen.drawImage(hero.flash > 0 ? P.silhouette(img, '#ffffff') : img, x, y);
+      fpen.globalAlpha = 1;
+      // the lantern's light travels with the hand
+      if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, 78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0), 1);
     }
 
     function drawHud() {
-      text('UNDERCROFT', 4, 4, '#8f8d88');
+      var k;
+      for (k = 0; k < hero.maxHp; k++) {
+        fpen.fillStyle = k < hero.hp ? '#ff4f7b' : '#3a3936';
+        fpen.fillRect(4 + k * 9, 4, 7, 6); fpen.fillRect(5 + k * 9, 10, 5, 1); fpen.fillRect(6 + k * 9, 11, 3, 1); fpen.fillRect(7 + k * 9, 12, 1, 1);
+        fpen.fillStyle = '#0b0b12'; fpen.fillRect(4 + k * 9, 4, 1, 1); fpen.fillRect(7 + k * 9, 4, 1, 1); fpen.fillRect(10 + k * 9, 4, 1, 1);
+      }
+      for (k = 0; k < hero.maxEnergy; k++) { fpen.fillStyle = k < hero.energy ? '#ffb347' : '#3a3936'; fpen.fillRect(4 + k * 6, 16, 4, 4); }
       if (state === 'title') {
         fpen.fillStyle = 'rgba(0,0,0,0.55)'; fpen.fillRect(0, 0, W, H);
         text('UNDERCROFT', W / 2, 70, '#e9e6df', 3, 'center');
@@ -400,9 +649,14 @@
 
     function render() {
       if (sheetMode) return;
+      var sx = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0, sy = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0;
+      cam.x += sx; cam.y += sy;
       drawBackdrop();
       drawTiles();
+      drawDummies();
       drawHero();
+      drawFx();
+      drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
       drawHud();
       // into the stage, scaled without smoothing, letterboxed in the dark
       var ratio = canvas.width / size.w;
@@ -411,6 +665,7 @@
       pen.fillRect(0, 0, size.w, size.h);
       pen.imageSmoothingEnabled = false;
       pen.drawImage(frame, view.x, view.y, view.w, view.h);
+      cam.x -= sx; cam.y -= sy;
     }
 
     /* ---- the loop and the room's wiring ---- */
@@ -427,7 +682,10 @@
       if (state === 'title') { if (hit('start') || hit('jump') || hit('attack')) begin(); return; }
       if (hit('pause')) state = state === 'paused' ? 'run' : 'paused';
       if (state !== 'run') return;
+      if (freeze > 0) { freeze--; return; }
       stepHero();
+      stepDummies();
+      stepFx();
       stepCamera(false);
     }
 
@@ -447,6 +705,7 @@
     }
 
     loadTest();
+    placeDummies();
     spawnHero();
     stepCamera(true);
 
@@ -472,7 +731,7 @@
       still: function () { if (state === 'run') state = 'paused'; render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame }, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows }, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, dummies: dummies.map(function (d) { return d.hp; }), particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows }, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -482,6 +741,7 @@
         for (k = 0; k < list.length; k++) held[list[k]] = false;
         render();
       },
+      hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
       sprites: function () {
         var out = {};
         Object.keys(sprites.warden).forEach(function (name) { out[name] = sprites.warden[name].map(function (img) { return P.count(img); }); });
@@ -496,8 +756,9 @@
         pen.fillStyle = '#101018'; pen.fillRect(0, 0, size.w, size.h);
         pen.imageSmoothingEnabled = false;
         var y = view.y + 4, x = view.x + 4;
+        var wanted = only ? String(only).split(',') : null;
         Object.keys(group).forEach(function (name) {
-          if (only && name !== only) return;
+          if (wanted && wanted.indexOf(name) < 0) return;
           group[name].forEach(function (img) {
             if (x + img.width * S > size.w) { x = view.x + 4; y += (img.height + 1) * S; }
             pen.drawImage(img, x, y, img.width * S, img.height * S); x += (img.width + 1) * S;
