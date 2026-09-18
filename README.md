@@ -21,7 +21,7 @@ Fonts. Offline it falls back to system fonts and still works.
 
 ```
 index.html            the hall: rooms 1 to 5, and the floor plan to the rest
-rooms/*.html          rooms 6 to 35, one work to a page (generated, committed)
+rooms/*.html          rooms 6 to 36, one work to a page (generated, committed)
 css/style.css
 js/core.js            frame loop, visibility, motion switch, GL helpers
 js/plan.js            the floor plan's hairline glyphs
@@ -62,6 +62,13 @@ js/rooms/selection.js     room 33  Dawkins biomorphs, bred by the visitor
 js/rooms/lightning.js     room 34  dielectric breakdown over a live-relaxed Laplace field
 js/rooms/docent.js        room 35  a Markov chain that writes and typesets a label for a room that does not exist
 js/corpus.js          every wall text, written by make-rooms.js for room 35 to read
+js/rooms/undercroft.js    room 36  the game's engine: fixed step, tiles, camera, HUD, the run, persistence
+js/game/pixels.js         room 36  the sprite compiler (text art to canvases) and the Warden's frames
+js/game/world.js          room 36  five elements, the chunk grammar, the seeded generator, reachability
+js/game/actors.js         room 36  ten creatures and their behaviours
+js/game/relics.js         room 36  four powers, eighteen relics
+js/game/guardians.js      room 36  five guardians and their patterns
+js/game/sound.js          room 36  synthesised effects and floor music
 tools/                authoring tools (Node): rooms.js is the copy, make-rooms.js stamps the pages
 docs/                 design and task plans
 ```
@@ -110,6 +117,12 @@ Gallery.inspect('tonight').where(ms)    // rooms/tonight.html: heliocentric posi
 Gallery.inspect('selection').litter()   // rooms/selection.html: generation, the parent's genes, the children's
 Gallery.inspect('lightning').bolt()     // rooms/lightning.html: steps, branches, strikes, the field's Laplace residual
 Gallery.inspect('docent').label()       // rooms/docent.html: the label being written and its longest copied run
+Gallery.inspect('undercroft').state()   // rooms/undercroft.html: the Warden, the run, the creatures, the frame cost
+Gallery.inspect('undercroft').press('right jump', 12)  // hold keys for so many steps (left right up down jump attack dash cast start pause)
+Gallery.inspect('undercroft').generate(seed, floor, section)  // a floor: columns, reachable, enemies, relics
+Gallery.inspect('undercroft').arena(floor); .guardian(); .slay()  // straight to a guardian, watch it, end it
+Gallery.inspect('undercroft').summon('hound', 40); .setPower('frostlance'); .take('aeolian'); .offer(3)
+Gallery.inspect('undercroft').sheet(true, 6, 'run,attack1', 'warden')  // draw sprite frames large on the stage; sheet(false) resumes
 ```
 
 ## Notes
@@ -118,9 +131,15 @@ Gallery.inspect('docent').label()       // rooms/docent.html: the label being wr
   control) and shows each work's resting state.
 - Works that need WebGL, WebGL 2 float targets or Web Audio say so plainly in
   place of the work if the browser lacks them; the rest of the page carries on.
-- Rooms 5, 14, 23 and 27 make sound only after the visitor asks for it, and
-  pausing motion silences them (rooms 23 and 27 also hush when the tab is
-  hidden). Room 35 speaks, with the Web Speech API, only when asked.
+- Rooms 5, 14, 23, 27 and 36 make sound only after the visitor asks for it,
+  and pausing motion silences them (rooms 23, 27 and 36 also hush when the tab
+  is hidden). Room 35 speaks, with the Web Speech API, only when asked.
+- Room 36 keeps its best floor, wins, unlocks and sound choice in
+  localStorage, guarded so a private window simply forgets. Its keys: arrows
+  or WASD move, X or K jumps, Z or J attacks, C or L dashes, V or I casts,
+  Enter begins, Escape or P pauses; the stage must have focus (it has a
+  tabindex, so the arrow keys steer the Warden and not the rooms). On touch
+  screens the controls are drawn below the frame.
 - Room 31's weave is checked every seam and every strand between crossings
   (no mismatches, no alternation errors over thousands of frames); room 32 was
   checked against the 2012 Venus transit, the 2020 Mars opposition, the 2003

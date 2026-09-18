@@ -96,6 +96,7 @@
       mode = MODES[which];
       shake = 1;
       env.live('mode', mode[0] + ', ' + mode[1]);
+      env.live('grains', Gallery.formatCount ? Gallery.formatCount(COUNT) : COUNT);
       env.live('hz', Math.round(pitchOf(mode)));
       var readout = env.room.querySelector('[data-chladni-mode-value]');
       if (readout) readout.textContent = 'm = ' + mode[0] + ', n = ' + mode[1] + ': ' + Math.round(pitchOf(mode)) + ' Hz';

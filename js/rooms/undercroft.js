@@ -1233,6 +1233,7 @@
         while (accumulator >= STEP) { step(); accumulator -= STEP; }
         render();
         cost = cost * 0.9 + (performance.now() - t0) * 0.1;
+        if (tick % 30 === 0) env.live('cost', cost.toFixed(1));
       },
       // With motion paused: the game pauses and the frame is held
       still: function () { if (state === 'run') state = 'paused'; if (SND) SND.stop(); render(); },

@@ -118,3 +118,21 @@ over 500 seeds for reachability; every sprite frame is checked non-blank.
    performance pass (under 4 ms a frame on the desktop budget).
 10. Integration and final pass: glyph, hall copy (thirty-six), colophon sources
     and line count, README, plan status, iframe audits, fresh-tab consoles.
+
+## Status
+
+All ten tasks are done and committed on `feat/undercroft`, one commit each.
+Where the build departs from the design above:
+
+- The Warden's frames are assembled from parts by poses rather than drawn
+  one by one, so a change to the cloak or the sword reaches every frame.
+- Alcoves offer a single relic on the card screen; guardians offer three and
+  then the altar. Relic choices are made with the arrows and any button.
+- The mirror on floor five borrows the Warden's own frames in the vault's
+  colours and casts whatever power she carries.
+- Touch controls are drawn on the stage below the frame on phones, where the
+  thumbs have room, and over its corners in the landscape.
+- The generator was checked over 1500 floors (100 seeds, five floors, three
+  sections): all reachable, 0.04 regenerations a floor. The engine costs
+  about a millisecond a frame in a fight on the desktop budget.
+
