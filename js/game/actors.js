@@ -525,6 +525,7 @@
   function hurtBoxes(e) {
     var K = e.spec, w = K.hurt.w * e.size, h = K.hurt.h * e.size, oy = (K.hurt.oy || 0) * e.size;
     if (e.vars && e.vars.shelled) return [];
+    if (K.boxes) return K.boxes(e, w, h);
     if (K.flying) return [{ x0: e.x - w / 2, x1: e.x + w / 2, y0: e.y - h / 2 + oy, y1: e.y + h / 2 + oy, mult: 1 }];
     return [{ x0: e.x - w / 2, x1: e.x + w / 2, y0: e.y - h + oy, y1: e.y + oy, mult: 1 }];
   }
@@ -689,5 +690,5 @@
     }
   };
 
-  window.Actors = { KINDS: KINDS, BY_ELEMENT: BY_ELEMENT, build: build, spawn: spawn, make: make, step: step, hurt: hurt, hurtBoxes: hurtBoxes, statusName: statusName, STATUS: STATUS };
+  window.Actors = { kit: { rig: rig, front: front, aim: aim, beginAttack: beginAttack, groundBelow: groundBelow, turnToward: turnToward, towards: towards, edgeAhead: edgeAhead }, KINDS: KINDS, BY_ELEMENT: BY_ELEMENT, build: build, spawn: spawn, make: make, step: step, hurt: hurt, hurtBoxes: hurtBoxes, statusName: statusName, STATUS: STATUS };
 })();
