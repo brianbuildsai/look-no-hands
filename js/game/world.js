@@ -38,7 +38,7 @@
     this.cols = cols; this.rows = ROWS; this.tiles = new Uint8Array(cols * ROWS);
     this.element = element; this.floor = floor; this.section = section;
     this.spawn = { x: 24, y: 0 }; this.door = { x: 0, y: 0 };
-    this.enemies = []; this.relics = []; this.lights = [];
+    this.enemies = []; this.relics = []; this.lights = []; this.chests = []; this.spots = [];
   }
   Level.prototype.get = function (x, y) {
     if (x < 0 || x >= this.cols) return STONE;
@@ -65,6 +65,7 @@
       // a patch of hazard sunk in the floor, now and then, past the first floor
       if (d > 1 && w >= 6 && rnd() < 0.45) { var hw = 2 + Math.floor(rnd() * 2), hx = x + 2 + Math.floor(rnd() * (w - hw - 3)); for (k = 0; k < hw; k++) { L.set(hx + k, g, HAZARD); } }
       if (w >= 5 && rnd() < 0.7) L.enemies.push({ x: x + Math.floor(w / 2), y: g, kind: 'walker' });
+      if (w >= 5) L.spots.push({ x: x + 1, y: g });
       return { x: x + w, g: g };
     },
     gap: function (L, x, g, rnd, d) {
@@ -116,6 +117,7 @@
       for (k = 0; k < w; k++) L.column(x + k, g2);
       L.set(x + 1, g + 1, LEDGE); L.set(x + 2, g + 1, LEDGE);
       if (g2 - g > 4) { L.set(x + w - 3, g2 - 3, LEDGE); L.set(x + w - 2, g2 - 3, LEDGE); }
+      if (rnd() < 0.4) L.chests.push({ x: x + w - 1, y: g2 });
       return { x: x + w, g: g2 };
     },
     arena: function (L, x, g, rnd, d) {
@@ -125,6 +127,7 @@
       var n = 2 + Math.floor(rnd() * Math.min(3, 1 + d));
       for (k = 0; k < n; k++) L.enemies.push({ x: x + 3 + Math.floor(rnd() * (w - 6)), y: g, kind: rnd() < 0.3 ? 'flyer' : rnd() < 0.5 ? 'brute' : 'walker' });
       if (rnd() < 0.5) L.lights.push({ x: x + Math.floor(w / 2), y: g - 4 });
+      if (rnd() < 0.6) L.chests.push({ x: x + w - 3, y: g - 3 });
       return { x: x + w, g: g };
     },
     alcove: function (L, x, g, rnd, d) {
@@ -179,6 +182,9 @@
       L.trim(x + 9);
       for (var y = 0; y < ROWS; y++) L.set(L.cols - 1, y, STONE);
       L.enemies = L.enemies.filter(function (e) { return e.x < x - 2 && e.x > 8; });
+      // every section holds at least one chest
+      var free = L.spots.filter(function (sp) { return sp.x > 16 && L.get(sp.x, sp.y) === STONE && L.get(sp.x, sp.y - 1) === AIR; });
+      if (!L.chests.length && free.length) L.chests.push(free[Math.floor(rnd() * free.length)]);
     } while (!reachable(L) && ++tries < 12);
     L.tries = tries;
     return L;

@@ -77,6 +77,9 @@
     castfrost: function () { tone('sine', 1320, 2640, 0.25, 0.005, 0.05, 0.4, 0.18); noise(0.3, 0.25, 'highpass', 3000, 9000); },
     caststorm: function () { for (var k = 0; k < 6; k++) setTimeout(function () { tone('square', 1200 + Math.random() * 2000, 200, 0.05, 0.001, 0.01, 0.04, 0.15, 5000); }, k * 22); noise(0.25, 0.4, 'highpass', 2000, 6000); },
     castbloom: function () { tone('sine', 392, 392, 0.4, 0.02, 0.15, 0.4, 0.15); tone('sine', 494, 494, 0.4, 0.02, 0.15, 0.4, 0.12); tone('sine', 587, 587, 0.4, 0.03, 0.15, 0.4, 0.1); },
+    chest: function () { tone('square', 180, 360, 0.12, 0.004, 0.03, 0.1, 0.12, 1600); setTimeout(function () { tone('sine', 784, 784, 0.2, 0.005, 0.05, 0.3, 0.14); }, 80); },
+    bell: function () { [1, 2.76, 5.4, 8.93].forEach(function (r, i) { tone('sine', 330 * r, 330 * r, 1.6, 0.003, 0.05, 1.5 - i * 0.25, 0.22 / (i + 1)); }); },
+    legend: function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { setTimeout(function () { tone('sine', f, f, 0.5, 0.01, 0.12, 0.7, 0.16); tone('triangle', f / 2, f / 2, 0.5, 0.01, 0.12, 0.7, 0.08); }, i * 110); }); noise(1.2, 0.12, 'highpass', 6000, 9000); },
     shot: function () { tone('triangle', 900, 300, 0.12, 0.002, 0.02, 0.1, 0.12, 2500); }
   };
   function play(name) { if (!on || !ctx) return; var fx = EFFECTS[name]; if (fx) fx(); }
