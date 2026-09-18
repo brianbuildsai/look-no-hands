@@ -39,7 +39,7 @@
     if (T.tick() % 2 === 0) bit(T, s.x, s.y, 0, 0, 8, s.colour, 1, 0);
     var hitWall = T.tileAt(Math.floor(s.x / 16), Math.floor(s.y / 16)) === 1;
     var n = T.touch({ x0: s.x - 4, x1: s.x + 4, y0: s.y - 4, y1: s.y + 4 }, s.damage, s.element, s.x - s.vx * 4, s.seen, !s.pierce);
-    if (--s.life <= 0 || hitWall || n && !s.pierce) { T.spark(s.x, s.y, s.colour, 6, 1.4, 12, 0.03); return false; }
+    if (--s.life <= 0 || hitWall || n && !s.pierce) { T.spark(s.x, s.y, s.colour, 6, 1.4, 12, 0.03); if (s.ended) s.ended(s); return false; }
     return true;
   };
   DRAW.shot = function (s, T, g, cx, cy) {
@@ -347,6 +347,152 @@
     }
   };
 
+  /* ---- Pendulum: the last crack stops the clock. Everything hangs where it was, in sepia, but her ---- */
+
+  var sand = 0;                     // steps until the glass has run back and can be turned again
+  FIRE.timestop = function (T) {
+    var h = T.hero;
+    if (sand > 0) { T.number(h.x, h.y - 34, 'THE SAND IS STILL FALLING', '#c9a44c'); return; }
+    sand = 480;
+    add({ kind: 'timestop', holds: true, max: 150 });
+    T.ring({ x: h.x, y: h.y - 12, r: 6, grow: 7, life: 22, max: 22, colour: '#fff3b0' });
+    T.flash('#ffd24d', 6); T.shake(3); T.sfx('bell');
+  };
+  STEP.timestop = function (s, T) {
+    var h = T.hero;
+    if (s.t % 30 === 0) T.sfx('select');
+    if (s.t % 3 === 0) bit(T, h.x + (T.random() - 0.5) * 200, h.y - 10 - T.random() * 90, 0, 0, 30, T.random() < 0.5 ? '#ffd24d' : '#fff3b0', 1, 0);
+    if (s.t === s.max - 1) { T.flash('#ffffff', 5); T.sfx('crack'); T.ring({ x: h.x, y: h.y - 12, r: 150, grow: -7, life: 20, max: 20, colour: '#fff3b0' }); }
+    return s.t < s.max && h.alive;
+  };
+  OVER.timestop = function (s, T, g, cx, cy) {
+    var h = T.hero, x = Math.round(h.x) - cx, y = Math.round(h.y) - 12 - cy, f = Math.min(1, s.t / 8) * Math.min(1, (s.max - s.t) / 10), k, R = 52;
+    g.fillStyle = 'rgba(120,82,30,' + (0.26 * f).toFixed(3) + ')'; g.fillRect(0, 0, T.W, T.H);
+    g.fillStyle = 'rgba(20,10,0,' + (0.22 * f).toFixed(3) + ')'; g.fillRect(0, 0, T.W, 14); g.fillRect(0, T.H - 14, T.W, 14);
+    // the clock she stands at the middle of: twelve marks, a hand that goes round once, and another that will not keep still
+    g.globalAlpha = 0.5 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.stroke();
+    g.globalAlpha = 0.25 * f; g.beginPath(); g.arc(x, y, R - 6, 0, 6.2832); g.stroke();
+    g.globalAlpha = 0.7 * f; g.fillStyle = '#fff3b0';
+    for (k = 0; k < 12; k++) { var a = k / 12 * 6.2832, len = k % 3 === 0 ? 5 : 2; g.fillRect(Math.round(x + Math.cos(a) * (R - len)), Math.round(y + Math.sin(a) * (R - len)), k % 3 === 0 ? 2 : 1, k % 3 === 0 ? 2 : 1); }
+    var a1 = -1.5708 + s.t / s.max * 6.2832, a2 = -1.5708 + Math.floor(s.t / 5) * 0.5236;
+    g.globalAlpha = 0.85 * f; g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a1) * (R - 8), y + Math.sin(a1) * (R - 8)); g.stroke();
+    g.globalAlpha = 0.5 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a2) * (R - 18), y + Math.sin(a2) * (R - 18)); g.stroke();
+    // what is left of it, as a closing arc
+    g.globalAlpha = 0.9 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, R + 3, -1.5708, -1.5708 + (1 - s.t / s.max) * 6.2832); g.stroke();
+    g.globalAlpha = 1;
+  };
+
+  /* ---- Constellation: every bolt leaves a star where it ends; the third joins them, the lines burn, and the figure bursts ---- */
+
+  var FIGURES = ['THE LANTERN', 'THE KITE', 'THE WYRM', 'THE BELL', 'THE KEY', 'THE MOTH', 'THE LADDER'];
+  function stars() { return fx.filter(function (s) { return s.kind === 'star' && !s.spent; }); }
+  function leaveStar(T, x, y) {
+    var all = stars(); if (all.length >= 7) all[0].spent = true;
+    add({ kind: 'star', x: x, y: y, max: 720, ph: T.random() * 6.28 });
+  }
+  function starBolt(T, n, big) {
+    var h = T.hero, d = h.dir, w = T.weapon();
+    var s = shot(T, { x: h.x + d * 16, y: h.y - 24, vx: d * (big ? 5 : 4.4), vy: 0, damage: w.damage[n] + T.mods().damage, element: null, colour: '#d9b8ff', life: big ? 70 : 52, pierce: big, star: true });
+    s.ended = function (q) { leaveStar(T, q.x - q.vx * 2, q.y); };
+    T.spark(h.x + d * 16, h.y - 24, '#ffffff', big ? 10 : 5, 1.6, 10, 0); T.sfx('bolt');
+  }
+  STEP.star = function (s) { return !s.spent && s.t < s.max; };
+  DRAW.star = function (s, T, g, cx, cy) {
+    var x = Math.round(s.x) - cx, y = Math.round(s.y) - cy, tw = 0.6 + 0.4 * Math.sin(s.t * 0.15 + s.ph), r = Math.round(2 + tw * 2), fade = Math.min(1, (s.max - s.t) / 60);
+    g.globalAlpha = fade; g.fillStyle = '#d9b8ff'; g.fillRect(x - r, y, r * 2 + 1, 1); g.fillRect(x, y - r, 1, r * 2 + 1);
+    g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 1, 3, 3); g.globalAlpha = 1;
+    T.light(s.x, s.y, 16 + tw * 8, 0.6 * fade); T.glow(s.x, s.y, 9, '#b06cff', 0.3 * fade);
+  };
+  FIRE.constellation = function (T) {
+    var all = stars();
+    if (all.length < 2) return;
+    all.forEach(function (s) { s.max = Math.max(s.max, s.t + 130); });
+    add({ kind: 'figure', pts: all, max: 104, seen: [], name: FIGURES[Math.floor(T.random() * FIGURES.length)] });
+    T.sfx('perk');
+  };
+  STEP.figure = function (s, T) {
+    var k, j, pts = s.pts;
+    if (s.t >= 20 && s.t < 84 && s.t % 10 === 0) {
+      if (s.t % 20 === 0) s.seen = [];
+      for (k = 0; k < pts.length - 1; k++) { var a = pts[k], b = pts[k + 1], len = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)), n = Math.max(1, Math.ceil(len / 8)); for (j = 0; j <= n; j++) { var px = a.x + (b.x - a.x) * j / n, py = a.y + (b.y - a.y) * j / n; T.touch({ x0: px - 4, x1: px + 4, y0: py - 4, y1: py + 4 }, 2 + T.mods().damage, null, px, s.seen, false); } }
+    }
+    if (s.t === 84) {
+      for (k = 0; k < pts.length; k++) { var p = pts[k]; T.strike({ x0: p.x - 22, x1: p.x + 22, y0: p.y - 22, y1: p.y + 22 }, 5 + T.mods().damage, 2, null); T.spark(p.x, p.y, '#ffffff', 14, 2.6, 20, 0); T.spark(p.x, p.y, '#b06cff', 12, 2, 26, 0); T.ring({ x: p.x, y: p.y, r: 3, grow: 2.4, life: 12, max: 12, colour: '#d9b8ff' }); p.spent = true; }
+      T.flash('#d9b8ff', 6); T.shake(6); T.sfx('shatter');
+    }
+    return s.t < s.max;
+  };
+  DRAW.figure = function (s, T) { if (s.t < 84) for (var k = 0; k < s.pts.length; k++) T.light(s.pts[k].x, s.pts[k].y, 34, 0.7); };
+  OVER.figure = function (s, T, g, cx, cy) {
+    if (s.t >= 84) return;
+    var pts = s.pts, segs = pts.length - 1, drawn = Math.min(1, s.t / 20) * segs, k, mx = 0, my = 1e9;
+    for (k = 0; k < segs; k++) {
+      var f = Math.max(0, Math.min(1, drawn - k)); if (f <= 0) break;
+      var a = pts[k], b = pts[k + 1], x0 = a.x - cx, y0 = a.y - cy, x1 = x0 + (b.x - a.x) * f, y1 = y0 + (b.y - a.y) * f, flick = 0.75 + 0.25 * Math.sin(s.t * 0.9 + k);
+      g.globalAlpha = 0.3 * flick; g.strokeStyle = '#b06cff'; g.lineWidth = 5; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      g.globalAlpha = flick; g.strokeStyle = '#ffffff'; g.lineWidth = 1; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    }
+    g.globalAlpha = 1;
+    for (k = 0; k < pts.length; k++) { mx += pts[k].x / pts.length; my = Math.min(my, pts[k].y); }
+    if (s.t > 22) T.text(s.name, Math.round(mx) - cx, Math.round(my) - cy - 14, '#d9b8ff', 1, 'center');
+  };
+
+  /* ---- Leviathan: the second blow brings a whale of pale water up through the floor, over, and down again ---- */
+
+  FIRE.breach = function (T) {
+    var h = T.hero, d = h.dir, gy = groundAt(T, h.x + d * 20, h.y);
+    add({ kind: 'whale', xs: h.x - d * 6, y0: gy, dir: d, max: 78, seen: [], x: h.x, y: gy + 40, a: 0, trail: [] });
+    T.sfx('roarwyrm'); T.shake(5);
+  };
+  function whaleAt(s, u) { return { x: s.xs + s.dir * 190 * u, y: s.y0 + 34 - Math.sin(u * Math.PI) * 132 }; }
+  STEP.whale = function (s, T) {
+    var u = Math.min(1, s.t / 66), p = whaleAt(s, u), q = whaleAt(s, Math.min(1, u + 0.02)), k;
+    s.a = Math.atan2(q.y - p.y, Math.abs(q.x - p.x)); s.x = p.x; s.y = p.y;
+    var above = p.y < s.y0 - 4;
+    if (above) T.touch({ x0: p.x - 30, x1: p.x + 30, y0: p.y - 18, y1: p.y + 18 }, 10 + T.mods().damage, 'tide', p.x - s.dir * 20, s.seen, false);
+    // through the floor, going up and coming down: spray, and coming down a wave each way
+    if ((s.was !== undefined) && above !== s.was) {
+      for (k = 0; k < 40; k++) bit(T, p.x + (T.random() - 0.5) * 40, s.y0 - 2, (T.random() - 0.5) * 3.4, -1.5 - T.random() * 3.6, 34, T.random() < 0.4 ? '#ffffff' : '#5fd4c4', T.random() < 0.3 ? 2 : 1, 0.14);
+      T.ring({ x: p.x, y: s.y0, r: 6, grow: 3, life: 16, max: 16, colour: '#9ff5e6' }); T.shake(above ? 6 : 9); T.sfx('boom'); T.flash('#5fd4c4', above ? 3 : 6);
+      if (!above) for (k = -1; k <= 1; k += 2) T.projectile({ x: p.x, y: s.y0 - 5, vx: k * 3.2, vy: 0, life: 44, colour: '#5fd4c4', size: 10, damage: 5 + T.mods().damage, element: 'tide', gravity: 0, from: 'hero', pierce: true, wave: true });
+    }
+    s.was = above;
+    if (above && s.t % 2 === 0) bit(T, p.x - s.dir * Math.cos(s.a) * 26 + (T.random() - 0.5) * 10, p.y - Math.sin(s.a) * 26, (T.random() - 0.5) * 0.6, 0.4 + T.random(), 26, T.random() < 0.5 ? '#9ff5e6' : '#ffffff', 1, 0.08);
+    return s.t < s.max;
+  };
+  DRAW.whale = function (s, T) { if (s.y < s.y0 + 10) { T.light(s.x, s.y, 90, 0.9); T.glow(s.x, s.y, 50, '#5fd4c4', 0.3); } };
+  OVER.whale = function (s, T, g, cx, cy) {
+    if (s.y > s.y0 + 30) return;
+    var k, d = s.dir;
+    g.save();
+    // only what is above the floor shows: the floor is the water's surface
+    g.beginPath(); g.rect(0, 0, T.W, Math.round(s.y0) - cy); g.clip();
+    g.translate(Math.round(s.x) - cx, Math.round(s.y) - cy); g.scale(d, 1); g.rotate(s.a);
+    var sway = Math.sin(s.t * 0.35) * 0.25;
+    g.globalAlpha = 0.34; g.fillStyle = '#5fd4c4'; g.beginPath(); g.ellipse(0, 0, 40, 17, 0, 0, 6.2832); g.fill();
+    g.globalAlpha = 0.86;
+    // the body: a long drop, heavy at the head, tapering to the stock of the tail
+    g.fillStyle = '#2fae9e'; g.beginPath(); g.moveTo(34, 2); g.quadraticCurveTo(30, -14, 6, -13); g.quadraticCurveTo(-20, -11, -34, -2); g.quadraticCurveTo(-20, 8, 4, 11); g.quadraticCurveTo(28, 12, 34, 2); g.fill();
+    // the belly, paler, with its grooves
+    g.fillStyle = '#9ff5e6'; g.beginPath(); g.moveTo(33, 3); g.quadraticCurveTo(24, 12, 4, 11); g.quadraticCurveTo(-10, 9, -20, 5); g.quadraticCurveTo(4, 5, 33, 3); g.fill();
+    g.strokeStyle = '#2fae9e'; g.lineWidth = 1; for (k = 0; k < 4; k++) { g.beginPath(); g.moveTo(26 - k * 7, 5 + (k > 1 ? 1 : 0)); g.lineTo(8 - k * 6, 8); g.stroke(); }
+    // the flukes, which beat
+    g.save(); g.translate(-33, -2); g.rotate(sway); g.fillStyle = '#2fae9e'; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-8, -3, -15, -11); g.quadraticCurveTo(-9, -1, -8, 0); g.quadraticCurveTo(-9, 2, -15, 10); g.quadraticCurveTo(-7, 4, 0, 0); g.fill(); g.restore();
+    // a fin, an eye, the line of the mouth, and light along the back
+    g.fillStyle = '#1f7a70'; g.beginPath(); g.moveTo(10, 8); g.quadraticCurveTo(4, 18, -4, 20); g.quadraticCurveTo(2, 12, 2, 9); g.fill();
+    g.fillStyle = '#ffffff'; g.fillRect(24, -3, 2, 2); g.fillStyle = '#0b0b12'; g.fillRect(25, -3, 1, 1);
+    g.strokeStyle = '#1f7a70'; g.beginPath(); g.moveTo(34, 2); g.quadraticCurveTo(26, 5, 18, 2); g.stroke();
+    g.strokeStyle = '#ffffff'; g.globalAlpha = 0.7; g.beginPath(); g.moveTo(28, -10); g.quadraticCurveTo(6, -14, -24, -6); g.stroke();
+    g.restore(); g.globalAlpha = 1;
+  };
+
+  // the glass that is still running back, by the second hand's slot
+  function sandGauge(T) {
+    if (sand <= 0 || T.weapon().finisher !== 'timestop') return;
+    var g = T.pen, f = 1 - sand / 480;
+    g.fillStyle = '#3a3936'; g.fillRect(34, T.H - 27, 18, 2); g.fillStyle = '#ffd24d'; g.fillRect(34, T.H - 27, Math.round(18 * f), 2);
+  }
+
   // while this is true the engine holds everything but her still
   function stopped() { for (var k = 0; k < fx.length; k++) { var s = fx[k]; if (s.kind === 'nightfall' && s.t < 26 || s.holds) return true; } return false; }
 
@@ -360,19 +506,21 @@
       if (sw.finisher) { throwDisc(T, n, true, -0.3); throwDisc(T, n, true, 0); throwDisc(T, n, true, 0.3); } else throwDisc(T, n, false, 0);
       return true;
     }
+    if (sw.shape === 'star') { starBolt(T, n, !!sw.finisher); return true; }
     if (w.twice) { var box = T.swingBox(sw); if (box) add({ kind: 'echo', box: box, damage: Math.max(1, Math.ceil((w.damage[n] + T.mods().damage) / 2)), element: w.element || null }); }
     return false;
   }
   function step(T) {
     stormWake(T);
+    if (sand > 0) sand--;
     for (var k = fx.length - 1; k >= 0; k--) { var s = fx[k]; s.t++; if (!STEP[s.kind] || !STEP[s.kind](s, T)) fx.splice(fx.indexOf(s), 1); }
     // whatever a toll has stopped sees stars
     var list = T.creatures();
     for (var j = 0; j < list.length; j++) { var c = list[j]; if (!c.dying && c.status.stun > 0 && T.tick() % 5 === 0) { var a = T.tick() * 0.2; bit(T, c.x + Math.cos(a) * 7, c.y - c.h - 5 + Math.sin(a) * 2, 0, 0, 10, '#efd27a', 1, 0); } }
   }
   function draw(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (DRAW[fx[k].kind]) DRAW[fx[k].kind](fx[k], T, T.pen, cx, cy); }
-  function over(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (OVER[fx[k].kind]) OVER[fx[k].kind](fx[k], T, T.pen, cx, cy); }
-  function clear() { fx.length = 0; lastX = null; wasDashing = false; }
+  function over(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (OVER[fx[k].kind]) OVER[fx[k].kind](fx[k], T, T.pen, cx, cy); sandGauge(T); }
+  function clear(wholly) { fx.length = 0; lastX = null; wasDashing = false; if (wholly) sand = 0; }
   function count(kind) { var n = 0; for (var k = 0; k < fx.length; k++) if (!kind || fx[k].kind === kind) n++; return n; }
 
   window.Arms = { stopped: stopped, fire: fire, swing: swing, step: step, draw: draw, over: over, clear: clear, count: count, FIRE: FIRE, STEP: STEP, DRAW: DRAW, OVER: OVER, add: add, shot: shot, bit: bit, groundAt: groundAt };

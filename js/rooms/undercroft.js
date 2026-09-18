@@ -1044,7 +1044,7 @@
     function kit() {
       return armsKit || (armsKit = { hero: hero, cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
         creatures: function () { return creatures; }, projectiles: function () { return projectiles; }, mods: function () { return mods; }, weapon: function () { return weapon; }, tick: function () { return tick; }, random: random,
-        spark: spark, particle: function (p) { particles.push(p); }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
+        spark: spark, particle: function (p) { particles.push(p); }, projectile: function (p) { projectiles.push(p); }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
         blocked: blocked, heroShape: function (colour, alpha) { var nm = hero.anim in sprites.warden ? hero.anim : 'idle', img = facing('warden', nm, Math.min(hero.frame, sprites.warden[nm].length - 1), hero.dir); fpen.globalAlpha = alpha; fpen.drawImage(P.silhouette(img, colour), Math.round(hero.x) - P.warden.anchor.x - Math.round(cam.x), Math.round(hero.y) - P.warden.anchor.y - Math.round(cam.y)); fpen.globalAlpha = 1; },
         light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text });
     }
@@ -2046,7 +2046,7 @@
       state = 'run';
       run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; won = false; visited = {}; rewarded = {}; applyRelics();
-      hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null; if (AR) AR.clear();
+      hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null; if (AR) AR.clear(true);
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }

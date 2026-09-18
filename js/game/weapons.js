@@ -70,6 +70,12 @@
       { anim: 'attack2', seq: [0, 1, 2, 3], ticks: [6, 2, 2, 7], active: [1, 2], shape: 'rise', reach: 1.2, lunge: 1.2, lift: true },
       { anim: 'attack3', seq: [0, 1, 2, 3, 4, 4], ticks: [9, 2, 2, 3, 14, 12], active: [1], shape: 'none', reach: 1, lunge: 0, finisher: true }
     ],
+    // a staff: bolts that leave a star where they end (arms.js)
+    staff: [
+      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 5, 3, 7], active: [2], shape: 'star', reach: 1, lunge: -0.3 },
+      { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 5, 3, 7], active: [2], shape: 'star', reach: 1, lunge: -0.3 },
+      { anim: 'bow', seq: [0, 1, 1, 2, 2], ticks: [6, 7, 7, 3, 10], active: [3], shape: 'star', reach: 1, lunge: -1, finisher: true }
+    ],
     bow: [
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
@@ -122,11 +128,17 @@
       art: ['...Z...', '..kZk..', '..kZk..', '.kzZzk.', '.kzZzk.', 'kzzZzzk', '.kzZzk.', '..kzk..', 'y.kzk.y', 'kyyzyyk', '..kzk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kyk..', '..kkk..'] },
     lastlight: { name: 'Last Light', rarity: 'legendary', moveset: 'iai', damage: [5, 5, 14], reach: 30, trail: '#ffffff', finisher: 'nightfall', line: 'A blade kept in its sheath. The third time, you are already past them; the picture goes dark, and then the cut arrives', grip: [1, 18],
       art: ['....W', '...kW', '..kWk', '..kWk', '..kWk', '.kWwk', '.kWwk', '.kWwk', '.kWwk', '.kWwk', '.kWwk', 'kWwk.', 'kWwk.', 'kWwk.', 'kWwk.', 'yYYy.', 'kDk..', 'kvk..', 'kDk..', 'kvk..', 'kyk..', 'kkk..'] },
+    pendulum: { name: 'Pendulum', rarity: 'legendary', moveset: 'whip', damage: [4, 4, 6], reach: 58, trail: '#ffd24d', finisher: 'timestop', lash: ['#c9a44c', '#fff3b0'], line: 'An hourglass on a chain. Its last crack stops the clock for everything but you', grip: [2, 10],
+      art: ['ryyyr', 'kAAAk', '.kAk.', '..k..', '.kAk.', 'kAAAk', 'ryyyr', '..g..', '..g..', '.kbk.', '.kbk.', '.kkk.'] },
+    constellation: { name: 'Constellation', rarity: 'legendary', moveset: 'staff', damage: [2, 2, 4], reach: 0, trail: '#d9b8ff', finisher: 'constellation', line: 'A staff that leaves a star wherever its bolts end. The third joins them up, and the figure burns, and bursts', grip: [3, 19],
+      art: ['...W...', '..WYW..', '...W...', 'v.....v', 'vk...kv', '.vkkkv.', '..vvv..', '..kvk..', '..kDk..', '..kvk..', '..kDk..', '..kDk..', '..kvk..', '..kDk..', '..kDk..', '..kvk..', '..kDk..', '..kDk..', '..kvk..', '..kDk..', '..kDk..', '..kvk..', '..kyk..', '..kkk..'] },
+    leviathan: { name: 'Leviathan', rarity: 'legendary', moveset: 'heavy', damage: [7, 10], reach: 32, trail: '#5fd4c4', element: 'tide', finisher: 'breach', line: 'An anchor from a ship that never came up. Its second blow calls what took it', grip: [4, 16],
+      art: ['.k.....k.', 'kqk...kqk', 'kqk...kqk', 'kqqk.kqqk', '.kqqkqqk.', '..kqqqk..', '...kqk...', '...kqk...', '...kQk...', '...kqk...', '...kqk...', '...kQk...', '...kqk...', '..kqqqk..', 'kqqqqqqqk', '..kkqkk..', '...kqk...', '...kgk...', '..kg.gk..', '..kg.gk..', '...kgk...', '....k....'] },
     murmuration: { name: 'Murmuration', rarity: 'legendary', moveset: 'bow', damage: [2, 2, 3], reach: 0, trail: '#ffd24d', finisher: 'flock', line: 'A bow that looses a flock of lights. They wheel, and fall on what you face', grip: [4, 9],
       art: ['..kk...', '.kYyk..', '..kyk..', '...kyk.', '...kyYk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h..kyYk', '...kyk.', '..kyk..', '.kYyk..', '..kk...'] }
   };
   /* What each weapon does, said plainly: the infobox reads these, and works out the damage and reach lines itself. */
-  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts', spear: 'Three long thrusts', iai: 'Two draw-cuts, then the crossing', thrown: 'Two throws and a great one' };
+  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts', staff: 'Three bolts of starlight', spear: 'Three long thrusts', iai: 'Two draw-cuts, then the crossing', thrown: 'Two throws and a great one' };
   var DETAILS = {
     shortsword:  ['The third stroke is a lunging thrust'],
     forgehammer: ['+Finisher: the floor cracks both ways, 4 damage along it, through everything'],
@@ -150,10 +162,13 @@
     quicksilver: ['+The blade leaves a ribbon where its tip has been', '+Finisher: 8 drops orbit you, then seek the nearest creatures, 3 damage each'],
     thunderhead: ['+Every hit shocks: the creature moves at 40% speed for 1 s', '+Finisher: six bolts fall one after another on the nearest creatures, 4 damage each (2 to one already struck)', '+Your dash leaves a line of lightning for 0.6 s: 2 damage to what touches it'],
     lastlight:   ['+Finisher: you cross up to 124 pixels through everything, unharmed, and the world stops', '+0.4 s later everything on that line takes the third number', '+You cannot be hurt until the cut lands'],
+    pendulum:    ['+Finisher: time stops for 2.5 s for everything but you: creatures, missiles, hazards', '+Nothing can hurt you while it is stopped', '-The glass takes 8 s to run back before it can be turned again'],
+    constellation: ['+Every bolt leaves a star where it ends (up to 7, for 12 s)', '+Finisher: joins the stars. The lines burn for 1 s, 2 damage every third of a second', '+then every star bursts: 5 damage within 22 pixels'],
+    leviathan:   ['+Every hit soaks: the creature moves 40% slower for 4 s', '+Finisher: a whale breaches through the floor and over, 10 damage to all it passes through', '+and where it lands a wave runs each way along the floor, 5 damage, through everything'],
     murmuration: ['+Each shot looses 5 lights that wheel and home on what you face', '+Finisher: a flock of 16']
   };
   Object.keys(WEAPONS).forEach(function (id) { WEAPONS[id].detail = DETAILS[id] || [WEAPONS[id].line]; WEAPONS[id].strokes = STROKES[WEAPONS[id].moveset] || ''; });
-  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'handaxe', 'daggers', 'hammer', 'pike', 'disc', 'emberbrand', 'frostglaive', 'stormrapier', 'trident', 'mainspring', 'glasssabre', 'scythe', 'thornwhip', 'umbralflail', 'bellmaul', 'dawnbreaker', 'quicksilver', 'murmuration', 'thunderhead', 'lastlight'];
+  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'handaxe', 'daggers', 'hammer', 'pike', 'disc', 'emberbrand', 'frostglaive', 'stormrapier', 'trident', 'mainspring', 'glasssabre', 'scythe', 'thornwhip', 'umbralflail', 'bellmaul', 'dawnbreaker', 'quicksilver', 'murmuration', 'thunderhead', 'lastlight', 'pendulum', 'constellation', 'leviathan'];
 
   // a weapon by chance: first a rarity (deeper floors and guardians lean toward the rarer), then any weapon of it,
   // so that adding weapons to a rarity does not make that rarity commoner
