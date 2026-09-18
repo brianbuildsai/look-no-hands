@@ -714,6 +714,30 @@ module.exports = {
   </div>
 </div>`,
       wall: 'The scribes of the Book of Kells, around the year 800, laid out their knotwork on a grid of dots and let the strands find their own way between them, which is why the great carpet pages look designed by no one. The method here, in which a grid of possibilities is narrowed until only one picture remains, was written down by Maxim Gumin in 2016 for making game maps, and named, as a joke, after quantum mechanics.'
+    },
+    {
+      number: 32,
+      slug: 'tonight',
+      ready: true,
+      title: 'Tonight',
+      line: 'Where the planets are at this moment, from six numbers each, and which of them you can see tonight.',
+      description: 'The solar system computed for the moment you open the page, from the mean orbital elements each planet has kept since 1800, with the evening and morning planets picked out. Scrub three centuries either way.',
+      canvasLabel: 'Eight faint elliptical orbits around a small amber sun, the planets on them as pale dots with their names, Earth in blue. Thin lines run from Earth to each planet: amber for the evening sky, blue for the morning, pale for those up all night, dotted for those lost in the glare.',
+      medium: '2026. The planets for <span class="live" data-live="tonight.date">tonight</span>, from Standish\u2019s mean elements. In the evening sky: <span class="live" data-live="tonight.evening">none</span>. Before dawn: <span class="live" data-live="tonight.morning">none</span>. Up all night: <span class="live" data-live="tonight.night">none</span>. Lost in the Sun\u2019s glare: <span class="live" data-live="tonight.glare">none</span>.',
+      text: 'This is not a picture of the solar system. It is the solar system, tonight, as near as six numbers a planet can put it: the size and shape of each orbit, its tilt, where it is pointed, and how far along it the planet has got, each drifting by a known amount per century. From those, Kepler\u2019s equation gives every position, and looking out from Earth sorts the planets into the ones that follow the Sun down after dusk, the ones that rise ahead of it before dawn, and the ones opposite it that are up all night. Turn the dial and the same arithmetic gives any night for three centuries either way, though the numbers were fitted to 1800 to 2050 and grow loose beyond it. The distances are squeezed so the inner planets can be seen; press for true distances and watch them vanish into the glare of the Sun.',
+      controls: `
+<div class="controls" role="group" aria-label="Tonight controls">
+  <label class="dial">
+    <span class="dial__label"><span>When</span><span data-tonight-when-value></span></span>
+    <input class="dial__input" type="range" min="-300" max="300" step="1" value="0" data-tonight-when>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-tonight-run aria-pressed="false">Let it run</button>
+    <button class="btn" type="button" data-tonight-now>Tonight</button>
+    <button class="btn" type="button" data-tonight-scale aria-pressed="false">True distances</button>
+  </div>
+</div>`,
+      wall: 'Johannes Kepler found in 1609 that the planets move on ellipses with the Sun at one focus, and in 1619 that the square of a planet\u2019s year is the cube of its distance, which is why six numbers are enough. The particular six used here are the mean elements published by E. Myles Standish of the Jet Propulsion Laboratory in 1992, fitted to the ephemeris the space probes are steered by. On 21 December 2020 they put Jupiter and Saturn a tenth of a degree apart, as the sky did.'
     }
   ]
 };

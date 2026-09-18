@@ -378,6 +378,17 @@
     pen.beginPath(); pen.ellipse(-dx, 0, r, r * 1.35, 0, 0.85, 2.3); pen.stroke();
   };
 
+  glyphs.tonight = function (pen, s) {
+    // a sun, three tilted orbits and their planets
+    pen.beginPath(); pen.arc(0, 0, s * 0.05, 0, 6.2832); pen.fill();
+    var radii = [0.16, 0.29, 0.44], where = [1.1, 3.6, 5.2];
+    for (var k = 0; k < 3; k++) {
+      var r = s * radii[k];
+      pen.beginPath(); pen.ellipse(0, 0, r, r * 0.55, 0, 0, 6.2832); pen.stroke();
+      pen.beginPath(); pen.arc(Math.cos(where[k]) * r, Math.sin(where[k]) * r * 0.55, s * (0.025 + 0.012 * k), 0, 6.2832); pen.fill();
+    }
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
