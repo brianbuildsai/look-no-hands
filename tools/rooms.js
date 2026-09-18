@@ -597,6 +597,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Wilson Bentley photographed five thousand snow crystals in Vermont between 1885 and 1931 and found no two the same, and Ukichiro Nakaya grew them to order in a cold room in the 1930s and showed that their shape follows the weather they fall through. The model here is Clifford Reiter\u2019s, from 2005: three rules on a honeycomb, and the six comes free.'
+    },
+    {
+      number: 27,
+      slug: 'chladni',
+      ready: true,
+      title: 'Chladni',
+      line: 'Bow a plate; the sand runs to where it is still.',
+      description: 'Sand on a vibrating plate leaps off wherever the plate moves and gathers on the lines where it is still. Choose the note, hear it, and watch fourteen thousand grains find the pattern.',
+      canvasLabel: 'A dark square plate covered in pale sand. As the plate sounds, the sand rearranges itself into a symmetrical figure of curved lines. An amber bow strokes one edge.',
+      medium: '2026. <span class="live" data-live="chladni.grains">14,000</span> grains of sand on a plate ringing in its (<span class="live" data-live="chladni.mode">2, 3</span>) mode at <span class="live" data-live="chladni.hz">0</span> Hz. Every grain is pushed by the motion under it, nothing more.',
+      text: 'A plate that is bowed does not shake all over. It shakes in a pattern, with lines that keep still, and sand thrown about everywhere else comes to rest on them. Each note has its own figure. Turn the dial to change the note, let it sound, and pour more sand where you touch. Left alone, the plate is bowed for you every few seconds.',
+      controls: `
+<div class="controls" role="group" aria-label="Chladni controls">
+  <label class="dial">
+    <span class="dial__label"><span>Which note</span><span data-chladni-mode-value></span></span>
+    <input class="dial__input" type="range" min="0" max="27" step="1" value="4" data-chladni-mode>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-chladni-bow>Bow it again</button>
+    <button class="btn" type="button" data-chladni-sound>Let it sound</button>
+  </div>
+</div>`,
+      wall: 'Ernst Chladni drew a violin bow along the edge of a sanded brass plate in 1787 and the sand made figures; in 1809 he showed them to Napoleon, who put up a prize for anyone who could explain them. Sophie Germain, who could not attend the Academy because she was a woman, won it. The figures here follow her equation, near enough, for a square plate held at its middle.'
     }
   ]
 };

@@ -306,6 +306,25 @@
     }
   };
 
+  // room 27: a square plate with the sand in one of its figures
+  glyphs.chladni = function (pen, s) {
+    var h = s * 0.42;
+    pen.beginPath(); pen.rect(-h, -h, h * 2, h * 2); pen.stroke();
+    pen.save(); pen.globalAlpha = 0.8;
+    for (var k = 0; k < 4; k++) {
+      var a = k * Math.PI / 2;
+      pen.beginPath();
+      for (var t = 0; t <= 1.001; t += 0.05) {
+        var x = t * h * 0.95, y = h * 0.95 * (1 - t) * (1 - t) * 0.25 + h * 0.18 * Math.sin(t * 6.283) ;
+        var px = Math.cos(a) * x - Math.sin(a) * y, py = Math.sin(a) * x + Math.cos(a) * y;
+        if (t === 0) pen.moveTo(px, py); else pen.lineTo(px, py);
+      }
+      pen.stroke();
+    }
+    pen.restore();
+    pen.beginPath(); pen.arc(0, 0, 1.6, 0, 6.2832); pen.fill();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
