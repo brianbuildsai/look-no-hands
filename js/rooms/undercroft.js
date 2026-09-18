@@ -309,13 +309,26 @@
       sfx('swing');
       if (spec.lift && !hero.onGround) hero.vy = Math.min(hero.vy, -1.5);
     }
+    // the Kite's dash: as far ahead as there is room for, at once, leaving himself behind in ribbons
+    function blink() {
+      var from = hero.x, reach = Math.round(64 * mods.dashLength), step, half = hero.w / 2, to = hero.x;
+      for (step = 4; step <= reach; step += 4) { var nx = from + hero.dir * step; if (blocked(nx - half, hero.y - hero.h, nx + half, hero.y, false)) break; to = nx; }
+      var frames = sprites.warden.dash, n = Math.max(2, Math.round(Math.abs(to - from) / 12));
+      for (step = 0; step < n; step++) afterimages.push({ img: P.silhouette(frames[step % 2], step % 2 ? '#ff3b4e' : '#ffffff'), x: from + (to - from) * step / n, y: hero.y, dir: hero.dir, life: 6 + step * 2 });
+      for (step = 0; step < 14; step++) particles.push({ x: from + (to - from) * random(), y: hero.y - 4 - random() * 18, vx: -hero.dir * random(), vy: (random() - 0.5) * 0.6, life: 10 + random() * 12, max: 22, colour: random() < 0.5 ? '#ff3b4e' : '#ffffff', size: 1, gravity: 0 });
+      rings.push({ x: from, y: hero.y - 12, r: 3, grow: 1.6, life: 8, max: 8, colour: '#ff3b4e' }); rings.push({ x: to, y: hero.y - 12, r: 8, grow: -0.6, life: 8, max: 8, colour: '#ffffff' });
+      // an edge on it, if he carries one: everything between is cut once
+      if (weapon.ability === 'dashslash' || mods.ghost) { if (strike({ x0: Math.min(from, to) - 6, x1: Math.max(from, to) + 6, y0: hero.y - 24, y1: hero.y - 2 }, 3 + mods.damage, 0, null)) zaps.push({ x0: from, y0: hero.y - 12, x1: to, y1: hero.y - 12, colour: '#ffffff', life: 6 }); }
+      hero.x = to;
+    }
     function startDash() {
       hero.act = { kind: 'dash', ticks: 0 };
       hero.anim = 'dash'; hero.frame = 0; hero.clock = 0;
-      hero.act.speed = klass.dash === 'charge' ? 3.5 : klass.dash === 'flicker' ? -3.8 : DASH_SPEED; hero.act.frames = Math.round((klass.dash === 'charge' ? 17 : klass.dash === 'flicker' ? 10 : DASH_FRAMES) * mods.dashLength); hero.act.struck = [];
+      hero.act.speed = klass.dash === 'charge' ? 3.5 : klass.dash === 'flicker' ? -3.8 : klass.dash === 'blink' ? 1.4 : DASH_SPEED; hero.act.frames = klass.dash === 'blink' ? 7 : Math.round((klass.dash === 'charge' ? 17 : klass.dash === 'flicker' ? 10 : DASH_FRAMES) * mods.dashLength); hero.act.struck = [];
+      if (klass.dash === 'blink') blink();
       if (klass.dash === 'flicker') { delayed.push({ t: 26, x: hero.x, y: hero.y - 12, fn: 'flare' }); flares.push({ x: hero.x, y: hero.y - 12, t: 26 }); }
       hero.vx = hero.dir * hero.act.speed; hero.vy = 0;
-      hero.dashCd = Math.round(DASH_COOLDOWN * (klass.dash === 'charge' ? 1.5 : 1) * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, hero.act.frames + 2);
+      hero.dashCd = Math.round(DASH_COOLDOWN * (klass.dash === 'charge' ? 1.5 : klass.dash === 'blink' ? 0.7 : 1) * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, klass.dash === 'blink' ? 16 : hero.act.frames + 2);
       if (!hero.onGround) hero.airDash = false;
       dust(hero.x, hero.y, -hero.dir, 6);
       sfx('dash');
@@ -383,7 +396,7 @@
           for (var ck = 0; ck < creatures.length; ck++) { var ce = creatures[ck]; if (ce.dying || a.struck.indexOf(ce) >= 0) continue; var cbx = boxesOf(ce); for (var cj = 0; cj < cbx.length; cj++) if (!cbx[cj].onHit && overlaps(cb, cbx[cj])) { a.struck.push(ce); if (wound(ce, Math.max(1, Math.round((4 + mods.damage) * (cbx[cj].mult || 1))), hero.x - hero.dir * 8, null)) { if (!ce.boss) { ce.vx = hero.dir * 3.2; ce.vy = -2.2; } hitstop(5); shake(3); sfx('heavy'); spark(hero.x + hero.dir * 12, hero.y - 14, '#ffdc9a', 12, 2.2, 14, 0.04); } break; } }
           if (a.ticks % 2 === 0) particles.push({ x: hero.x - hero.dir * 4, y: hero.y - 1, vx: -hero.dir * (0.5 + random()), vy: -0.6 - random() * 0.8, life: 12, max: 12, colour: random() < 0.5 ? '#ff8c42' : '#8a6a5c', size: 1, gravity: 0.05 });
         }
-        if (a.ticks % 2 === 0) afterimage(sprites.warden.dash[hero.frame], hero.x, hero.y, hero.dir);
+        if (a.ticks % 2 === 0 && klass.dash !== 'blink') afterimage(sprites.warden.dash[hero.frame], hero.x, hero.y, hero.dir);
         if (a.ticks >= a.frames) { hero.act = null; hero.vx = hero.dir * RUN_MAX; hero.anim = 'idle'; }
         if (hit('attack')) { hero.act = null; hero.combo = 0; startAttack(); }
         return;
@@ -434,10 +447,10 @@
       if (hit('jump')) hero.buffer = BUFFER;
       if (mods.pound && !hero.onGround && hero.coyote <= 0 && down('down') && hit('jump') && !pounding && !hero.act) { pounding = true; hero.vy = 6.5; hero.vx = 0; hero.buffer = 0; hero.invuln = Math.max(hero.invuln, 20); }
       if (pounding) { hero.vy = Math.max(hero.vy, 6); hero.vx = 0; }
-      if (mayJump && hero.buffer > 0 && hero.wall && !hero.onGround) { hero.vy = JUMP_V * 0.95; hero.vx = -hero.wall * 2.6; hero.dir = -hero.wall; hero.jumping = true; hero.buffer = 0; hero.wall = 0; sfx('jump'); dust(hero.x, hero.y - 8, hero.dir, 4); }
+      if (mayJump && hero.buffer > 0 && hero.wall && !hero.onGround) { hero.vy = JUMP_V * 0.95; hero.vx = -hero.wall * 2.6; hero.dir = -hero.wall; hero.jumping = true; hero.buffer = 0; hero.wall = 0; if (klass.flips) hero.flip = 18; sfx('jump'); dust(hero.x, hero.y - 8, hero.dir, 4); }
       // everyone has a second jump, from the air; the Boots give a third
       if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && !hero.wall && airJumped < mods.airJumps && hero.vy > -2) {
-        hero.vy = JUMP_V * 0.9; hero.jumping = true; airJumped++; hero.buffer = 0; sfx('jump');
+        hero.vy = JUMP_V * 0.9; hero.jumping = true; airJumped++; hero.buffer = 0; sfx('jump'); if (klass.flips) hero.flip = 18;
         spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02); rings.push({ x: hero.x, y: hero.y, r: 2, grow: 1.4, life: 8, max: 8, colour: '#9fd8ff' });
       }
       if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
@@ -504,6 +517,9 @@
     // which animation, and how fast it runs, when the Warden is free
     function animateHero() {
       var next, rate;
+      if (hero.flip > 0) hero.flip--;
+      if (hero.onGround) hero.flip = 0;
+      if (hero.flip > 0 && sprites.warden.flip) { hero.anim = 'flip'; hero.frame = Math.floor((18 - hero.flip) / 18 * 8) % 8; hero.clock = 0; if (hero.flip % 3 === 0) particles.push({ x: hero.x - hero.dir * 4, y: hero.y - 12, vx: 0, vy: 0, life: 10, max: 10, colour: '#ff3b4e', size: 1, gravity: 0 }); return; }
       if (!hero.onGround) { next = hero.vy < 0 ? 'jump' : 'fall'; rate = 8; }
       else if (hero.landed > 4) { next = 'land'; rate = 4; }
       else if (Math.abs(hero.vx) > 0.2) { next = 'run'; rate = Math.max(3, Math.round(7 - Math.abs(hero.vx) * 3)); }
@@ -651,7 +667,7 @@
             break;
           }
         }
-        if (e.dying === 2 && !e.boss) { kills++; if (e.elder) dropPickup(rollLoot(random, true), e.x, e.y - 10); else if (random() < 0.14) dropPickup({ kind: 'heart', id: 'heart' }, e.x, e.y - 8); if (weapon.ability === 'reap') { reaped++; if (reaped % 3 === 0 && hero.hp < hero.maxHp) { hero.hp++; number(hero.x, hero.y - 34, '+1', '#ff3b4e'); } } spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
+        if (e.dying === 2 && !e.boss) { kills++; if (klass.dash === 'blink') { hero.airDash = true; hero.dashCd = 0; } if (e.elder) dropPickup(rollLoot(random, true), e.x, e.y - 10); else if (random() < 0.14) dropPickup({ kind: 'heart', id: 'heart' }, e.x, e.y - 8); if (weapon.ability === 'reap') { reaped++; if (reaped % 3 === 0 && hero.hp < hero.maxHp) { hero.hp++; number(hero.x, hero.y - 34, '+1', '#ff3b4e'); } } spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
         if (e.dying > (e.boss ? 90 : 22)) creatures.splice(k, 1);
         if (e.y > level.rows * TILE + 40) creatures.splice(k, 1);
       }
@@ -1064,7 +1080,7 @@
       }
       if (ribbon.length > 28 || (!(hero.act && hero.act.kind === 'attack') && ribbon.length)) ribbon.splice(0, 2);
       // the daggers' dash cuts through what it passes
-      if ((weapon.ability === 'dashslash' || mods.ghost) && hero.act && hero.act.kind === 'dash' && hero.act.ticks % 3 === 1) { if (strike({ x0: hero.x - 12, x1: hero.x + 12, y0: hero.y - 24, y1: hero.y - 2 }, 2 + mods.damage, 0, null)) crescents.push({ x: hero.x, y: hero.y - 14, dir: hero.dir, r: 16, colour: weapon.trail, life: 8, max: 8 }); }
+      if ((weapon.ability === 'dashslash' || mods.ghost) && klass.dash !== 'blink' && hero.act && hero.act.kind === 'dash' && hero.act.ticks % 3 === 1) { if (strike({ x0: hero.x - 12, x1: hero.x + 12, y0: hero.y - 24, y1: hero.y - 2 }, 2 + mods.damage, 0, null)) crescents.push({ x: hero.x, y: hero.y - 14, dir: hero.dir, r: 16, colour: weapon.trail, life: 8, max: 8 }); }
       // the rarer the weapon, the more it gives off
       var rank = rarityOf(weapon).rank;
       if (rank >= 2 && tick % (9 - rank * 2) === 0 && hero.alive) particles.push({ x: hero.x + hero.dir * (6 + random() * 6), y: hero.y - 10 - random() * 14, vx: (random() - 0.5) * 0.3, vy: -0.25 - random() * 0.3, life: 20 + random() * 16, max: 36, colour: rarityOf(weapon).colour, size: 1, gravity: -0.003 });

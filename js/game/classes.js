@@ -87,7 +87,48 @@
   };
   ORDER.push('lamplighter');
 
-  /* [kite] */
+  /* ---- the Kite ----
+     Slight and dark: a white mask with two slits and a red mark under a hood,
+     wrapped arms and legs, a crimson sash and a short cape, and two long
+     ribbons that say where he has just been. He turns over in the air: the
+     somersault is one tucked frame turned through eight headings. */
+
+  P.addSkin('kite', {
+    parts: {
+      head: ['..kkkkk..', '.kNNNNNk.', 'kNNnNNNNk', 'kNNNkkkkk', 'kNNkxxxxk', 'kNNkxexek', 'kNNkxxcxk', '.kNkxxxxk', '..kkkkkk.'],
+      torso: ['.kkkkk.', 'kNNNNNk', 'kNnNNNk', 'kNNNNNk', 'kccCcck', 'kNNNNNk', 'kNnNNnk', '.kkkkk.'],
+      cloak: ['.kkkkkk.', 'kcccCcck', 'kccccCck', 'kcCcccck', 'kccccCck', 'kcCcccck', '.kcccck.', '..kkkk..'],
+      arm: ['kkk', 'kNk', 'kNk', 'kNk', 'kxk', 'kxk', 'kkk'],
+      leg: ['kkkk', 'kNNk', 'kNNk', 'kxNk', 'kNxk', 'kxNk', 'kNNk', 'kNNk', 'kkkk'],
+      legBent: ['kkkk', 'kNNk', 'kxNk', 'kNxk', 'kNNk', 'kkkk'],
+      scarf: ['kcCcCcCck.', '.kkcCcCcCk', '...kkkkkk.'],
+      scarfUp: ['......kcCk', '...kcCcCk.', 'kcCcCkkk..', '.kkkk.....'],
+      ribbon: ['kCcCcCcCk.', '.kkCcCcCck', '...kkkkkk.'],
+      ribbonUp: ['.....kCcCk', '..kCcCcCk.', 'kCcCckkk..', '.kkkk.....'],
+      lantern: ['..kk..', '.kook.', 'kaAAak', 'kaAAak', 'kaaaak', 'kaaaak', '.kook.', '..kk..']
+    },
+    at: { cloak: [9, 12], backLeg: [11, 21], backArm: [10, 14], lantern: [7, 20], torso: [12, 13], frontLeg: [15, 21], head: [11, 5], scarf: [2, 12], ribbon: [0, 15], frontArm: [17, 14] },
+    hand: { down: [1, 5], reach: [6, 1] },
+    palette: { N: '#23222b', n: '#3d3c4a' },
+    // the somersault: knees to the chest, turned through eight headings about the middle of him
+    more: function (F, pose, dim) {
+      var tuck = pose({ bob: 3, lean: 1, front: { x: 1, y: -6, bent: true }, back: { x: -1, y: -5, bent: true }, frontArm: { x: -1, y: 2 }, backArm: { x: 1, y: 2 }, lantern: { x: 1, y: -3 }, scarf: { x: -1, y: -1 }, headY: 2, headX: 1, cloakLift: -2, sword: null });
+      var cx = dim.OX + 16, cy = dim.OY + 21, k;
+      F.flip = [];
+      for (k = 0; k < 8; k++) {
+        var c = P.blank(dim.FW, dim.FH), g = c.getContext('2d');
+        g.imageSmoothingEnabled = false; g.translate(cx, cy); g.rotate(k / 8 * Math.PI * 2); g.drawImage(tuck, -cx, -cy);
+        F.flip.push(c);
+      }
+    }
+  });
+  CLASSES.kite = {
+    id: 'kite', name: 'The Kite', line: 'Never where the blow lands',
+    hp: 5, energy: 3, run: 1.18, weapon: 'daggers', dash: 'blink', flips: true, colour: '#ff3b4e',
+    traits: ['Five hearts, the quickest on his feet', 'The dash is a blink: he is simply elsewhere', 'Three jumps, the second and third turned over', 'Holds a wall and leaps from it; a kill gives the blink back'],
+    apply: function (m) { m.airJumps += 1; m.wallgrip = true; }
+  };
+  ORDER.push('kite');
 
   window.Classes = { CLASSES: CLASSES, ORDER: ORDER };
 })();
