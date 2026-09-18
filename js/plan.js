@@ -389,6 +389,18 @@
     }
   };
 
+  glyphs.selection = function (pen, s) {
+    // a small biomorph: a symmetric tree forking four times
+    function tree(x, y, len, angle, left) {
+      if (!left) return;
+      var x2 = x + Math.cos(angle) * len, y2 = y + Math.sin(angle) * len;
+      pen.beginPath(); pen.moveTo(x, y); pen.lineTo(x2, y2); pen.stroke();
+      tree(x2, y2, len * 0.62, angle - 0.7, left - 1);
+      tree(x2, y2, len * 0.62, angle + 0.7, left - 1);
+    }
+    tree(0, s * 0.42, s * 0.3, -Math.PI / 2, 4);
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

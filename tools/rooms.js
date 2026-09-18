@@ -738,6 +738,30 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Johannes Kepler found in 1609 that the planets move on ellipses with the Sun at one focus, and in 1619 that the square of a planet\u2019s year is the cube of its distance, which is why six numbers are enough. The particular six used here are the mean elements published by E. Myles Standish of the Jet Propulsion Laboratory in 1992, fitted to the ephemeris the space probes are steered by. On 21 December 2020 they put Jupiter and Saturn a tenth of a degree apart, as the sky did.'
+    },
+    {
+      number: 33,
+      slug: 'selection',
+      ready: true,
+      title: 'Selection',
+      line: 'Breed a creature from nine numbers, one chosen child at a time, and see where your taste takes it.',
+      description: 'Dawkins’s biomorphs: a creature drawn from nine genes, its eight children each one gene different, and the visitor as the only selection pressure. Choose a child and it becomes the parent of the next generation.',
+      canvasLabel: 'A three-by-three litter of branching line creatures drawn in thin strokes. The parent, in amber, sits in the middle; its eight children, in bone, grow outward from their roots around it, each a little different from the parent.',
+      medium: '2026. Nine genes, drawn by a tree that forks at every step. Generation <span class="live" data-live="selection.generation">0</span>; the parent’s genes are <span class="live" data-live="selection.genes">0 0 0 0 0 0 0 0 4</span>, which make a creature of <span class="live" data-live="selection.segments">15</span> strokes.',
+      text: 'Nine small whole numbers make a creature. Eight of them say which way a branch may grow, the ninth how many times it forks, and a tree drawn by those rules is the creature’s body. Around the parent in the middle are its eight children, each with one gene nudged a notch. Nothing here judges them. You do: tap the child you like and it becomes the parent of eight more, and after twenty or thirty generations of that, something you never asked for is looking back at you. Richard Dawkins wrote this in 1986 expecting trees, and got insects, bats, spiders and a lamp. Leave it to breed itself and the only pressure is size, which is what a garden does.',
+      controls: `
+<div class="controls" role="group" aria-label="Selection controls">
+  <label class="dial">
+    <span class="dial__label"><span>How far a child may differ</span><span data-selection-nudge-value></span></span>
+    <input class="dial__input" type="range" min="1" max="4" step="1" value="1" data-selection-nudge>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-selection-auto aria-pressed="false">Let it breed itself</button>
+    <button class="btn" type="button" data-selection-back>A generation back</button>
+    <button class="btn" type="button" data-selection-again>Start again</button>
+  </div>
+</div>`,
+      wall: 'Richard Dawkins wrote the biomorph program for The Blind Watchmaker in 1986 to show that cumulative selection, one small step at a time, can reach forms that no single lucky step could, and that no plan was needed. He reported losing an insect he had bred and searching the space of genes for weeks to find it again. The encoding of the nine genes here is his: eight direction vectors and a depth.'
     }
   ]
 };
