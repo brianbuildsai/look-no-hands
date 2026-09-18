@@ -133,6 +133,8 @@
     if (e.status.burn > 0) { e.status.burn--; if (e.status.burn % 40 === 0) { e.hp -= (e.status.burnDamage || 1); ctx.spark(e.x, e.y - e.h / 2, '#ff8c42', 4, 1, 16, -0.02); } }
     if (e.status.poison > 0) { e.status.poison--; if (e.status.poison % 50 === 0) e.hp -= 1; }
     if (e.status.shock > 0) e.status.shock--;
+    if (e.status.cut > 0) e.status.cut--;
+    if (e.status.soak > 0) e.status.soak--;
     if (e.hp <= 0) { e.hp = 0; e.dying = 1; e.boxes = []; e.attack = null; return; }
     // a mark on the bar is crossed: whatever it was doing breaks, and it reels
     while (e.phase < D.phases.length && e.hp <= e.maxHp * D.phases[e.phase]) {

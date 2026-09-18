@@ -492,7 +492,10 @@
     frost: { name: 'chill', time: 200, colour: '#9fd8ff' },
     storm: { name: 'shock', time: 90, colour: '#8fa3ff' },
     bloom: { name: 'poison', time: 130, colour: '#9ae66e' },
-    void:  { name: 'drain', time: 1, colour: '#a48cff' }
+    void:  { name: 'drain', time: 1, colour: '#a48cff' },
+    tide:  { name: 'soak', time: 170, colour: '#5fd4c4' },
+    gear:  { name: 'jam', time: 180, colour: '#e0b04a' },
+    glass: { name: 'cut', time: 240, colour: '#ff9ecb' }
   };
   function statusName(element) { return STATUS[element].name; }
 
@@ -598,14 +601,17 @@
     if (e.cooldown > 0) e.cooldown--;
     if (e.status.burn > 0) { e.status.burn--; if (e.status.burn % 40 === 0) { e.hp -= (e.status.burnDamage || 1); ctx.spark(e.x, e.y - e.h / 2, '#ff8c42', 4, 1, 16, -0.02); if (e.hp <= 0) { e.hp = 0; e.dying = 1; return; } } }
     if (e.status.poison > 0) { e.status.poison--; if (e.status.poison % 50 === 0) { e.hp -= 1; ctx.spark(e.x, e.y - e.h / 2, '#9ae66e', 3, 0.8, 16, -0.01); if (e.hp <= 0) { e.hp = 0; e.dying = 1; return; } } }
-    var frozen = e.status.freeze > 0, shocked = e.status.shock > 0;
-    if (frozen) e.status.freeze--;
+    var stunned = e.status.stun > 0, frozen = e.status.freeze > 0 || stunned, shocked = e.status.shock > 0, soaked = e.status.soak > 0;
+    if (e.status.freeze > 0) e.status.freeze--;
+    if (stunned) e.status.stun--;
     if (shocked) e.status.shock--;
+    if (soaked) { e.status.soak--; if (e.clock % 9 === 0) ctx.particle({ x: e.x + (ctx.random() - 0.5) * e.w, y: e.y - e.h / 2, vx: 0, vy: 0.4, life: 14, max: 14, colour: '#5fd4c4', size: 1, gravity: 0.05 }); }
+    if (e.status.cut > 0) e.status.cut--;
     var d = dist(e, hero), sees = d < K.sight && hero.alive;
     if (sees) e.seen = true;
     e.clock++;
     if (frozen) { e.boxes = []; if (!K.flying) { e.vx = 0; e.vy = Math.min(5, e.vy + 0.32); ctx.moveBody(e); } return; }
-    var slow = shocked ? 0.4 : 1;
+    var slow = shocked ? 0.4 : soaked ? 0.6 : 1;
     if (e.attack) {
       stepAttack(e, ctx);
       if (!K.flying) { e.vy = Math.min(5, e.vy + 0.32); if (!(e.attack && e.attack.def.moves)) e.vx *= 0.8; var t = ctx.moveBody(e); e.onGround = t.floor; if (t.wall && e.attack && e.attack.def.moves) e.vx = 0; }

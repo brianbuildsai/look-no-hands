@@ -52,6 +52,18 @@
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 8], active: [2], shape: 'bolt', reach: 1, lunge: -0.3 },
       { anim: 'bow', seq: [0, 1, 1, 2, 2], ticks: [6, 8, 8, 3, 10], active: [3], shape: 'bolt', reach: 1, lunge: -1.2, finisher: true }
     ],
+    // a spear: three long thrusts, the last a lunge
+    spear: [
+      { anim: 'attack3', seq: [0, 1, 2, 4], ticks: [4, 2, 4, 3], active: [1, 2], shape: 'thrust', reach: 1, lunge: 0.9 },
+      { anim: 'attack3', seq: [0, 1, 2, 4], ticks: [3, 2, 4, 3], active: [1, 2], shape: 'thrust', reach: 1.05, lunge: 0.9 },
+      { anim: 'attack3', seq: [0, 1, 2, 3, 4], ticks: [6, 2, 4, 4, 6], active: [1, 2, 3], shape: 'thrust', reach: 1.25, lunge: 2.6, finisher: true }
+    ],
+    // a thing thrown: it leaves the hand, and arms.js brings it back
+    thrown: [
+      { anim: 'attack1', seq: [0, 1, 2, 3], ticks: [4, 3, 3, 5], active: [1], shape: 'throw', reach: 1, lunge: -0.2 },
+      { anim: 'attack1', seq: [0, 1, 2, 3], ticks: [4, 3, 3, 5], active: [1], shape: 'throw', reach: 1, lunge: -0.2 },
+      { anim: 'attack1', seq: [0, 0, 1, 2, 3], ticks: [6, 5, 3, 4, 8], active: [2], shape: 'throw', reach: 1, lunge: -0.8, finisher: true }
+    ],
     bow: [
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
@@ -60,11 +72,11 @@
   };
 
   var WEAPONS = {
-    forgehammer: { name: 'Forge Hammer', rarity: 'common', moveset: 'heavy', damage: [3, 4], reach: 24, trail: '#ffb347', finisher: 'quake', line: 'Two slow blows; the second cracks the floor both ways', grip: [3, 13],
+    forgehammer: { name: 'Forge Hammer', starter: true, rarity: 'common', moveset: 'heavy', damage: [3, 4], reach: 24, trail: '#ffb347', finisher: 'quake', line: 'Two slow blows; the second cracks the floor both ways', grip: [3, 13],
       art: ['kkkkkkk', 'kgwggnk', 'kggggnk', 'kgfggnk', 'kggggnk', 'kkkkkkk', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..krk..', '..kkk..'] },
-    lamppole: { name: 'Lantern Pole', rarity: 'common', moveset: 'pole', damage: [1, 1, 3], reach: 0, trail: '#ffdc9a', line: 'Three bolts of lantern light, the third straight through', grip: [3, 15],
+    lamppole: { name: 'Lantern Pole', starter: true, rarity: 'common', moveset: 'pole', damage: [1, 1, 3], reach: 0, trail: '#ffdc9a', line: 'Three bolts of lantern light, the third straight through', grip: [3, 15],
       art: ['..kkk..', '.krRrk.', 'kaAAAak', 'kaAFAak', 'kaAAAak', '.krrrk.', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..kBk..', '..kbk..', '..krk..', '..kkk..'] },
-    shortsword: { name: 'Short Sword', rarity: 'common', moveset: 'sword', damage: [2, 2, 4], reach: 24, trail: '#e9e6df', line: 'Three swings, the last a thrust', grip: [1, 11], handDrawn: true,
+    shortsword: { name: 'Short Sword', starter: true, rarity: 'common', moveset: 'sword', damage: [2, 2, 4], reach: 24, trail: '#e9e6df', line: 'Three swings, the last a thrust', grip: [1, 11], handDrawn: true,
       art: ['.W.', 'kWk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'kwk', 'rrr', 'krk', 'kbk', 'kkk'] },
     daggers: { name: 'Twin Daggers', rarity: 'rare', moveset: 'quick', damage: [1, 1, 1, 3], reach: 19, trail: '#6ec6ff', ability: 'dashslash', line: 'Four quick cuts; your dash cuts through what it passes', grip: [1, 7],
       art: ['.W.', 'kWk', 'kwk', 'kwk', 'kgk', 'rrr', 'kbk', 'kbk', 'kkk'] },
@@ -80,6 +92,22 @@
       art: ['....kkkkkkkk.', '..kkCCCCCCCCk', '.kCCccccccck.', 'kCcckkkkkkk..', 'kCck.........', 'kkMk.........', '.kMk.........', '.kmk.........', '.kMk.........', '.kMk.........', '.kmk.........', '.kMk.........', '.kMk.........', '.kmk.........', '.kMk.........', '.kMk.........', '.kmk.........', '.kMk.........', '.kMk.........', '.kcck........', '.kkk.........'] },
     thornwhip: { name: 'Thorn Whip', rarity: 'master', moveset: 'whip', damage: [3, 3, 5], reach: 62, trail: '#9ae66e', element: 'bloom', finisher: 'drag', line: 'A long living lash that poisons; the last crack drags them to you', grip: [1, 4],
       art: ['.U.', 'kuk', 'kuk', 'kUk', 'kbk', 'kbk', 'kkk'] },
+    handaxe: { name: 'Hand Axe', rarity: 'common', moveset: 'sword', damage: [2, 2, 5], reach: 20, trail: '#c4c1ba', line: 'Two chops and a heavy third', grip: [2, 9],
+      art: ['..kkkk.', '.kbwWwk', '.kbwwwk', '.kbgwk.', '.kbkk..', '.kBk...', '.kbk...', '.kBk...', '.kbk...', '.kbk...', '.krk...', '.kkk...'] },
+    pike: { name: 'Pike', rarity: 'rare', moveset: 'spear', damage: [3, 3, 5], reach: 40, trail: '#6ec6ff', finisher: 'skewer', line: 'Long thrusts; the last carries you through them', grip: [2, 21],
+      art: ['..W..', '.kWk.', '.kwk.', 'kwwwk', '.kwk.', '.krk.', '.kbk.', '.kBk.', '.kbk.', '.kbk.', '.kBk.', '.kbk.', '.kbk.', '.kBk.', '.kbk.', '.kbk.', '.kBk.', '.kbk.', '.kbk.', '.kBk.', '.kbk.', '.kbk.', '.kBk.', '.kgk.', '.kkk.'] },
+    disc: { name: 'Returning Disc', rarity: 'rare', moveset: 'thrown', damage: [2, 2, 4], reach: 0, trail: '#6ec6ff', line: 'Thrown; it strikes going out and again coming back', grip: [3, 5],
+      art: ['..kkk..', '.kwWwk.', 'kwk.kwk', 'kW...Wk', 'kwk.kwk', '.kwWwk.', '..kkk..'] },
+    trident: { name: 'Trident of the Stacks', rarity: 'epic', moveset: 'spear', damage: [3, 3, 5], reach: 38, trail: '#5fd4c4', element: 'tide', finisher: 'geyser', line: 'Every thrust soaks; the last raises a geyser under them', grip: [3, 19],
+      art: ['Q..Q..Q', 'q..Q..q', 'qk.q.kq', 'qk.q.kq', 'kqqqqqk', '.kkqkk.', '..kqk..', '..kbk..', '..kBk..', '..kbk..', '..kbk..', '..kBk..', '..kbk..', '..kbk..', '..kBk..', '..kbk..', '..kbk..', '..kBk..', '..kbk..', '..kbk..', '..kBk..', '..kqk..', '..kkk..'] },
+    mainspring: { name: 'Mainspring Saw', rarity: 'epic', moveset: 'sword', damage: [2, 2, 4], reach: 26, trail: '#e0b04a', element: 'gear', finisher: 'runningsaw', twice: true, line: 'Every cut lands twice; the last sends a saw along the floor and back', grip: [3, 13],
+      art: ['...k...', '..kRk..', '.krRk..', '..kRrk.', '.krRk..', '..kRrk.', '.krRk..', '..kRrk.', '.krRk..', '..kRrk.', '.krRrk.', 'kgggggk', '.kkbkk.', '..kbk..', '..kkk..'] },
+    glasssabre: { name: 'Glass Sabre', rarity: 'epic', moveset: 'sword', damage: [3, 3, 5], reach: 28, trail: '#ff9ecb', element: 'glass', finisher: 'shardfan', line: 'Every cut opens them to the next; the thrust breaks into three shards', grip: [2, 14],
+      art: ['...L.', '..kLk', '..klL', '.kLlk', '.klLk', '.kLlk', 'kLlk.', 'klLk.', 'kLlk.', 'klLk.', '.kLlk', '.klLk', 'wwwww', '.kgk.', '.kbk.', '.kkk.'] },
+    umbralflail: { name: 'Umbral Flail', rarity: 'master', moveset: 'whip', damage: [3, 3, 6], reach: 56, trail: '#a48cff', finisher: 'singularity', lash: ['#5b3fa0', '#d9b8ff'], line: 'A long dark lash; the last crack opens a hole that drags them in and crushes them', grip: [2, 8],
+      art: ['.kkk.', 'kvVvk', 'kVDVk', 'kvVvk', '.kkk.', '..g..', '..g..', '.kbk.', '.kbk.', '.kkk.'] },
+    bellmaul: { name: 'Bellringer\'s Maul', rarity: 'master', moveset: 'heavy', damage: [6, 9], reach: 28, trail: '#efd27a', finisher: 'toll', line: 'A bell on a haft. Its second blow tolls, and what hears it stands stunned', grip: [4, 16],
+      art: ['...kkk...', '..krRrk..', '.krRRRrk.', '.krRrRrk.', '.krRRRrk.', 'krRRRRRrk', 'krrrrrrrk', 'kkkkRkkkk', '...kbk...', '...kBk...', '...kbk...', '...kbk...', '...kBk...', '...kbk...', '...kbk...', '...kBk...', '...kbk...', '...krk...', '...kkk...'] },
     dawnbreaker: { name: 'Dawnbreaker', rarity: 'legendary', moveset: 'heavy', damage: [7, 11], reach: 34, trail: '#ffd24d', finisher: 'sunpillar', line: 'A greatsword of first light. Its last blow brings down the sun', grip: [3, 20],
       art: ['...Y...', '..kYk..', '..kYk..', '.kyYyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyYyk.', '.kyyyk.', 'kYYYYYk', 'kyrYryk', '.kkrkk.', '..krk..', '..kyk..', '..krk..', '..kYk..', '..kkk..'] },
     quicksilver: { name: 'Quicksilver', rarity: 'legendary', moveset: 'sword', damage: [4, 4, 6], reach: 30, trail: '#f4f8ff', finisher: 'droplets', flowing: true, line: 'A blade that has not decided to be solid. It ends in drops that seek', grip: [2, 14],
@@ -88,7 +116,7 @@
       art: ['..kk...', '.kYyk..', '..kyk..', '...kyk.', '...kyYk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h..kyYk', '...kyk.', '..kyk..', '.kYyk..', '..kk...'] }
   };
   /* What each weapon does, said plainly: the infobox reads these, and works out the damage and reach lines itself. */
-  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts' };
+  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts', spear: 'Three long thrusts', thrown: 'Two throws and a great one' };
   var DETAILS = {
     shortsword:  ['The third stroke is a lunging thrust'],
     forgehammer: ['+Finisher: the floor cracks both ways, 4 damage along it, through everything'],
@@ -100,22 +128,32 @@
     stormrapier: ['+Finisher: a bolt arcs to the 3 nearest creatures, 3 damage each, and shocks them'],
     scythe:      ['+Every 3rd creature you kill heals 1 heart', '+Finisher: a whirl all round you, 5 damage within 42 pixels'],
     thornwhip:   ['+Every hit poisons: 5 damage over 4 s', '+Finisher: drags every lesser creature within 100 pixels to you and breaks its attack'],
+    handaxe:     ['The third stroke is a heavy chop'],
+    pike:        ['+Finisher: a lunge that carries you through them, unharmed, 3 damage to all you pass'],
+    disc:        ['+Flies about 90 pixels and returns to your hand', '+Strikes once going out and once coming back', '+Finisher: three discs in a fan'],
+    trident:     ['+Every hit soaks: the creature moves 40% slower for 4 s', '+Finisher: a geyser under the nearest ahead, 4 damage, and throws it in the air'],
+    mainspring:  ['+Every cut lands a second time for half damage', '+Every hit jams: the creature cannot begin an attack for about 1 s', '+Finisher: a saw runs 130 pixels along the floor and back, 3 damage each way'],
+    glasssabre:  ['+Every hit cuts: the creature takes 1 more from every blow for 4 s', '+Finisher: three shards in a fan, 3 damage each'],
+    umbralflail: ['+Finisher: a hole opens where the lash ends and drags lesser creatures in', '+then collapses: 6 damage within 30 pixels'],
+    bellmaul:    ['+Finisher: a toll. Lesser creatures within 84 pixels are stunned for 1.7 s', '+and whatever they were doing is broken off'],
     dawnbreaker: ['+Finisher: a pillar of light from vault to floor, 12 damage', '+and a wave of gold each way along the floor, 5 damage, through everything'],
     quicksilver: ['+The blade leaves a ribbon where its tip has been', '+Finisher: 8 drops orbit you, then seek the nearest creatures, 3 damage each'],
     murmuration: ['+Each shot looses 5 lights that wheel and home on what you face', '+Finisher: a flock of 16']
   };
   Object.keys(WEAPONS).forEach(function (id) { WEAPONS[id].detail = DETAILS[id] || [WEAPONS[id].line]; WEAPONS[id].strokes = STROKES[WEAPONS[id].moveset] || ''; });
-  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'daggers', 'hammer', 'emberbrand', 'frostglaive', 'stormrapier', 'scythe', 'thornwhip', 'dawnbreaker', 'quicksilver', 'murmuration'];
+  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'handaxe', 'daggers', 'hammer', 'pike', 'disc', 'emberbrand', 'frostglaive', 'stormrapier', 'trident', 'mainspring', 'glasssabre', 'scythe', 'thornwhip', 'umbralflail', 'bellmaul', 'dawnbreaker', 'quicksilver', 'murmuration'];
 
-  // a weapon by chance: deeper floors and bosses lean toward the rarer
+  // a weapon by chance: first a rarity (deeper floors and guardians lean toward the rarer), then any weapon of it,
+  // so that adding weapons to a rarity does not make that rarity commoner
   function roll(rnd, floor, boost, exclude) {
-    var weights = { common: 0, rare: 6, epic: 3 + floor, master: 0.6 + floor * 0.9, legendary: 0.15 + floor * 0.45 };
-    if (boost) { weights.rare = 1; weights.epic += 3; weights.master += 2; weights.legendary += 1.2; }
+    var weights = { common: floor <= 2 && !boost ? 2 : 0, rare: 12, epic: 9 + floor * 3, master: 1.2 + floor * 1.8, legendary: 0.45 + floor * 1.35 };
+    if (boost) { weights.rare = 2; weights.epic += 9; weights.master += 4; weights.legendary += 3.6; }
     var not = exclude instanceof Array ? exclude : [exclude];
-    var pool = ORDER.filter(function (id) { return WEAPONS[id].rarity !== 'common' && not.indexOf(id) < 0; }), total = 0, k;
-    for (k = 0; k < pool.length; k++) total += weights[WEAPONS[pool[k]].rarity];
+    var pool = ORDER.filter(function (id) { return !WEAPONS[id].starter && not.indexOf(id) < 0; }), byRarity = {}, total = 0, k, name;
+    for (k = 0; k < pool.length; k++) (byRarity[WEAPONS[pool[k]].rarity] || (byRarity[WEAPONS[pool[k]].rarity] = [])).push(pool[k]);
+    for (name in byRarity) total += weights[name];
     var pick = rnd() * total;
-    for (k = 0; k < pool.length; k++) { pick -= weights[WEAPONS[pool[k]].rarity]; if (pick <= 0) return pool[k]; }
+    for (name in byRarity) { pick -= weights[name]; if (pick <= 0 && weights[name] > 0) return byRarity[name][Math.floor(rnd() * byRarity[name].length)]; }
     return pool[pool.length - 1];
   }
 

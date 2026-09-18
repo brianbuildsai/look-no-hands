@@ -320,7 +320,7 @@
       hero.combo = n + 1; hero.queued = false;
       hero.anim = spec.anim; hero.frame = spec.seq[0]; hero.clock = 0;
       hero.vx = hero.dir * spec.lunge + hero.vx * 0.3;
-      var ms = weapon.moveset; if (ms !== 'bow' && ms !== 'pole') sfx(ms === 'heavy' ? 'swingheavy' : ms === 'quick' ? 'swingquick' : ms === 'whip' ? 'whip' : 'swing');
+      var ms = weapon.moveset; if (ms !== 'bow' && ms !== 'pole') sfx(ms === 'heavy' ? 'swingheavy' : ms === 'quick' || ms === 'thrown' ? 'swingquick' : ms === 'whip' ? 'whip' : 'swing');
       if (spec.lift && !hero.onGround) hero.vy = Math.min(hero.vy, -1.5);
     }
     // the Kite's dash: as far ahead as there is room for, at once, leaving himself behind in ribbons
@@ -697,22 +697,27 @@
           if (hurtHero(p.x, p.damage, p.cause ? p.cause : p.wave ? 'wave' : p.seek ? 'beam' : p.cloud ? 'spore' : 'shard')) afflict(p.element);
           gone = true;
         }
-        if (p.from === 'hero') {
-          for (var j = 0; j < creatures.length; j++) {
-            var c = creatures[j];
-            if (c.dying || (p.struck && p.struck.indexOf(c) >= 0)) continue;
-            var cb = boxesOf(c), touched = false;
-            for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { if (cb[q].onHit) { touched = cb[q].onHit(c, ctx, p.damage, p.x - p.vx * 4); break; } if (c.boss && cb.length > 1) c.struckAt = { x: (cb[q].x0 + cb[q].x1) / 2, y: (cb[q].y0 + cb[q].y1) / 2 }; wound(c, Math.max(1, Math.round(p.damage * (cb[q].mult || 1))), p.x, p.element); touched = true; break; }
-            if (touched) { (p.struck || (p.struck = [])).push(c); if (!p.pierce) { gone = true; break; } }
-          }
-        }
+        if (p.from === 'hero' && touchCreatures(pbox, p.damage, p.element, p.x - p.vx * 4, p.struck || (p.struck = []), !p.pierce) && !p.pierce) gone = true;
         if (gone) { if (p.land && struckStone) p.land(p); spark(p.x, p.y, p.colour, 5, 1, 12, 0); projectiles.splice(k, 1); }
       }
       for (k = zaps.length - 1; k >= 0; k--) if (--zaps[k].life <= 0) zaps.splice(k, 1);
     }
+    // something thrown touches whatever it has not touched before; returns how many it touched
+    function touchCreatures(pbox, damage, elementName, fromX, seen, one) {
+      var n = 0;
+      for (var j = 0; j < creatures.length; j++) {
+        var c = creatures[j];
+        if (c.dying || seen.indexOf(c) >= 0) continue;
+        var cb = boxesOf(c), touched = false;
+        for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { if (cb[q].onHit) { touched = cb[q].onHit(c, ctx, damage, fromX); break; } if (c.boss && cb.length > 1) c.struckAt = { x: (cb[q].x0 + cb[q].x1) / 2, y: (cb[q].y0 + cb[q].y1) / 2 }; wound(c, Math.max(1, Math.round(damage * (cb[q].mult || 1))), fromX, elementName); touched = true; break; }
+        if (touched) { seen.push(c); n++; if (one) break; }
+      }
+      return n;
+    }
     // a wound on a creature, with the Warden's element laid on it
     function wound(e, damage, fromX, elementName) {
       if (e.status.freeze > 0) damage += mods.frozenBonus;
+      if (e.status.cut > 0) damage += 1;
       if (!AC.hurt(e, damage, fromX, ctx)) return false;
       if (e.boss) { e.vx = 0; e.vy = Math.min(e.vy, 0); } else e.vx *= mods.knockback;
       if (mods.breaker && !e.boss && e.attack && e.attack.phase === 'windup') { if (e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; e.cooldown = 50; number(e.x, e.y - e.h - 14, 'BROKEN', '#ffb347'); }
@@ -727,6 +732,9 @@
       else if (elementName === 'frost') e.status.freeze = Math.round(90 * mods.freezeTime);
       else if (elementName === 'storm') e.status.shock = Math.round(60 * mods.shockTime);
       else if (elementName === 'bloom') e.status.poison = 250;
+      else if (elementName === 'tide') e.status.soak = 240;
+      else if (elementName === 'gear') { if (!e.boss) e.cooldown = Math.max(e.cooldown, 70); }
+      else if (elementName === 'glass') e.status.cut = 240;
       return true;
     }
     // a box strikes whatever stands in it; returns whether anything was hit
@@ -921,6 +929,7 @@
     var weaponId = 'shortsword', weapon = WP.WEAPONS.shortsword, swings = WP.MOVESETS.sword;
     // two hands: what each holds, which is in use, and how long ago they changed (for the flourish in the corner)
     var hands = ['shortsword', null], handIn = 0, swapT = 0;
+    var AR = window.Arms || null, armsKit = null;
     var flares = [], ribbon = [], droplets = [], flock = [], pillars = [], rings = [], spikes = [], lash = null, delayed = [], reaped = 0;
 
     function equip(id) {
@@ -985,6 +994,7 @@
       } else if (sw.shape === 'shot') {
         loose(sw.finisher ? 16 : 5);
       }
+      if (AR) AR.swing(sw, n, kit());
       if (legendary) for (var m = 0; m < 8; m++) particles.push({ x: hero.x + d * random() * r, y: hero.y - 8 - random() * 22, vx: (random() - 0.5) * 0.6, vy: -0.3 - random() * 0.5, life: 24 + random() * 20, max: 44, colour: random() < 0.5 ? '#ffd24d' : '#fff3b0', size: 1, gravity: -0.004 });
     }
 
@@ -1002,6 +1012,7 @@
     // what a weapon does at the end of its combo
     function finisher(name) {
       var d = hero.dir, k;
+      if (AR && AR.fire(name, kit())) return;
       if (name === 'quake') { for (k = -1; k <= 1; k += 2) projectiles.push({ x: hero.x + d * 20 + k * 6, y: hero.y - 4, vx: k * 3, vy: 0, life: 36, colour: '#c4c1ba', size: 8, damage: 4 + mods.damage, element: null, gravity: 0, from: 'hero', pierce: true, wave: true }); shake(6); }
       else if (name === 'flamewave') { projectiles.push({ x: hero.x + d * 16, y: hero.y - 8, vx: d * 3.4, vy: 0, life: 46, colour: '#ff8c42', size: 12, damage: 4 + mods.damage, element: 'ember', gravity: 0, from: 'hero', pierce: true, flame: true }); sfx('castember'); flash = { colour: '#ff8c42', life: 5 }; }
       else if (name === 'icespikes') { for (k = 0; k < 5; k++) delayed.push({ t: k * 5, x: hero.x + d * (26 + k * 16), y: hero.y, fn: 'spike' }); sfx('castfrost'); }
@@ -1029,9 +1040,17 @@
       }
     }
 
+    // what arms.js is given to work with
+    function kit() {
+      return armsKit || (armsKit = { hero: hero, cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
+        creatures: function () { return creatures; }, projectiles: function () { return projectiles; }, mods: function () { return mods; }, weapon: function () { return weapon; }, tick: function () { return tick; }, random: random,
+        spark: spark, particle: function (p) { particles.push(p); }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
+        light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text });
+    }
     function stepWeapons() {
       var k, b, t;
       runDelayed();
+      if (AR) AR.step(kit());
       for (k = pillars.length - 1; k >= 0; k--) if (--pillars[k].life <= 0) pillars.splice(k, 1);
       for (k = rings.length - 1; k >= 0; k--) { rings[k].r += rings[k].grow; if (--rings[k].life <= 0) rings.splice(k, 1); }
       for (k = spikes.length - 1; k >= 0; k--) if (--spikes[k].life <= 0) spikes.splice(k, 1);
@@ -1088,7 +1107,8 @@
       for (k = 0; k < rings.length; k++) { b = rings[k]; fpen.globalAlpha = b.life / b.max; fpen.strokeStyle = b.colour; fpen.lineWidth = 2; fpen.beginPath(); fpen.ellipse(Math.round(b.x) - cx, Math.round(b.y) - cy, b.r, b.r * 0.3, 0, 0, 6.2832); fpen.stroke(); fpen.globalAlpha = 1; }
       for (k = 0; k < spikes.length; k++) { b = spikes[k]; var up = Math.sin(Math.min(1, (b.max - b.life) / 6) * Math.PI / 2) * (b.life < 8 ? b.life / 8 : 1), hh = Math.round(30 * up), sx = Math.round(b.x) - cx, sy = Math.round(b.y) - cy; fpen.fillStyle = '#9fd8ff'; fpen.beginPath(); fpen.moveTo(sx - 6, sy); fpen.lineTo(sx, sy - hh); fpen.lineTo(sx + 6, sy); fpen.fill(); fpen.fillStyle = '#e6f6ff'; fpen.beginPath(); fpen.moveTo(sx - 2, sy); fpen.lineTo(sx, sy - hh); fpen.lineTo(sx + 1, sy); fpen.fill(); light(b.x, b.y - 12, 22, 0.6); }
       // the whip: a living curve from the hand, cracking at its end
-      if (lash) { var p = 1 - lash.life / lash.max, ext = Math.sin(Math.min(1, p * 1.6) * Math.PI / 2) * lash.reach, hx = Math.round(hero.x) + lash.dir * 8 - cx, hy = Math.round(hero.y) - 16 - cy; fpen.strokeStyle = '#4e9a52'; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(hx, hy); for (var s2 = 1; s2 <= 12; s2++) { var f = s2 / 12; fpen.lineTo(hx + lash.dir * ext * f, hy + Math.sin(f * 7 - p * 12) * 6 * (1 - f) * (1 - p) - f * 4 + f * f * 8); } fpen.stroke(); fpen.fillStyle = '#c5ff9a'; fpen.fillRect(hx + lash.dir * ext - 1, hy + 3, 3, 3); if (lash.life === lash.max - 5) spark(hero.x + lash.dir * (8 + ext), hero.y - 12, '#c5ff9a', 8, 1.8, 12, 0); }
+      if (AR) AR.draw(kit());
+      if (lash) { var lc = weapon.lash || ['#4e9a52', '#c5ff9a'], p = 1 - lash.life / lash.max, ext = Math.sin(Math.min(1, p * 1.6) * Math.PI / 2) * lash.reach, hx = Math.round(hero.x) + lash.dir * 8 - cx, hy = Math.round(hero.y) - 16 - cy; fpen.strokeStyle = lc[0]; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(hx, hy); for (var s2 = 1; s2 <= 12; s2++) { var f = s2 / 12; fpen.lineTo(hx + lash.dir * ext * f, hy + Math.sin(f * 7 - p * 12) * 6 * (1 - f) * (1 - p) - f * 4 + f * f * 8); } fpen.stroke(); fpen.fillStyle = lc[1]; fpen.fillRect(hx + lash.dir * ext - 1, hy + 3, 3, 3); if (lash.life === lash.max - 5) spark(hero.x + lash.dir * (8 + ext), hero.y - 12, lc[1], 8, 1.8, 12, 0); }
       // the flowing blade's ribbon, chrome with a blue edge
       if (ribbon.length >= 4) { for (var pass = 0; pass < 2; pass++) { fpen.strokeStyle = pass ? '#f4f8ff' : '#3d5bff'; fpen.lineWidth = pass ? 2 : 4; fpen.globalAlpha = pass ? 1 : 0.5; fpen.beginPath(); fpen.moveTo(ribbon[0] - cx, ribbon[1] - cy); for (k = 2; k < ribbon.length; k += 2) fpen.lineTo(ribbon[k] - cx, ribbon[k + 1] - cy); fpen.stroke(); } fpen.globalAlpha = 1; }
       for (k = 0; k < droplets.length; k++) { b = droplets[k]; fpen.fillStyle = '#aab4c8'; fpen.beginPath(); fpen.arc(Math.round(b.x) - cx, Math.round(b.y) - cy, 3, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(b.x) - 1 - cx, Math.round(b.y) - 2 - cy, 1, 1); light(b.x, b.y, 12, 0.5); }
@@ -1806,7 +1826,7 @@
         run.stage++;
         if (run.stage >= STAGES.length) { run.stage = STAGES.length - 1; won = true; endRun(true); return true; }
         loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
-        particles.length = 0; afterimages.length = 0; numbers.length = 0;
+        particles.length = 0; afterimages.length = 0; numbers.length = 0; if (AR) AR.clear();
       }
       if (transition >= 48) transition = 0;
       return true;
@@ -1834,6 +1854,7 @@
       drawGlows();
       drawBoxes();
       drawFlash();
+      if (AR) AR.over(kit());
       drawTransition();
       drawHud();
       drawMap(); drawChambers(); drawPortalHint(); drawPerkLabel();
@@ -2024,7 +2045,7 @@
       state = 'run';
       run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; won = false; visited = {}; rewarded = {}; applyRelics();
-      hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null;
+      hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null; if (AR) AR.clear();
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
@@ -2130,6 +2151,7 @@
       drop: function (kind, id, dx) { dropPickup({ kind: kind, id: id }, hero.x + (dx === undefined ? 0 : dx), hero.y - 12); return pickups.length; },
       finds: function () { return { chests: chests.map(function (c) { return { x: c.x, y: c.y, open: c.open, rarity: c.rarity, loot: c.loot }; }), pickups: pickups.map(function (q) { return { kind: q.kind, id: q.id, rarity: q.rarity, x: Math.round(q.x), y: Math.round(q.y), ground: q.ground }; }), prompt: prompt ? prompt.id : null, ceremony: ceremony ? ceremony.loot.id : null, banner: banner ? banner.text : null, slowmo: slowmo, bell: !!bell, flakes: flakes.length }; },
       hands: function () { return { hands: hands.slice(), inUse: handIn, weapon: weaponId }; },
+      arms: function (kind) { return AR ? AR.count(kind) : -1; },
       swap: function () { return changeHands(); },
       wield: function (id) { takeWeapon(id); return { hands: hands.slice(), inUse: handIn }; },
       equip: function (id) { return equip(id) ? { id: weaponId, name: weapon.name, rarity: weapon.rarity, swings: swings.length } : null; },

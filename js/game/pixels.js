@@ -29,7 +29,10 @@
     f: '#ff8c42', F: '#ffdc9a',   // flame
     z: '#8fa3ff', Z: '#ffffff',   // storm
     u: '#4e9a52', U: '#9ae66e',   // green
-    j: '#aab4c8', J: '#f4f8ff'    // quicksilver
+    j: '#aab4c8', J: '#f4f8ff',   // quicksilver
+    q: '#2fae9e', Q: '#9ff5e6',   // the tide
+    l: '#ff9ecb', L: '#ffe8f4',   // glass, rose
+    D: '#1b1430', G: '#7a5a1e'    // the umbral dark; old brass
   };
 
   var cache = {};
