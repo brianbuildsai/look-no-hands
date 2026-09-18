@@ -81,21 +81,53 @@
     window.addEventListener('blur', function () { held = {}; });
 
     // touch: zones drawn in the frame on phones; a pointer over one holds its button
-    var ZONES = [];
+    var ZONES = [], touchy = false;
+    function layoutZones() {
+      ZONES = [];
+      if (!touchy) return;
+      var below = size.h - (view.y + view.h), pad = 10, b = below >= 130 ? 58 : 46, y0, x, gap = 8;
+      if (below >= 130) y0 = view.y + view.h + Math.round((below - b * 2 - gap) / 2);
+      else y0 = size.h - b * 2 - gap - pad;
+      // left hand: left and right; right hand: jump, attack, dash, cast
+      ZONES.push({ name: 'left', x: pad, y: y0 + b + gap, w: b, h: b, label: '\u2190' }, { name: 'right', x: pad + b + gap, y: y0 + b + gap, w: b, h: b, label: '\u2192' });
+      ZONES.push({ name: 'down', x: pad + Math.round((b + gap) / 2), y: y0, w: b, h: b, label: '\u2193' });
+      var rx = size.w - pad - b;
+      ZONES.push({ name: 'jump', x: rx, y: y0 + b + gap, w: b, h: b, label: 'JUMP' }, { name: 'attack', x: rx - b - gap, y: y0 + b + gap, w: b, h: b, label: 'HIT' });
+      ZONES.push({ name: 'dash', x: rx, y: y0, w: b, h: b, label: 'DASH' }, { name: 'cast', x: rx - b - gap, y: y0, w: b, h: b, label: 'CAST' });
+      ZONES.push({ name: 'pause', x: Math.round(size.w / 2) - 20, y: y0 + b + gap + b - 22, w: 40, h: 22, label: 'II' });
+    }
     function zoneAt(px, py) {
-      for (var k = 0; k < ZONES.length; k++) { var z = ZONES[k]; if (px >= z.x && px < z.x + z.w && py >= z.y && py < z.y + z.h) return z.name; }
+      for (var k = 0; k < ZONES.length; k++) { var z = ZONES[k]; if (px >= z.x - 6 && px < z.x + z.w + 6 && py >= z.y - 6 && py < z.y + z.h + 6) return z.name; }
       return null;
     }
     function framePoint(e) {
       var rect = canvas.getBoundingClientRect();
-      return { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+    function drawZones() {
+      if (!touchy || !ZONES.length) return;
+      var ratio = canvas.width / size.w;
+      pen.setTransform(ratio, 0, 0, ratio, 0, 0);
+      pen.font = '600 12px "Hanken Grotesk", system-ui, sans-serif';
+      pen.textAlign = 'center'; pen.textBaseline = 'middle';
+      for (var k = 0; k < ZONES.length; k++) {
+        var z = ZONES[k], isHeld = !!held[z.name];
+        pen.fillStyle = isHeld ? 'rgba(255,179,71,0.35)' : 'rgba(233,230,223,0.08)';
+        pen.strokeStyle = isHeld ? 'rgba(255,179,71,0.9)' : 'rgba(233,230,223,0.3)';
+        pen.lineWidth = 1;
+        pen.beginPath(); pen.roundRect ? pen.roundRect(z.x + 0.5, z.y + 0.5, z.w - 1, z.h - 1, 8) : pen.rect(z.x + 0.5, z.y + 0.5, z.w - 1, z.h - 1); pen.fill(); pen.stroke();
+        pen.fillStyle = isHeld ? '#ffdc9a' : '#c4c1ba';
+        pen.fillText(z.label, z.x + z.w / 2, z.y + z.h / 2);
+      }
     }
     canvas.addEventListener('pointerdown', function (e) {
       try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
       if (e.pointerType === 'mouse') { if (state === 'title') queued.start = true; return; }
+      if (!touchy) { touchy = true; layoutZones(); }
       e.preventDefault();
       var p = framePoint(e), name = zoneAt(p.x, p.y);
-      if (state === 'title') { queued.start = true; return; }
+      if (state === 'title' && !name) { queued.start = true; return; }
+      if (state === 'summary' && !name) { queued.start = true; return; }
       if (name) { touches[e.pointerId] = name; if (!held[name]) queued[name] = true; held[name] = true; }
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
     });
@@ -1014,6 +1046,7 @@
       pen.fillRect(0, 0, size.w, size.h);
       pen.imageSmoothingEnabled = false;
       pen.drawImage(frame, view.x, view.y, view.w, view.h);
+      drawZones();
       cam.x -= sx; cam.y -= sy;
     }
 
@@ -1188,6 +1221,11 @@
         view.scale = Math.max(0.5, Math.min(vw / W, vh / H));
         view.w = Math.round(W * view.scale); view.h = Math.round(H * view.scale);
         view.x = x0 + Math.round((vw - view.w) / 2); view.y = Math.round((vh - view.h) / 2);
+        var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        if (coarse) touchy = true;
+        // below the masthead, which sits over the top of the stage on phones, with the thumbs' room beneath
+        if (!wide && touchy && vh - view.h >= 200) view.y = Math.min(view.y, 72);
+        layoutZones();
       },
       frame: function (time, dt) {
         var t0 = performance.now();
@@ -1199,6 +1237,7 @@
       // With motion paused: the game pauses and the frame is held
       still: function () { if (state === 'run') state = 'paused'; if (SND) SND.stop(); render(); },
       motion: function (on) { if (!on && state === 'run') state = 'paused'; if (!on && SND) SND.stop(); else if (on && SND && SND.isOn() && state !== 'title') SND.music(element.name); },
+      zones: function (force) { if (force) { touchy = true; layoutZones(); } return ZONES.map(function (z) { return { name: z.name, x: z.x, y: z.y, w: z.w, h: z.h }; }); },
       sound: function () { return { on: !!(SND && SND.isOn()), effects: SND ? SND.effects : [] }; },
       state: function () {
         return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
