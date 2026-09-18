@@ -47,3 +47,24 @@ to room 1.
 11. Adversarial pass over all thirty-five: overflow, NaN, contrast, undefined
     classes, paused-motion rendering, fresh-tab console; hall copy, colophon
     (fourth brief, true line count, sources), README, memory notes.
+
+## Status
+
+All eleven tasks are done and committed on `feat/rooms-26-35`, one commit
+each. Where the build departs from the table above:
+
+- *Knotwork* uses sixteen tiles rather than a phase-carrying set: the regions
+  between strands are shaded like a chessboard and the strand on top at each
+  crossing is the one with a shaded region counterclockwise of it, which is
+  exactly the condition for an alternating diagram. The first, directed
+  encoding kept weaving itself into corners it could not unpick.
+- *Tonight* also plays a year every five seconds and has a true-distances
+  toggle; the dial spans three centuries either way.
+- *Selection* has a breed-itself mode (selection for size), a step back and a
+  start again, besides the visitor's choice.
+- *Lightning* raises grounded rods where the visitor taps, up to three.
+- *Docent* reads a generated `js/corpus.js` rather than fetching, so it works
+  from a file:// URL, and can read its label aloud with the Web Speech API.
+- The hall now says thirty-five works and quotes a fourth brief; the line
+  count is 17,264.
+

@@ -21,7 +21,7 @@ Fonts. Offline it falls back to system fonts and still works.
 
 ```
 index.html            the hall: rooms 1 to 5, and the floor plan to the rest
-rooms/*.html          rooms 6 to 25, one work to a page (generated, committed)
+rooms/*.html          rooms 6 to 35, one work to a page (generated, committed)
 css/style.css
 js/core.js            frame loop, visibility, motion switch, GL helpers
 js/plan.js            the floor plan's hairline glyphs
@@ -51,6 +51,17 @@ js/rooms/follower.js      room 22  inverse kinematics and a stepping gait
 js/rooms/choir.js         room 23  formant voice synthesis, Web Audio
 js/rooms/shadow.js        room 24  the six regular 4D solids, generated and projected
 js/rooms/guesses.js       room 25  progressive Monte Carlo path tracer
+js/rooms/six.js           room 26  Reiter's snow-crystal automaton on a hexagonal grid
+js/rooms/chladni.js       room 27  Chladni plate: sand settling on the nodal lines of a sounding plate
+js/rooms/fireflies.js     room 28  three thousand pulse-coupled oscillators falling into step
+js/rooms/weathering.js    room 29  droplet hydraulic erosion of a random range
+js/rooms/soap.js          room 30  thin-film interference on a draining soap film (WebGL 2)
+js/rooms/knotwork.js      room 31  an endless Celtic knot by wave-function collapse
+js/rooms/tonight.js       room 32  the planets tonight, from Standish's mean orbital elements
+js/rooms/selection.js     room 33  Dawkins biomorphs, bred by the visitor
+js/rooms/lightning.js     room 34  dielectric breakdown over a live-relaxed Laplace field
+js/rooms/docent.js        room 35  a Markov chain that writes and typesets a label for a room that does not exist
+js/corpus.js          every wall text, written by make-rooms.js for room 35 to read
 tools/                authoring tools (Node): rooms.js is the copy, make-rooms.js stamps the pages
 docs/                 design and task plans
 ```
@@ -90,6 +101,15 @@ Gallery.inspect('bottom').look()        // rooms/bottom.html: where the dive is,
 Gallery.inspect('slits').plate()        // rooms/slits.html: the far wall's fringe record
 Gallery.inspect('follower').gait()      // rooms/follower.html: feet in the air, leg stretch
 Gallery.inspect('choir').sound()        // rooms/choir.html: level and spectral peaks
+Gallery.inspect('chladni').rest()       // rooms/chladni.html: mean |f| under the grains (small when settled)
+Gallery.inspect('fireflies').sync()     // rooms/fireflies.html: the order parameter, 0 to 1
+Gallery.inspect('weathering').relief()  // rooms/weathering.html: drops, soil moved, lowest and highest
+Gallery.inspect('soap').film()          // rooms/soap.html: mean thickness, age, films so far
+Gallery.inspect('knotwork').weave()     // rooms/knotwork.html: seams and alternation errors (both must be 0), loops, crossings
+Gallery.inspect('tonight').where(ms)    // rooms/tonight.html: heliocentric positions and elongations for a Date.now() value
+Gallery.inspect('selection').litter()   // rooms/selection.html: generation, the parent's genes, the children's
+Gallery.inspect('lightning').bolt()     // rooms/lightning.html: steps, branches, strikes, the field's Laplace residual
+Gallery.inspect('docent').label()       // rooms/docent.html: the label being written and its longest copied run
 ```
 
 ## Notes
@@ -98,8 +118,14 @@ Gallery.inspect('choir').sound()        // rooms/choir.html: level and spectral 
   control) and shows each work's resting state.
 - Works that need WebGL, WebGL 2 float targets or Web Audio say so plainly in
   place of the work if the browser lacks them; the rest of the page carries on.
-- Rooms 5, 14 and 23 make sound only after the visitor asks for it, and pausing
-  motion silences them (room 23 also hushes when the tab is hidden).
+- Rooms 5, 14, 23 and 27 make sound only after the visitor asks for it, and
+  pausing motion silences them (rooms 23 and 27 also hush when the tab is
+  hidden). Room 35 speaks, with the Web Speech API, only when asked.
+- Room 31's weave is checked every seam and every strand between crossings
+  (no mismatches, no alternation errors over thousands of frames); room 32 was
+  checked against the 2012 Venus transit, the 2020 Mars opposition, the 2003
+  Mars closest approach and the 2020 great conjunction; room 34 reports the
+  mean Laplace residual of its field.
 - Room 16 was checked against a double-precision CPU render at 2.8 trillion
   times magnification (99.5% agreement on inside/outside); room 18's fringe
   spacing matches Young's formula within 3%; room 24's solids are checked by
