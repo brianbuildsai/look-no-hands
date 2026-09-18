@@ -4,8 +4,8 @@
    file writes itself into, the rig that builds its frames from parts, the
    clock of an attack (a wind-up that tells, the live steps, a recovery),
    the marks on its bar where it changes, and the boxes it is struck in.
-   The Kiln Golem and the Rime Wyrm have their own files. Until theirs are
-   written, the herald and the mirror below are the older, simpler kind. */
+   The Kiln Golem, the Rime Wyrm and the Storm Herald have their own files.
+   Until its own is written, the mirror below is the older, simpler kind. */
 (function () {
   'use strict';
 
@@ -20,20 +20,6 @@
   };
 
   var ART = {
-    herald: {
-      idle: [
-        ['.......kkkkkk.......', '.....kkppppppkk.....', '....kppppppppppk....', '....kpppkkkkpppk....', '....kppkeekkeekppk..', '.....kkpppppppkk....', '......kppppppk......', '.....kppplllppk.....', '....kppplllllppk....', '...kppplllwlllppk...', '...kpppllwwwllppk...', '..kppppllwwwllpppk..', '..kpppplllwlllpppk..', '..kkkppplllllpppkkk.', '....kpppppppppppk...', '....kppppppppppk....', '.....kppppppppk.....', '......kpppppk.......', '.......kpppk........', '........kkk.........'],
-        ['.......kkkkkk.......', '.....kkppppppkk.....', '....kppppppppppk....', '....kpppkkkkpppk....', '....kppkeekkeekppk..', '.....kkpppppppkk....', '......kppppppk......', '.....kppplllppk.....', '....kppplllllppk....', '...kppplllwlllppk...', '...kpppllwwwllppk...', '..kppppllwwwllpppk..', '..kpppplllwlllpppk..', '..kkkppplllllpppkkk.', '....kpppppppppppk...', '....kppppppppppk....', '.....kppppppppk.....', '......kpppppk.......', '......kppppk........', '.......kkkk.........']
-      ],
-      attack: [['.......kkkkkk.......', '.....kkppppppkk.....', '....kppppppppppk....', '....kpppkkkkpppk....', '....kppkwwkkwwkppk..', '.....kkpppppppkk....', 'kkk...kppppppk...kkk', 'kwwkkkppplllppkkkwwk', 'kwwwwwpplllllppwwwwk', 'kkkkkppplllwlllppkkk', '...kpppllwwwllppk...', '..kppppllwwwllpppk..', '..kpppplllwlllpppk..', '..kkkppplllllpppkkk.', '....kpppppppppppk...', '....kppppppppppk....', '.....kppppppppk.....', '......kpppppk.......', '.......kpppk........', '........kkk.........']]
-    },
-    heart: {
-      idle: [
-        ['....kk....kk....kk....kk....', '...kmmk..kmmk..kmmk..kmmk...', '..kmmmmkkmmmmkkmmmmkkmmmmk..', '.kmmmmmmmmmmmmmmmmmmmmmmmmk.', '.kmmppppmmmmmmmmmmmmppppmmk.', 'kmmppppppmmmmmmmmmmppppppmmk', 'kmpppeepppmmmmmmmmpppeepppmk', 'kmppeeeeppmmmmmmmmppeeeeppmk', 'kmpppeepppppmmmmpppppeepppmk', '.kmpppppppppppppppppppppmk..', '..kmmppppppppppppppppppmk...', '...kmmmpppppppppppppppmk....', '....kmmmmpppppppppppmk......', '.....kmmmmmpppppppmmk.......', '......kmmmmmmpppmmmk........', '.......kkmmmmmmmmkk.........', '.........kkmmmmkk...........', '...........kkkk.............'],
-        ['....kk....kk....kk....kk....', '...kmmk..kmmk..kmmk..kmmk...', '..kmmmmkkmmmmkkmmmmkkmmmmk..', '.kmmmmmmmmmmmmmmmmmmmmmmmmk.', '.kmmpppppmmmmmmmmmmmpppppmk.', 'kmmpppppppmmmmmmmmmpppppppmk', 'kmppppeeppppmmmmmmppppeeppmk', 'kmpppeeeepppmmmmmmpppeeeepmk', 'kmppppeeppppppmmppppppeeppmk', '.kmppppppppppppppppppppppmk.', '..kmmppppppppppppppppppmk...', '...kmmmpppppppppppppppmk....', '....kmmmmpppppppppppmk......', '.....kmmmmmpppppppmmk.......', '......kmmmmmmpppmmmk........', '.......kkmmmmmmmmkk.........', '.........kkmmmmkk...........', '...........kkkk.............']
-      ],
-      attack: [['....kk....kk....kk....kk....', '...kllk..kllk..kllk..kllk...', '..kllllkkllllkkllllkkllllk..', '.kmmmmmmmmmmmmmmmmmmmmmmmmk.', '.kmmppppmmmmmmmmmmmmppppmmk.', 'kmmppppppmmmmmmmmmmppppppmmk', 'kmpppwwpppmmmmmmmmpppwwpppmk', 'kmppwwwwppmmmmmmmmppwwwwppmk', 'kmpppwwpppppmmmmpppppwwpppmk', '.kmpppppppppppppppppppppmk..', '..kmmppppppppppppppppppmk...', '...kmmmpppppppppppppppmk....', '....kmmmmpppppppppppmk......', '.....kmmmmmpppppppmmk.......', '......kmmmmmmpppmmmk........', '.......kkmmmmmmmmkk.........', '.........kkmmmmkk...........', '...........kkkk.............']]
-    }
   };
 
   var SPRITES = null;
@@ -65,8 +51,6 @@
   /* ---- the kinds and their patterns ---- */
 
   var KINDS = {
-    herald: { element: 'storm', name: 'The Storm Herald', w: 14, h: 26, hp: 45, flying: true,  damage: 1 },
-    heart:  { element: 'bloom', name: 'The Bramble Heart', w: 26, h: 18, hp: 70, flying: false, damage: 1 },
     mirror: { element: 'void',  name: 'The Void Mirror',  w: 10, h: 22, hp: 55, flying: false, damage: 2 }
   };
   var BY_FLOOR = ['golem', 'wyrm', 'herald', 'mirror'];
@@ -111,52 +95,6 @@
   }
 
   var PATTERNS = {
-    herald: function (e, ctx, quick) {
-      var hero = ctx.hero, A = e.arena;
-      if (e.state === 'idle') {
-        e.anim = 'idle';
-        var ty = A.groundY - 34 + Math.sin(e.clock * 0.05) * 6;
-        e.vy += (ty - e.y) * 0.01; e.vy *= 0.9; e.vx *= 0.9; e.dir = towards(e, hero);
-        if (e.cooldown <= 0) { var r = ctx.random(); e.state = r < 0.45 ? 'bolts' : r < 0.8 ? 'blink' : 'summon'; e.wait = 40; }
-      } else if (e.state === 'blink') {
-        e.anim = 'attack';
-        if (--e.wait === 20) { ctx.spark(e.x, e.y - 12, '#a48cff', 20, 2, 24, 0); e.x = A.left + 30 + ctx.random() * (A.right - A.left - 60); ctx.spark(e.x, e.y - 12, '#ffffff', 20, 2, 24, 0); }
-        if (e.wait <= 0) { e.state = 'idle'; e.cooldown = Math.round(70 * quick); }
-      } else if (e.state === 'bolts') {
-        e.anim = 'attack'; e.vx *= 0.9; e.vy *= 0.9;
-        if (e.wait === 40) { e.spots = [hero.x, hero.x - 44, hero.x + 44]; if (e.phase) e.spots.push(hero.x - 88, hero.x + 88); e.spots.forEach(function (sx) { ctx.telegraph(sx - 5, 16, 10, A.groundY - 16, 40, '#8fa3ff'); }); }
-        if (--e.wait === 0) e.spots.forEach(function (sx) { ctx.zap(sx, 16, sx, A.groundY, '#ffffff'); ctx.hazard({ x0: sx - 5, x1: sx + 5, y0: 16, y1: A.groundY, life: 10, damage: 1, element: 'storm', colour: '#8fa3ff' }); ctx.spark(sx, A.groundY, '#8fa3ff', 10, 1.6, 20, 0.04); });
-        if (e.wait <= -30) { e.state = 'idle'; e.cooldown = Math.round(120 * quick); }
-      } else if (e.state === 'summon') {
-        e.anim = 'attack';
-        if (--e.wait === 0) { if (ctx.count() < 5) { ctx.summon('jelly', e.x - 30, e.y - 20); ctx.summon('jelly', e.x + 30, e.y - 20); } }
-        if (e.wait <= -20) { e.state = 'idle'; e.cooldown = Math.round(200 * quick); }
-      }
-      e.x += e.vx; e.y += e.vy;
-      if (e.x < A.left + 16) e.x = A.left + 16; if (e.x > A.right - 16) e.x = A.right - 16;
-    },
-    heart: function (e, ctx, quick) {
-      var hero = ctx.hero, A = e.arena;
-      e.dir = towards(e, hero);
-      if (e.state === 'idle') {
-        e.anim = 'idle';
-        if (e.cooldown <= 0) { var r = ctx.random(); e.state = r < 0.45 ? 'thorns' : r < 0.75 ? 'lash' : 'spores'; e.wait = 40; }
-      } else if (e.state === 'thorns') {
-        e.anim = 'attack';
-        if (e.wait === 40) { e.spots = [hero.x, hero.x - 28, hero.x + 28]; if (e.phase) e.spots.push(hero.x - 56, hero.x + 56); e.spots.forEach(function (sx) { ctx.telegraph(sx - 8, A.groundY - 30, 16, 30, 40, '#9ae66e'); }); }
-        if (--e.wait === 0) e.spots.forEach(function (sx) { ctx.hazard({ x0: sx - 8, x1: sx + 8, y0: A.groundY - 30, y1: A.groundY, life: 30, damage: 1, element: 'bloom', colour: '#9ae66e' }); ctx.spark(sx, A.groundY - 10, '#c5ff9a', 12, 1.8, 24, 0.03); });
-        if (e.wait <= -30) { e.state = 'idle'; e.cooldown = Math.round(120 * quick); }
-      } else if (e.state === 'lash') {
-        e.anim = 'attack';
-        if (e.wait === 40) ctx.telegraph(A.left, A.groundY - 12, A.right - A.left, 12, 40, '#9ae66e');
-        if (--e.wait === 0) { ctx.hazard({ x0: A.left, x1: A.right, y0: A.groundY - 12, y1: A.groundY, life: 12, damage: 1, element: 'bloom', colour: '#9ae66e' }); ctx.shake(3); }
-        if (e.wait <= -30) { e.state = 'idle'; e.cooldown = Math.round(130 * quick); }
-      } else if (e.state === 'spores') {
-        e.anim = 'attack';
-        if (--e.wait === 0) for (var k = 0; k < 5; k++) ctx.projectile({ x: hero.x + (ctx.random() - 0.5) * 120, y: 20 + k * 6, vx: (ctx.random() - 0.5) * 0.4, vy: 0.4, life: 200, colour: '#9ae66e', size: 3, damage: 1, element: 'bloom', gravity: 0.008, cloud: true });
-        if (e.wait <= -30) { e.state = 'idle'; e.cooldown = Math.round(160 * quick); }
-      }
-    },
     mirror: function (e, ctx, quick) {
       var hero = ctx.hero, A = e.arena, d = Math.abs(hero.x - e.x);
       e.vy = Math.min(5, e.vy + 0.32);

@@ -300,10 +300,26 @@
     L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 4 * TILE, bossX: 22 * TILE, row: g };
     return L;
   }
+  // The Gallery of Rails: a roofed hall, two rails along its floor, a pylon in each corner, three ledges
+  function galleryOfRails(element, floor) {
+    var L = new Level(32, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 32; x++) { L.column(x, g); for (k = 0; k < 3; k++) L.set(x, k, STONE); }
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(30, k, STONE); L.set(31, k, STONE); }
+    for (x = 5; x < 8; x++) L.set(x, g - 2, LEDGE);
+    for (x = 14; x < 18; x++) L.set(x, g - 2, LEDGE);
+    for (x = 24; x < 27; x++) L.set(x, g - 2, LEDGE);
+    L.spawn = { x: 4 * TILE + 8, y: g * TILE };
+    L.door = { x: 28 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 9, y: g - 5 }, { x: 16, y: g - 6 }, { x: 22, y: g - 5 });
+    L.boss = true; L.locked = true; L.title = 'The Gallery of Rails';
+    L.arena = { left: 2 * TILE, right: 30 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 21 * TILE, row: g };
+    return L;
+  }
   function arena(seed, floor) {
     var element = byName(ARENA_ELEMENT[Math.max(0, Math.min(3, floor - 1))]);
     if (floor === 1) return greatKiln(element, floor);
     if (floor === 2) return frozenCistern(element, floor);
+    if (floor === 3) return galleryOfRails(element, floor);
     var L = new Level(46, element, floor, 3), g = 11, x, k;
     for (x = 0; x < 46; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }

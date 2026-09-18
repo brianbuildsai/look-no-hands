@@ -660,7 +660,7 @@
             var c = creatures[j];
             if (c.dying || (p.struck && p.struck.indexOf(c) >= 0)) continue;
             var cb = boxesOf(c), touched = false;
-            for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { if (c.boss && cb.length > 1) c.struckAt = { x: (cb[q].x0 + cb[q].x1) / 2, y: (cb[q].y0 + cb[q].y1) / 2 }; wound(c, Math.max(1, Math.round(p.damage * (cb[q].mult || 1))), p.x, p.element); touched = true; break; }
+            for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { if (cb[q].onHit) { touched = cb[q].onHit(c, ctx, p.damage, p.x - p.vx * 4); break; } if (c.boss && cb.length > 1) c.struckAt = { x: (cb[q].x0 + cb[q].x1) / 2, y: (cb[q].y0 + cb[q].y1) / 2 }; wound(c, Math.max(1, Math.round(p.damage * (cb[q].mult || 1))), p.x, p.element); touched = true; break; }
             if (touched) { (p.struck || (p.struck = [])).push(c); if (!p.pierce) { gone = true; break; } }
           }
         }
@@ -722,6 +722,7 @@
         if (!boxes.length && e.vars && e.vars.shelled && overlaps(box, { x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y })) { spark(e.x, e.y - e.h, '#ffffff', 5, 1.6, 10, 0.04); sfx('select'); }
         for (var j = 0; j < boxes.length; j++) {
           if (!overlaps(box, boxes[j])) continue;
+          if (boxes[j].onHit) { if (boxes[j].onHit(e, ctx, damage, hero.x)) any = true; break; }
           if (e.boss && boxes.length > 1) e.struckAt = { x: (boxes[j].x0 + boxes[j].x1) / 2, y: (boxes[j].y0 + boxes[j].y1) / 2 };
           if (wound(e, Math.max(1, Math.round(damage * (boxes[j].mult || 1))), hero.x, elementName)) { any = true; if (boxes[j].mult > 1) { spark((boxes[j].x0 + boxes[j].x1) / 2, (boxes[j].y0 + boxes[j].y1) / 2, '#ffdc9a', 10, 2.2, 18, 0.02); number(e.x, e.y - e.h - 16, 'SOFT', '#ffdc9a'); } }
           break;
@@ -751,6 +752,7 @@
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, e;
       for (k = 0; k < creatures.length; k++) {
         e = creatures[k];
+        if (e.boss && e.spec.scenery) e.spec.scenery(e, { pen: fpen, cx: cx, cy: cy, tick: tick });
         if ((e.x < cam.x - 40 || e.x > cam.x + W + 40) && !(e.boss && e.spec.draw)) continue;
         var set, frames, img, scale, w, h, x, y;
         if (e.boss && e.spec.draw) {
@@ -1790,7 +1792,7 @@
       summary: function () { return summary; },
       kept: function (reset) { if (reset) { kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false }; save(); } return kept; },
       lastHurtBy: function () { return lastHurtBy; },
-      guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length } : null; },
+      guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length, balls: boss.vars && boss.vars.balls ? boss.vars.balls.map(function (b) { return { x: Math.round(b.x), y: Math.round(b.y), struck: b.struck }; }) : undefined } : null; },
       stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
       arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
