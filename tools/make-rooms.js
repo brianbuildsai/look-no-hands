@@ -21,7 +21,9 @@ var data = require('./rooms.js');
 
 var TOTAL = data.hall.length + data.rooms.length;
 var WORDS = [null, 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
-  'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+  'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty', 'twenty-one', 'twenty-two', 'twenty-three',
+  'twenty-four', 'twenty-five', 'twenty-six', 'twenty-seven', 'twenty-eight', 'twenty-nine', 'thirty', 'thirty-one', 'thirty-two',
+  'thirty-three', 'thirty-four', 'thirty-five', 'thirty-six', 'thirty-seven', 'thirty-eight', 'thirty-nine', 'forty'];
 var ready = data.rooms.filter(function (room) { return room.ready; });
 
 function escapeHtml(text) {
@@ -164,4 +166,36 @@ var block = plan();
 html = html.slice(0, from + START.length) + '\n' + (block ? block + '\n' : '') + '    ' + html.slice(to);
 fs.writeFileSync(indexPath, html);
 
-console.log('rooms written: ' + (ready.map(function (room) { return room.number + ' ' + room.slug; }).join(', ') || 'none') + '; floor plan ' + (block ? 'updated' : 'empty'));
+/* ---- the corpus: every wall text in the building, for the docent to learn from ----
+
+   Written to js/corpus.js so that room 35 can read the whole exhibition
+   without fetching anything, which keeps it working from a file:// URL. */
+
+function plain(html) {
+  return String(html || '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&rarr;|&amp;|&nbsp;/g, function (m) { return m === '&amp;' ? '&' : m === '&nbsp;' ? ' ' : '→'; })
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+var corpus = { titles: [], labels: [] };
+// the hall's five labels live in index.html
+var hallLabels = html.split('<div class="label').slice(1);
+hallLabels.forEach(function (chunk) {
+  var title = (chunk.match(/label__title">([\s\S]*?)<\/h2>/) || [])[1];
+  var medium = (chunk.match(/label__medium">([\s\S]*?)<\/p>/) || [])[1];
+  var texts = [];
+  chunk.replace(/label__text(?:[^"]*)">([\s\S]*?)<\/p>/g, function (m, t) { texts.push(plain(t)); return m; });
+  if (!title) return;
+  corpus.titles.push(plain(title));
+  corpus.labels.push({ title: plain(title), line: '', description: '', medium: plain(medium), text: texts.join(' '), wall: '' });
+});
+ready.forEach(function (room) {
+  corpus.titles.push(room.title);
+  corpus.labels.push({ title: room.title, line: plain(room.line), description: plain(room.description), medium: plain(room.medium), text: plain(room.text), wall: plain(room.wall) });
+});
+fs.writeFileSync(path.join(root, 'js', 'corpus.js'),
+  '/* corpus.js: every wall text in the building, written by tools/make-rooms.js. Do not edit by hand. */\n' +
+  'window.CORPUS = ' + JSON.stringify(corpus, null, 1).replace(/\n\s*/g, ' ') + ';\n');
+
+console.log('rooms written: ' + (ready.map(function (room) { return room.number + ' ' + room.slug; }).join(', ') || 'none') + '; floor plan ' + (block ? 'updated' : 'empty') + '; corpus of ' + corpus.labels.length + ' labels');

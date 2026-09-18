@@ -785,6 +785,30 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Niemeyer, Pietronero and Wiesmann published the dielectric breakdown model in 1984, after photographing discharges spreading across glass plates. Their single parameter, the power the field is raised to, sets the shape of the whole: at one, the discharge fills space like frost; at four or five, it is a single stroke. Real lightning, measured from photographs, behaves as though the power were about three. The field solver here is Gauss–Seidel relaxation, sped up a little by over-correcting, the method David Young worked out in 1950.'
+    },
+    {
+      number: 35,
+      slug: 'docent',
+      ready: true,
+      scripts: ['corpus.js'],
+      title: 'Docent',
+      line: 'The building reads every label in it, then writes one for a room that does not exist.',
+      description: 'A Markov chain trained in the page on every wall text in the exhibition writes and typesets a new label, with an invented title and glyph, for a room that does not exist. It confesses how much it copied.',
+      canvasLabel: 'A wall label being typed out, letter by letter, in the exhibition’s own style: a small invented glyph, a room number, an invented title in italic serif, a grey medium line, a paragraph of plausible nonsense and an italic note beneath. An amber caret marks the pen.',
+      medium: '2026. A chain of <span class="live" data-live="docent.words">6,000</span> words, learned when this page opened from the thirty-five labels in this building, writing its <span class="live" data-live="docent.written">1</span>st label. The longest run in it copied from any real label is <span class="live" data-live="docent.copied">fewer than four</span> words.',
+      text: 'Every other room in this building has a label that someone wrote. This one writes its own. When the page opens it reads the other thirty-four, the hall’s and the rooms’, and learns the oldest kind of language model there is: a chain that knows, for every pair of words, which word has followed them. That is all it knows. Then it writes a label for a room that is not here, invents a title by the same trick applied to letters, and a glyph, and sets the lot in the house style as it goes. It is a fair imitation of a docent and no imitation of a mind, and it says on the label how much it has copied. Turn the dial and it strays further from what it read.',
+      controls: `
+<div class="controls" role="group" aria-label="Docent controls">
+  <label class="dial">
+    <span class="dial__label"><span>How far it strays from what it read</span><span data-docent-stray-value></span></span>
+    <input class="dial__input" type="range" min="0" max="60" step="1" value="20" data-docent-stray>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-docent-another>Another room</button>
+    <button class="btn" type="button" data-docent-speak aria-pressed="false">Let it speak</button>
+  </div>
+</div>`,
+      wall: 'Andrei Markov introduced his chains in 1913 by counting the vowels and consonants in the first twenty thousand letters of Pushkin’s Eugene Onegin, and Claude Shannon in 1948 used the same idea to generate English-shaped nonsense from letter and word frequencies, one order at a time. The chain here is of the second order, over words. Everything it says it has heard in this building, which is the confession of every docent.'
     }
   ]
 };

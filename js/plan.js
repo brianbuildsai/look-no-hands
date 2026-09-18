@@ -413,6 +413,18 @@
     pen.beginPath(); pen.moveTo(-s * 0.42, s * 0.44); pen.lineTo(s * 0.42, s * 0.44); pen.stroke();
   };
 
+  glyphs.docent = function (pen, s) {
+    // a pair of quotation marks over a line of writing
+    pen.lineWidth = 1.6;
+    for (var k = -1; k <= 1; k += 2) {
+      pen.beginPath(); pen.arc(k * s * 0.14, -s * 0.2, s * 0.07, Math.PI * 0.5, Math.PI * 1.5); pen.stroke();
+      pen.beginPath(); pen.moveTo(k * s * 0.14, -s * 0.13); pen.quadraticCurveTo(k * s * 0.14 + s * 0.07, -s * 0.02, k * s * 0.14 - s * 0.02, s * 0.06); pen.stroke();
+    }
+    pen.lineWidth = 1.2;
+    pen.beginPath(); pen.moveTo(-s * 0.36, s * 0.26); pen.lineTo(s * 0.36, s * 0.26); pen.stroke();
+    pen.beginPath(); pen.moveTo(-s * 0.36, s * 0.4); pen.lineTo(s * 0.12, s * 0.4); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
