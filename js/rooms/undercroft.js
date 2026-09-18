@@ -64,7 +64,7 @@
 
     var KEYS = {
       ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right',
-      ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down',
+      ArrowUp: 'up', w: 'up', W: 'up', e: 'up', E: 'up', ArrowDown: 'down', s: 'down', S: 'down',
       x: 'jump', X: 'jump', k: 'jump', K: 'jump', ' ': 'jump',
       z: 'attack', Z: 'attack', j: 'attack', J: 'attack',
       c: 'dash', C: 'dash', l: 'dash', L: 'dash', Shift: 'dash',
@@ -1224,7 +1224,7 @@
         drawLootIcon(p, px, py, 1);
       }
       for (k = 0; k < flakes.length; k++) drawFlake(flakes[k], cx, cy);
-      if (prompt) { var pr = rarity(prompt.rarity); text('UP: ' + lootName(prompt), Math.round(prompt.x) - cx, Math.round(prompt.y) - cy - 34, pr.colour, 1, 'center'); text(pr.name, Math.round(prompt.x) - cx, Math.round(prompt.y) - cy - 27, '#8f8d88', 1, 'center'); }
+      if (prompt) { var pr = rarity(prompt.rarity); text('E: ' + lootName(prompt), Math.round(prompt.x) - cx, Math.round(prompt.y) - cy - 34, pr.colour, 1, 'center'); text(pr.name, Math.round(prompt.x) - cx, Math.round(prompt.y) - cy - 27, '#8f8d88', 1, 'center'); }
     }
     function drawLootIcon(loot, px, py, scale) {
       if (loot.kind === 'weapon') { var v = WP.views(loot.id).up.img; fpen.drawImage(v, px - Math.round(v.width * scale / 2), py - Math.round(v.height * scale / 2), v.width * scale, v.height * scale); }
@@ -1412,7 +1412,7 @@
         text(n.relic.name.toUpperCase(), tx, ty, nr.colour, 2, 'center');
         text(nr.name, tx, ty + 14, nr.colour, 1, 'center');
         wrapText(n.relic.line.toUpperCase(), tx, ty + 23, 44);
-        text('UP: TAKE IT', tx, ty + 23 + 16, '#ffffff', 1, 'center');
+        text('E: TAKE IT', tx, ty + 23 + 16, '#ffffff', 1, 'center');
       } else if (level.sanctuary && !level.taken && perks.length) text('THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
     }
     // a line of the small type broken at spaces, two lines at most
@@ -1745,7 +1745,7 @@
       drawTransition();
       drawHud();
       drawMap(); drawChambers(); drawPortalHint(); drawPerkLabel();
-      if (nearPortal && !prompt && state === 'run') text('UP: STEP THROUGH', Math.round(level.door.x - cam.x), Math.round(level.door.y - cam.y) - 46, '#ffffff', 1, 'center');
+      if (nearPortal && !prompt && state === 'run') text('E: STEP THROUGH', Math.round(level.door.x - cam.x), Math.round(level.door.y - cam.y) - 46, '#ffffff', 1, 'center');
       drawBossBar();
       drawBanner();
       drawChoice();
@@ -1918,7 +1918,7 @@
       if (n > 1) text('LEFT AND RIGHT TO CHOOSE A POWER', W / 2, 134, '#8f8d88', 1, 'center');
       else text('MORE POWERS UNLOCK AS YOU GO DEEPER', W / 2, 134, '#8f8d88', 1, 'center');
       text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
-      text('C OR L DASH   V OR I CAST   UP TAKES   ENTER TO CHOOSE WHO GOES', W / 2, 170, '#8f8d88', 1, 'center');
+      text('C OR L DASH   V OR I CAST   E OR UP TAKES   ENTER TO CHOOSE WHO GOES', W / 2, 170, '#8f8d88', 1, 'center');
     }
 
     /* ---- the loop and the room's wiring ---- */
