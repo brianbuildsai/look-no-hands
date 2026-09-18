@@ -485,7 +485,7 @@
       telegraph: function (x, y, w, h, life, colour) { telegraphs.push({ x: x, y: y, w: w, h: h, life: life, max: life, colour: colour }); },
       shake: shake,
       count: function () { return creatures.length; },
-      summon: function (kind, x, y) { var e = AC.spawn({ x: Math.floor(x / TILE), y: Math.floor(y / TILE), kind: 'flyer' }, AC.KINDS[kind].element, run.floor, random); e.kind = kind; e.spec = AC.KINDS[kind]; e.element = AC.KINDS[kind].element; e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
+      summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
       afterimage: function (e) { var set = guardianSprites.mirror, frames = (e.dir >= 0 ? set : set.flipped).dash; afterimages.push({ img: P.silhouette(frames[0], '#5b3fa0'), x: e.x, y: e.y, dir: 1, life: 12 }); },
       mirrorCast: function (e) { mirrorCast(e); }
     };
@@ -509,7 +509,7 @@
       var k, h;
       for (k = hazards.length - 1; k >= 0; k--) {
         h = hazards[k];
-        if (hero.alive && hero.x + hero.w / 2 > h.x0 && hero.x - hero.w / 2 < h.x1 && hero.y > h.y0 && hero.y - hero.h < h.y1) { if (hurtHero((h.x0 + h.x1) / 2, h.damage, boss ? boss.kind : h.element)) afflict(h.element); }
+        if (hero.alive && overlaps(heroHurtBox(), h)) { if (hurtHero((h.x0 + h.x1) / 2, h.damage, boss ? boss.kind : h.element)) afflict(h.element); }
         if (h.life % 3 === 0) particles.push({ x: h.x0 + random() * (h.x1 - h.x0), y: h.y0 + random() * (h.y1 - h.y0), vx: 0, vy: -0.4 - random() * 0.6, life: 14, max: 14, colour: h.colour, size: random() < 0.4 ? 2 : 1, gravity: 0 });
         if (--h.life <= 0) hazards.splice(k, 1);
       }
@@ -543,6 +543,14 @@
         e = creatures[k];
         if (Math.abs(e.x - hero.x) > W * 1.2 && !e.seen) continue;   // asleep until the Warden is near
         if (e.boss) GD.step(e, ctx); else AC.step(e, ctx);
+        if (e.boxes && e.boxes.length && hero.alive && !e.hitHero) {
+          var hb = heroHurtBox();
+          for (var bi = 0; bi < e.boxes.length; bi++) {
+            if (!overlaps(hb, e.boxes[bi])) continue;
+            if (hurtHero(e.x, e.boxes[bi].damage || 1, e.kind)) { e.hitHero = true; afflict(e.boxes[bi].element || e.element); if (mods.thorns) wound(e, mods.thorns, hero.x, null); }
+            break;
+          }
+        }
         if (e.dying === 2 && !e.boss) { kills++; spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
         if (e.dying > (e.boss ? 90 : 22)) creatures.splice(k, 1);
         if (e.y > level.rows * TILE + 40) creatures.splice(k, 1);
@@ -553,11 +561,20 @@
         p.x += p.vx; p.y += p.vy; p.vy += p.gravity || 0;
         if (tick % 2 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 8, max: 8, colour: p.colour, size: 1, gravity: 0 });
         var gone = --p.life <= 0 || (!p.wave && tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1) || (p.wave && tileAt(Math.floor((p.x + p.vx * 3) / TILE), Math.floor(p.y / TILE)) === 1);
-        if (p.from === 'enemy' && hero.alive && Math.abs(p.x - hero.x) < hero.w / 2 + p.size && p.y > hero.y - hero.h - p.size && p.y < hero.y + p.size) {
+        var pbox = { x0: p.x - p.size / 2, x1: p.x + p.size / 2, y0: p.y - p.size / 2, y1: p.y + p.size / 2 };
+        if (p.from === 'enemy' && hero.alive && overlaps(heroHurtBox(), pbox)) {
           if (hurtHero(p.x, p.damage, p.wave ? 'wave' : p.seek ? 'beam' : p.cloud ? 'spore' : 'shard')) afflict(p.element);
           gone = true;
         }
-        if (p.from === 'hero') { for (var j = 0; j < creatures.length; j++) { var c = creatures[j]; if (!c.dying && Math.abs(p.x - c.x) < c.w / 2 + p.size && p.y > c.y - c.h - p.size && p.y < c.y + p.size) { wound(c, p.damage, p.x, p.element); if (!p.pierce) gone = true; break; } } }
+        if (p.from === 'hero') {
+          for (var j = 0; j < creatures.length; j++) {
+            var c = creatures[j];
+            if (c.dying || (p.struck && p.struck.indexOf(c) >= 0)) continue;
+            var cb = boxesOf(c), touched = false;
+            for (var q = 0; q < cb.length; q++) if (overlaps(pbox, cb[q])) { wound(c, Math.max(1, Math.round(p.damage * (cb[q].mult || 1))), p.x, p.element); touched = true; break; }
+            if (touched) { (p.struck || (p.struck = [])).push(c); if (!p.pierce) { gone = true; break; } }
+          }
+        }
         if (gone) { spark(p.x, p.y, p.colour, 5, 1, 12, 0); projectiles.splice(k, 1); }
       }
       for (k = zaps.length - 1; k >= 0; k--) if (--zaps[k].life <= 0) zaps.splice(k, 1);
@@ -580,25 +597,64 @@
       return true;
     }
     // a box strikes whatever stands in it; returns whether anything was hit
+    function overlaps(a, b) { return a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0; }
+    // where the Warden can be struck: a little inside her body, to be fair to her
+    function heroHurtBox() { return { x0: hero.x - 4, x1: hero.x + 4, y0: hero.y - 20, y1: hero.y - 1 }; }
+    function boxesOf(e) {
+      if (!e.boss) return AC.hurtBoxes(e);
+      if (GD.hurtBoxes) return GD.hurtBoxes(e);
+      return [{ x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y, mult: 1 }];
+    }
+    var lastStrike = null, debugBoxes = false;
+    // a box strikes whatever can be struck inside it; returns whether anything was hit
     function strike(box, damage, kind, elementName) {
       var any = false;
+      lastStrike = { box: box, life: 8 };
       for (var k = 0; k < creatures.length; k++) {
         var e = creatures[k];
         if (e.dying) continue;
-        if (e.x + e.w / 2 < box.x0 || e.x - e.w / 2 > box.x1 || e.y < box.y0 || e.y - e.h > box.y1) continue;
-        if (wound(e, damage, hero.x, elementName)) any = true;
+        var boxes = boxesOf(e);
+        for (var j = 0; j < boxes.length; j++) {
+          if (!overlaps(box, boxes[j])) continue;
+          if (wound(e, Math.max(1, Math.round(damage * (boxes[j].mult || 1))), hero.x, elementName)) any = true;
+          break;
+        }
       }
       if (any) { hitstop(Math.round((kind === 2 ? 5 : 3) * mods.hitstop)); shake(kind === 2 ? 3 : 1.5); }
       return any;
+    }
+    // every box, drawn over the game, for tuning them against the art
+    function drawBoxes() {
+      if (!debugBoxes) return;
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, j;
+      function rect(b, colour, fill) { fpen.strokeStyle = colour; fpen.lineWidth = 1; fpen.strokeRect(Math.round(b.x0) - cx + 0.5, Math.round(b.y0) - cy + 0.5, Math.round(b.x1 - b.x0) - 1, Math.round(b.y1 - b.y0) - 1); if (fill) { fpen.globalAlpha = 0.25; fpen.fillStyle = colour; fpen.fillRect(Math.round(b.x0) - cx, Math.round(b.y0) - cy, Math.round(b.x1 - b.x0), Math.round(b.y1 - b.y0)); fpen.globalAlpha = 1; } }
+      rect(heroHurtBox(), '#5dff8a');
+      if (lastStrike) { rect(lastStrike.box, '#ffe14d', true); if (--lastStrike.life <= 0) lastStrike = null; }
+      for (k = 0; k < creatures.length; k++) {
+        var e = creatures[k];
+        if (e.dying) continue;
+        var hb = boxesOf(e);
+        for (j = 0; j < hb.length; j++) rect(hb[j], hb[j].mult > 1 ? '#ff9df0' : '#4dd2ff');
+        if (e.boxes) for (j = 0; j < e.boxes.length; j++) rect(e.boxes[j], '#ff4040', true);
+      }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; rect({ x0: p.x - p.size / 2, x1: p.x + p.size / 2, y0: p.y - p.size / 2, y1: p.y + p.size / 2 }, p.from === 'hero' ? '#ffe14d' : '#ff9040'); }
+      for (k = 0; k < hazards.length; k++) rect({ x0: hazards[k].x0, x1: hazards[k].x1, y0: hazards[k].y0, y1: hazards[k].y1 }, '#ff4040');
     }
     function drawCreatures() {
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, e;
       for (k = 0; k < creatures.length; k++) {
         e = creatures[k];
         if (e.x < cam.x - 40 || e.x > cam.x + W + 40) continue;
-        var set = e.boss ? guardianSprites[e.kind] : actorSprites[e.kind], frames = (e.dir >= 0 ? set : set.flipped)[e.anim] || set.idle, img = frames[Math.min(e.frame, frames.length - 1)];
-        var scale = e.boss ? 1 : e.elder ? 1.5 : 1, w = img.width * scale, h = img.height * scale;
-        var x = Math.round(e.x) - w / 2 - cx, y = Math.round(e.y) - h - cy + (e.spec.flying ? h / 2 : 0);
+        var set, frames, img, scale, w, h, x, y;
+        if (e.boss) {
+          set = guardianSprites[e.kind]; frames = (e.dir >= 0 ? set : set.flipped)[e.anim] || set.idle; img = frames[Math.min(e.frame, frames.length - 1)];
+          scale = 1; w = img.width; h = img.height;
+          x = Math.round(e.x) - w / 2 - cx; y = Math.round(e.y) - h - cy + (e.spec.flying ? h / 2 : 0);
+        } else {
+          set = actorSprites[e.kind]; frames = (e.dir >= 0 ? set.frames : set.flipped)[e.anim] || set.frames.walk; img = frames[Math.min(e.frame, frames.length - 1)];
+          scale = e.size; w = img.width * scale; h = img.height * scale;
+          x = Math.round(e.x) - (e.dir >= 0 ? set.anchor.x : img.width - set.anchor.x) * scale - cx; y = Math.round(e.y) - set.anchor.y * scale - cy;
+        }
         if (e.boss && e.kind === 'mirror') { x = Math.round(e.x) - 16 - cx; y = Math.round(e.y) - 31 - cy; w = 32; h = 32; }
         var glow = WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow;
         if (e.dying) { var t = Math.min(1, e.dying / (e.boss ? 60 : 22)); fpen.globalAlpha = 1 - t; fpen.drawImage(P.silhouette(img, '#ffffff'), x + w * t / 2, y + h * t / 2, w * (1 - t), h * (1 - t)); fpen.globalAlpha = 1; continue; }
@@ -608,7 +664,7 @@
         if (e.status.burn > 0 && tick % 3 === 0) ember(e.x + (random() - 0.5) * w, e.y - h / 2);
         if (e.status.poison > 0 && tick % 6 === 0) particles.push({ x: e.x + (random() - 0.5) * w, y: e.y - h / 2, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 });
         if (e.hp < e.maxHp && !e.boss) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
-        light(e.x, e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
+        light(e.x, e.spec.flying && !e.boss ? e.y : e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
       for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
       for (k = 0; k < zaps.length; k++) { var z = zaps[k]; fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
@@ -1034,6 +1090,7 @@
       drawHero();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
+      drawBoxes();
       drawFlash();
       drawTransition();
       drawHud();
@@ -1241,7 +1298,7 @@
       zones: function (force) { if (force) { touchy = true; layoutZones(); } return ZONES.map(function (z) { return { name: z.name, x: z.x, y: z.y, w: z.w, h: z.h }; }); },
       sound: function () { return { on: !!(SND && SND.isOn()), effects: SND ? SND.effects : [] }; },
       state: function () {
-        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
+        return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status, anim: e.anim, frame: e.frame, attack: e.attack ? e.attack.def.name + ':' + e.attack.phase : null, boxes: e.boxes ? e.boxes.length : 0 }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
@@ -1270,15 +1327,16 @@
       sprites: function () {
         var out = {};
         Object.keys(sprites.warden).forEach(function (name) { out[name] = sprites.warden[name].map(function (img) { return P.count(img); }); });
-        Object.keys(actorSprites).forEach(function (name) { out[name] = actorSprites[name].walk.concat(actorSprites[name].attack).map(function (img) { return P.count(img); }); });
+        Object.keys(actorSprites).forEach(function (name) { var f = actorSprites[name].frames; out[name] = f.walk.concat(f.windup, f.attack, f.hurt).map(function (img) { return P.count(img); }); });
         return out;
       },
-      summon: function (kind, dx) { var e = AC.spawn({ x: Math.floor((hero.x + (dx || 40)) / TILE), y: Math.floor(hero.y / TILE), kind: AC.KINDS[kind].flying ? 'flyer' : 'walker' }, AC.KINDS[kind].element, run.floor, random); e.kind = kind; e.spec = AC.KINDS[kind]; e.element = AC.KINDS[kind].element; creatures.push(e); return creatures.length; },
+      summon: function (kind, dx, elder) { var e = AC.make(kind, hero.x + (dx === undefined ? 40 : dx), Math.floor(hero.y / TILE) * TILE, !!elder, run.floor, random); e.seen = true; creatures.push(e); return creatures.length; },
+      boxes: function (on) { debugBoxes = on !== false; return debugBoxes; },
       // draw every frame of the Warden large on the stage, for looking at the art; sheet(false) puts the game back
       sheet: function (on, scale, only, set) {
         sheetMode = on !== false;
         if (!sheetMode) return;
-        var ratio = canvas.width / size.w, S = scale || 5, group = set === 'creatures' ? (function () { var g = {}; Object.keys(actorSprites).forEach(function (n) { g[n] = actorSprites[n].walk.concat(actorSprites[n].attack); }); return g; })() : sprites[set || 'warden'];
+        var ratio = canvas.width / size.w, S = scale || 5, group = set === 'creatures' ? (function () { var g = {}; Object.keys(actorSprites).forEach(function (n) { var f = actorSprites[n].frames; g[n] = f.walk.concat(f.windup, f.attack, f.hurt); }); return g; })() : sprites[set || 'warden'];
         pen.setTransform(ratio, 0, 0, ratio, 0, 0);
         pen.fillStyle = '#101018'; pen.fillRect(0, 0, size.w, size.h);
         pen.imageSmoothingEnabled = false;
