@@ -1,0 +1,72 @@
+/* sounds.js: every recorded effect the undercroft uses, as words.
+
+   make-sounds.js reads this and asks ElevenLabs' sound-effects model for each
+   one: `text` is the prompt, `seconds` the length asked for, `influence` how
+   closely to follow the words (0 to 1), `volume` how loud the game plays it
+   against the others, `loop` whether it is meant to run on. The name is the
+   event sound.js plays. Change a prompt, delete its file, run the tool again. */
+module.exports = {
+  // her
+  swing:       { text: 'Fast sword swing whoosh through air, sharp and clean, single swipe, no impact, game sound effect', seconds: 0.5, influence: 0.6, volume: 0.5 },
+  swingheavy:  { text: 'Huge heavy war hammer swung through the air, deep slow whoosh, single swing, no impact', seconds: 0.7, influence: 0.6, volume: 0.6 },
+  swingquick:  { text: 'Very quick light dagger slash, tiny sharp air swish, single', seconds: 0.5, influence: 0.6, volume: 0.45 },
+  whip:        { text: 'Leather whip crack, sharp snap with a short whoosh before it', seconds: 0.6, influence: 0.6, volume: 0.6 },
+  shot:        { text: 'Magical bowstring release with a soft shimmering chime, quick', seconds: 0.6, influence: 0.5, volume: 0.5 },
+  bolt:        { text: 'Small bolt of warm light fired, bright soft magical pew with a glassy ring, quick', seconds: 0.5, influence: 0.5, volume: 0.5 },
+  hit:         { text: 'Blade hitting a creature, meaty punchy impact with a short crunch, dry, single hit, game sound effect', seconds: 0.5, influence: 0.6, volume: 0.7 },
+  heavy:       { text: 'Massive heavy blunt impact, deep thud with crunch and a short rumble tail, single hit', seconds: 0.8, influence: 0.6, volume: 0.85 },
+  clink:       { text: 'Sword glancing off hard stone shell, bright metallic clink ricochet, single', seconds: 0.5, influence: 0.6, volume: 0.6 },
+  jump:        { text: 'Light cloth rustle and a soft effort of a small character jumping, short airy whoosh upward', seconds: 0.5, influence: 0.5, volume: 0.35 },
+  flip:        { text: 'Quick acrobatic somersault in the air, spinning cloth flutter whoosh, short', seconds: 0.5, influence: 0.5, volume: 0.4 },
+  land:        { text: 'Boots landing on a stone floor, soft thump with a little grit, single', seconds: 0.5, influence: 0.6, volume: 0.4 },
+  dash:        { text: 'Fast dash, rushing air whoosh with a cloak snapping, short', seconds: 0.5, influence: 0.5, volume: 0.5 },
+  blink:       { text: 'Short-range teleport, a sharp inward suck of air then a bright pop with a sparkle, very quick', seconds: 0.6, influence: 0.5, volume: 0.55 },
+  charge:      { text: 'Armoured knight shoulder charge, heavy metal clatter and rushing footsteps with a grunt, short', seconds: 0.7, influence: 0.5, volume: 0.6 },
+  flare:       { text: 'A magical flare bursting, bright fizzing pop with a warm whoomph', seconds: 0.7, influence: 0.5, volume: 0.6 },
+  hurt:        { text: 'Player character takes damage, sharp painful impact with a short low synth sting, game sound effect', seconds: 0.6, influence: 0.5, volume: 0.7 },
+  death:       { text: 'Hero dies, a lantern flame snuffed out, low mournful descending tone with a dying hiss, dark fantasy', seconds: 2.2, influence: 0.4, volume: 0.8 },
+  flamelost:   { text: 'A candle flame blown out then one relit with a soft whoosh, hopeful low chime after', seconds: 1.8, influence: 0.4, volume: 0.7 },
+  // her powers
+  castember:   { text: 'Burst of fire magic, roaring flame whoosh cone, hot and crackling, short', seconds: 1.0, influence: 0.5, volume: 0.7 },
+  castfrost:   { text: 'Ice magic cast, sharp crystalline shards forming and shooting, glassy cold shimmer', seconds: 1.0, influence: 0.5, volume: 0.65 },
+  caststorm:   { text: 'Lightning magic zap, sharp electric crack with a buzzing arc, short', seconds: 0.8, influence: 0.5, volume: 0.65 },
+  castbloom:   { text: 'Nature magic, a burst of leaves and thorns with a soft healing chime, organic rustle', seconds: 1.0, influence: 0.5, volume: 0.6 },
+  freeze:      { text: 'Something freezing solid instantly, ice crackling and tightening, short', seconds: 0.8, influence: 0.5, volume: 0.55 },
+  // finding things
+  pickup:      { text: 'Picking up an item in a fantasy game, short pleasant rising chime with a soft sparkle', seconds: 0.7, influence: 0.5, volume: 0.6 },
+  chest:       { text: 'Old wooden treasure chest creaking open with a metallic latch click and a small magical shimmer', seconds: 1.2, influence: 0.5, volume: 0.7 },
+  perk:        { text: 'Claiming a powerful magical upgrade, swelling warm shimmer rising into a bright resolved chord, satisfying', seconds: 1.6, influence: 0.4, volume: 0.75 },
+  legend:      { text: 'Legendary item revealed, majestic golden fanfare swell with choir-like shimmer and sparkling chimes', seconds: 3.0, influence: 0.4, volume: 0.85 },
+  bell:        { text: 'A single large bronze bell struck once, rich resonant ring with long shimmering overtones', seconds: 2.5, influence: 0.5, volume: 0.7 },
+  font:        { text: 'Healing at a magical fountain, gentle water trickle with a soft warm restorative chime swelling', seconds: 1.8, influence: 0.4, volume: 0.7 },
+  select:      { text: 'Menu selection tick, short soft wooden click with a tiny tone, user interface sound', seconds: 0.5, influence: 0.6, volume: 0.4 },
+  confirm:     { text: 'Menu confirm, short bright two-note chime, positive, user interface sound', seconds: 0.6, influence: 0.6, volume: 0.5 },
+  // the way down
+  door:        { text: 'Heavy stone dungeon door grinding open, low rumble of stone on stone, then a thud', seconds: 1.6, influence: 0.5, volume: 0.7 },
+  portal:      { text: 'Stepping through a magic portal, deep whooshing warp with a rising shimmer and a soft boom', seconds: 1.8, influence: 0.4, volume: 0.8 },
+  portalhum:   { text: 'Magic portal idle hum, low mystical droning energy with slow swirling shimmer, steady, seamless loop', seconds: 5.0, influence: 0.4, volume: 0.35, loop: true },
+  brazier:     { text: 'A brazier bursting alight, whoosh of flame catching then a steady crackle, short', seconds: 1.2, influence: 0.5, volume: 0.7 },
+  crack:       { text: 'Ice or stone floor cracking, a creeping splitting crackle, ominous, short', seconds: 1.0, influence: 0.5, volume: 0.5 },
+  // creatures and guardians
+  boom:        { text: 'Huge ground slam explosion, deep booming impact with falling debris and a rumbling tail', seconds: 1.6, influence: 0.5, volume: 0.9 },
+  roar:        { text: 'Huge monster roar in a stone hall, deep guttural and threatening, with reverb', seconds: 2.2, influence: 0.5, volume: 0.8 },
+  roargolem:   { text: 'Giant iron furnace golem roaring, bellowing metallic groan with fire rushing inside, echoing stone hall', seconds: 2.4, influence: 0.5, volume: 0.85 },
+  roarwyrm:    { text: 'Ice serpent dragon shriek, piercing cold hiss rising into a roar, echoing cavern', seconds: 2.4, influence: 0.5, volume: 0.85 },
+  roarherald:  { text: 'Eerie spectral conductor, a rising choir of electric voices swelling into a thunder crack, echoing hall', seconds: 2.4, influence: 0.4, volume: 0.8 },
+  roarthorn:   { text: 'Giant plant monster waking, deep wet wooden creaking groan with rustling vines and a low bellow', seconds: 2.4, influence: 0.5, volume: 0.85 },
+  roarorrery:  { text: 'Cosmic entity awakening, deep sub bass drone swelling with a slow metallic orbiting whoosh, ominous', seconds: 2.6, influence: 0.4, volume: 0.85 },
+  roarlightless: { text: 'Dark void entity, reversed whispering voices swelling into a deep hollow roar, terrifying, large hall', seconds: 2.8, influence: 0.4, volume: 0.9 },
+  breath:      { text: 'Furnace flamethrower blast, continuous roaring jet of fire, intense, steady', seconds: 1.6, influence: 0.5, volume: 0.7 },
+  gust:        { text: 'Freezing wind blast along the ground, howling icy gust with fine ice particles, steady', seconds: 1.6, influence: 0.5, volume: 0.65 },
+  icicle:      { text: 'Large icicle falling and shattering on stone, sharp glassy crash with tinkling shards', seconds: 0.9, influence: 0.6, volume: 0.6 },
+  thunder:     { text: 'Close lightning bolt strike, violent crack with an immediate short thunder clap', seconds: 1.2, influence: 0.6, volume: 0.85 },
+  beam:        { text: 'Sustained magical energy beam, intense humming laser of dark energy with a crackling edge, steady', seconds: 2.0, influence: 0.5, volume: 0.6 },
+  clap:        { text: 'Two giant stone hands clapping together, enormous crushing slam with a shockwave', seconds: 1.2, influence: 0.6, volume: 0.9 },
+  lash:        { text: 'Huge thorny vine whipping across a stone floor, heavy woody swoosh and a scraping crack', seconds: 0.9, influence: 0.5, volume: 0.7 },
+  roots:       { text: 'Thick roots bursting up through a stone floor, splintering earth and cracking rock, single burst', seconds: 0.8, influence: 0.5, volume: 0.7 },
+  spit:        { text: 'Plant creature spitting a seed pod, wet hollow thoop, short', seconds: 0.5, influence: 0.6, volume: 0.55 },
+  moon:        { text: 'Heavy stone sphere hurled into the ground, deep cosmic thump with a resonant ringing crack', seconds: 1.2, influence: 0.5, volume: 0.85 },
+  eclipse:     { text: 'All light sucked away, a deep reverse whoosh into sudden muffled silence with a faint low tone', seconds: 1.6, influence: 0.4, volume: 0.75 },
+  shatter:     { text: 'A stone moon shattering to pieces, cracking rock explosion with a glassy cosmic shimmer', seconds: 1.4, influence: 0.5, volume: 0.85 },
+  victory:     { text: 'Triumphant ending fanfare, warm rising orchestral swell resolving, light returning, hopeful, short', seconds: 4.0, influence: 0.4, volume: 0.85 }
+};
