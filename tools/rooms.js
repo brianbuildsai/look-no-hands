@@ -642,6 +642,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Travellers on the rivers of Thailand and Malaysia have written for centuries of whole trees of fireflies flashing as one, and were not believed. In 1990 Renato Mirollo and Steven Strogatz proved that clocks which nudge each other this way must always end up in step, however they start. The same arithmetic keeps the cells of your heart beating together.'
+    },
+    {
+      number: 29,
+      slug: 'weathering',
+      ready: true,
+      title: 'Weathering',
+      line: 'Make it rain on a mountain range and watch the valleys come.',
+      description: 'Rain falls on a mountain range made of random heights. Each drop runs downhill, picking up soil where it is fast and dropping it where it slows, and hundreds of thousands of drops later there are valleys, streams and silt fans that nobody drew.',
+      canvasLabel: 'A survey map of a mountain range in pale bone tones, lit from the north-west and marked with contour lines. Thin blue threads of water run down its slopes and slowly carve branching valleys into it.',
+      medium: '2026. <span class="live" data-live="weathering.cells">0</span> cells of ground and <span class="live" data-live="weathering.drops">0</span> drops of rain so far, each of which knows only how to run downhill and carry what it can.',
+      text: 'The mountains were made at random. Everything else was done by rain. A drop lands, runs downhill with a little momentum, takes soil where it is fast and leaves it where it slows, and dries up. Watch the streams find each other, the valleys deepen, and the silt fan out where the water reaches the plain. Press anywhere to make it rain there, and see what a river does to a hillside.',
+      controls: `
+<div class="controls" role="group" aria-label="Weathering controls">
+  <label class="dial">
+    <span class="dial__label"><span>How hard it rains</span><span data-weathering-rain-value></span></span>
+    <input class="dial__input" type="range" min="0" max="14" step="1" value="5" data-weathering-rain>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-weathering-everywhere aria-pressed="true">Rain everywhere</button>
+    <button class="btn" type="button" data-weathering-again>New mountains</button>
+  </div>
+</div>`,
+      wall: 'James Hutton looked at the layers in a Scottish cliff in 1788 and understood that the land is made and unmade by ordinary rain, given time, and that there was therefore a great deal more time than anyone had supposed. What takes ten million years out of doors takes a minute here, but it is the same arithmetic, one drop after another.'
     }
   ]
 };

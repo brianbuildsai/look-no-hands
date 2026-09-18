@@ -336,6 +336,21 @@
     }
   };
 
+  // room 29: contour lines of a hill, and a stream running off it
+  glyphs.weathering = function (pen, s) {
+    for (var k = 1; k <= 4; k++) {
+      var r = s * 0.11 * k;
+      pen.beginPath();
+      for (var t = 0; t <= 1.001; t += 0.04) {
+        var a = t * 6.2832, rr = r * (1 + 0.22 * Math.sin(a * 3 + k) + 0.1 * Math.cos(a * 5));
+        var x = Math.cos(a) * rr * 1.15, y = Math.sin(a) * rr * 0.85;
+        if (t === 0) pen.moveTo(x, y); else pen.lineTo(x, y);
+      }
+      pen.closePath(); pen.stroke();
+    }
+    pen.beginPath(); pen.moveTo(s * 0.05, -s * 0.02); pen.quadraticCurveTo(s * 0.2, s * 0.2, s * 0.14, s * 0.46); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
