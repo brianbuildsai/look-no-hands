@@ -814,7 +814,7 @@ module.exports = {
       number: 36,
       slug: 'undercroft',
       ready: true,
-      scripts: ['game/pixels.js', 'game/classes.js', 'game/weapons.js', 'game/world.js', 'game/explore.js', 'game/actors.js', 'game/relics.js', 'game/guardians.js', 'game/boss-golem.js', 'game/boss-wyrm.js', 'game/boss-herald.js', 'game/boss-lightless.js', 'game/sound.js'],
+      scripts: ['game/pixels.js', 'game/classes.js', 'game/weapons.js', 'game/world.js', 'game/explore.js', 'game/actors.js', 'game/relics.js', 'game/guardians.js', 'game/boss-golem.js', 'game/boss-wyrm.js', 'game/boss-thornmother.js', 'game/boss-herald.js', 'game/boss-lightless.js', 'game/sound.js'],
       stageAttributes: 'tabindex="0"',
       title: 'Undercroft',
       line: 'Choose who goes down. The stages draw themselves, a portal is hidden in each, four guardians wait below, and nothing comes back up except what you learned.',
