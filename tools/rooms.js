@@ -665,6 +665,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'James Hutton looked at the layers in a Scottish cliff in 1788 and understood that the land is made and unmade by ordinary rain, given time, and that there was therefore a great deal more time than anyone had supposed. What takes ten million years out of doors takes a minute here, but it is the same arithmetic, one drop after another.'
+    },
+    {
+      number: 30,
+      slug: 'soap',
+      ready: true,
+      title: 'Soap',
+      line: 'Blow on a soap film and watch it drain through every colour to black.',
+      description: 'A soap film in a wire ring, coloured by thin-film interference worked out wavelength by wavelength from its thickness. It drains, swirls, goes black at the top and pops. Blow on it.',
+      canvasLabel: 'A circle of shimmering colour inside a thin wire ring: bands of gold, magenta, blue and green swirl slowly downward, thinning to silver and then to black at the top, until the film bursts and a new one takes its place.',
+      medium: '2026. A film about <span class="live" data-live="soap.mean">700</span> millionths of a millimetre thick, <span class="live" data-live="soap.age">0</span> seconds old, the <span class="live" data-live="soap.films">1</span>st in this ring. Every pixel\u2019s colour is the interference of twenty-four wavelengths in that thickness.',
+      text: 'The colours are not paint. Light from the back of the film has travelled a little further than light from the front, and for each colour that extra distance either helps or hinders; which it does depends on how thick the film is just there. Thick liquid sinks and thin liquid rises, so the film drains and swirls, and the top goes black just before it pops, as a real one does. Move over it to stir it, press to blow.',
+      controls: `
+<div class="controls" role="group" aria-label="Soap controls">
+  <label class="dial">
+    <span class="dial__label"><span>How fast it drains</span><span data-soap-drain-value></span></span>
+    <input class="dial__input" type="range" min="3" max="25" step="1" value="10" data-soap-drain>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-soap-pop>Pop it</button>
+    <button class="btn" type="button" data-soap-new>Blow a new one</button>
+  </div>
+</div>`,
+      wall: 'Robert Hooke and Isaac Newton both puzzled over the colours of soap bubbles in the 1660s and 1670s, and Newton measured the thickness of a film from its colour, which is very nearly what this room does in reverse. The black at the top, where the film is thinner than any wavelength of light, is what an experienced bubble-blower watches for: it means a few seconds are left.'
     }
   ]
 };

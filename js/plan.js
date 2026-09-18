@@ -351,6 +351,19 @@
     pen.beginPath(); pen.moveTo(s * 0.05, -s * 0.02); pen.quadraticCurveTo(s * 0.2, s * 0.2, s * 0.14, s * 0.46); pen.stroke();
   };
 
+  // room 30: a ring on a wand, with the bands of a draining film
+  glyphs.soap = function (pen, s) {
+    var r = s * 0.36;
+    pen.beginPath(); pen.arc(0, -s * 0.06, r, 0, 6.2832); pen.stroke();
+    pen.beginPath(); pen.moveTo(0, -s * 0.06 + r); pen.lineTo(0, s * 0.48); pen.stroke();
+    pen.save(); pen.globalAlpha = 0.55;
+    for (var k = 1; k <= 4; k++) {
+      var y = -s * 0.06 - r + r * 2 * (k / 5) * (k / 5) * 1.0 + r * 0.3 * (k / 5), half = Math.sqrt(Math.max(0, r * r - (y + s * 0.06) * (y + s * 0.06)));
+      pen.beginPath(); pen.moveTo(-half, y); pen.quadraticCurveTo(0, y + s * 0.05, half, y); pen.stroke();
+    }
+    pen.restore();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {
