@@ -238,7 +238,7 @@
        is doing is `act`: null when free, else an attack, dash, cast, hurt or
        death that runs for so many steps and says when it may be cut short. */
 
-    var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22, doubleJumped = false;
+    var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22, airJumped = 0;
 
     var hero = {
       x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
@@ -423,9 +423,10 @@
       if (mods.pound && !hero.onGround && hero.coyote <= 0 && down('down') && hit('jump') && !pounding && !hero.act) { pounding = true; hero.vy = 6.5; hero.vx = 0; hero.buffer = 0; hero.invuln = Math.max(hero.invuln, 20); }
       if (pounding) { hero.vy = Math.max(hero.vy, 6); hero.vx = 0; }
       if (mayJump && hero.buffer > 0 && hero.wall && !hero.onGround) { hero.vy = JUMP_V * 0.95; hero.vx = -hero.wall * 2.6; hero.dir = -hero.wall; hero.jumping = true; hero.buffer = 0; hero.wall = 0; sfx('jump'); dust(hero.x, hero.y - 8, hero.dir, 4); }
-      if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && mods.doubleJump && !doubleJumped && hero.vy > -2) {
-        hero.vy = JUMP_V * 0.9; hero.jumping = true; doubleJumped = true; hero.buffer = 0; sfx('jump');
-        spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02);
+      // everyone has a second jump, from the air; the Boots give a third
+      if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && !hero.wall && airJumped < mods.airJumps && hero.vy > -2) {
+        hero.vy = JUMP_V * 0.9; hero.jumping = true; airJumped++; hero.buffer = 0; sfx('jump');
+        spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02); rings.push({ x: hero.x, y: hero.y, r: 2, grow: 1.4, life: 8, max: 8, colour: '#9fd8ff' });
       }
       if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
         if (down('down') && hero.onGround && standingOnLedge()) hero.drop = 8;
@@ -440,10 +441,10 @@
       var wasGround = hero.onGround;
       var touched = moveBody(hero);
       hero.onGround = touched.floor;
-      if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; doubleJumped = false; } else if (hero.coyote > 0) hero.coyote--;
+      if (hero.onGround) { hero.coyote = COYOTE; hero.airDash = true; airJumped = 0; } else if (hero.coyote > 0) hero.coyote--;
       // the gauntlets: a wall she leans on lets her down slowly, and she may jump away from it
       hero.wall = 0;
-      if (mods.wallgrip && !hero.onGround && touched.wall && move !== 0 && hero.vy > 0 && !hero.act) { hero.wall = move; hero.vy = Math.min(hero.vy, 0.7); hero.airDash = true; doubleJumped = false; if (tick % 5 === 0) dust(hero.x + move * 5, hero.y - 10, -move, 1); }
+      if (mods.wallgrip && !hero.onGround && touched.wall && move !== 0 && hero.vy > 0 && !hero.act) { hero.wall = move; hero.vy = Math.min(hero.vy, 0.7); hero.airDash = true; airJumped = 0; if (tick % 5 === 0) dust(hero.x + move * 5, hero.y - 10, -move, 1); }
       // the cape: jump held in the air, and the fall is slow
       if (mods.glider && !hero.onGround && down('jump') && hero.vy > 0.7 && !hero.act) { hero.vy = 0.7; if (tick % 4 === 0) particles.push({ x: hero.x - hero.dir * 6, y: hero.y - 18, vx: -hero.vx * 0.3, vy: -0.2, life: 16, max: 16, colour: '#6b84ff', size: 1, gravity: 0 }); }
       // the greaves: coming down like a hammer

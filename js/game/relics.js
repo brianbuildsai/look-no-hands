@@ -23,7 +23,7 @@
   // the bag of modifiers the engine reads; a fresh one for every run
   function baseMods() {
     return {
-      maxHp: 0, maxEnergy: 0, damage: 0, comboSpeed: 1, dashLength: 1, dashCooldown: 1, doubleJump: false, secondWind: 0,
+      maxHp: 0, maxEnergy: 0, damage: 0, comboSpeed: 1, dashLength: 1, dashCooldown: 1, airJumps: 1, secondWind: 0,
       lantern: 1, hitsPerEnergy: 4, burnSpread: false, burnDamage: 1, freezeTime: 1, frozenBonus: 0, chainMore: 0, shockTime: 1,
       thorns: 0, shield: 0, freeCast: 0, knockback: 1, hitstop: 1, slowOnHit: 0, map: false, glowFar: false, lifeOnKill: 0, speed: 1,
       wallgrip: false, glider: false, pound: false, ghost: false, parry: false, magnet: false, phoenix: 0, bell: false, snowflake: false, sandglass: false
@@ -37,7 +37,7 @@
     { id: 'secondwind', rarity: 'master', name: 'Second Wind', element: null, line: 'Once, when you would die, you stand up with three hearts', apply: function (m) { m.secondWind += 1; } },
     { id: 'hourglass', rarity: 'epic', name: 'Hourglass Shard', element: null, line: 'Every hit you land slows the creature for a breath', apply: function (m) { m.slowOnHit = 45; } },
     { id: 'tuningfork', rarity: 'epic', name: 'Tuning Fork', element: null, line: 'Your weapon comes round a third faster', apply: function (m) { m.comboSpeed *= 0.7; } },
-    { id: 'aeolian', rarity: 'epic', name: 'Aeolian Boots', element: null, ability: true, line: 'A second jump, from the air', apply: function (m) { m.doubleJump = true; } },
+    { id: 'aeolian', rarity: 'epic', name: 'Aeolian Boots', element: null, ability: true, line: 'A third jump, from the air', apply: function (m) { m.airJumps += 1; } },
     { id: 'reiter', rarity: 'epic', name: "Reiter's Crystal", element: 'frost', line: 'Frost holds twice as long, and frozen things take two more', apply: function (m) { m.freezeTime *= 2; m.frozenBonus += 2; } },
     { id: 'almanac', rarity: 'rare', name: "Standish's Almanac", element: null, ability: true, line: 'The whole floor is drawn small at the top of your sight', apply: function (m) { m.map = true; } },
     { id: 'fireflies', rarity: 'rare', name: "Fireflies' Lantern", element: null, line: 'The lantern reaches further, and every creature glows from afar', apply: function (m) { m.lantern *= 1.4; m.glowFar = true; } },
