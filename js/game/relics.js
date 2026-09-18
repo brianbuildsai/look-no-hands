@@ -26,7 +26,7 @@
       maxHp: 0, maxEnergy: 0, damage: 0, comboSpeed: 1, dashLength: 1, dashCooldown: 1, airJumps: 1, secondWind: 0,
       lantern: 1, hitsPerEnergy: 4, burnSpread: false, burnDamage: 1, freezeTime: 1, frozenBonus: 0, chainMore: 0, shockTime: 1,
       thorns: 0, shield: 0, freeCast: 0, knockback: 1, hitstop: 1, slowOnHit: 0, map: false, glowFar: false, lifeOnKill: 0, speed: 1,
-      wallgrip: false, glider: false, pound: false, ghost: false, parry: false, magnet: false, phoenix: 0, bell: false, snowflake: false, sandglass: false
+      wallgrip: false, glider: false, pound: false, ghost: false, parry: false, magnet: false, phoenix: 0, bell: false, snowflake: false, sandglass: false, breaker: false
     };
   }
 

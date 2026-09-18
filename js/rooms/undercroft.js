@@ -312,8 +312,9 @@
     function startDash() {
       hero.act = { kind: 'dash', ticks: 0 };
       hero.anim = 'dash'; hero.frame = 0; hero.clock = 0;
-      hero.vx = hero.dir * DASH_SPEED; hero.vy = 0;
-      hero.dashCd = Math.round(DASH_COOLDOWN * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, Math.round(DASH_FRAMES * mods.dashLength) + 2);
+      hero.act.speed = klass.dash === 'charge' ? 3.5 : DASH_SPEED; hero.act.frames = Math.round((klass.dash === 'charge' ? 17 : DASH_FRAMES) * mods.dashLength); hero.act.struck = [];
+      hero.vx = hero.dir * hero.act.speed; hero.vy = 0;
+      hero.dashCd = Math.round(DASH_COOLDOWN * (klass.dash === 'charge' ? 1.5 : 1) * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, hero.act.frames + 2);
       if (!hero.onGround) hero.airDash = false;
       dust(hero.x, hero.y, -hero.dir, 6);
       sfx('dash');
@@ -373,10 +374,16 @@
         return;
       }
       if (a.kind === 'dash') {
-        hero.vx = hero.dir * DASH_SPEED; hero.vy = 0;
+        hero.vx = hero.dir * a.speed; hero.vy = 0;
         hero.frame = a.ticks % 6 < 3 ? 0 : 1;
+        // the Smith's charge: shoulder first, and whatever it meets is struck once and thrown
+        if (klass.dash === 'charge') {
+          var cb = { x0: hero.dir > 0 ? hero.x : hero.x - 16, x1: hero.dir > 0 ? hero.x + 16 : hero.x, y0: hero.y - 24, y1: hero.y - 2 };
+          for (var ck = 0; ck < creatures.length; ck++) { var ce = creatures[ck]; if (ce.dying || a.struck.indexOf(ce) >= 0) continue; var cbx = boxesOf(ce); for (var cj = 0; cj < cbx.length; cj++) if (!cbx[cj].onHit && overlaps(cb, cbx[cj])) { a.struck.push(ce); if (wound(ce, Math.max(1, Math.round((4 + mods.damage) * (cbx[cj].mult || 1))), hero.x - hero.dir * 8, null)) { if (!ce.boss) { ce.vx = hero.dir * 3.2; ce.vy = -2.2; } hitstop(5); shake(3); sfx('heavy'); spark(hero.x + hero.dir * 12, hero.y - 14, '#ffdc9a', 12, 2.2, 14, 0.04); } break; } }
+          if (a.ticks % 2 === 0) particles.push({ x: hero.x - hero.dir * 4, y: hero.y - 1, vx: -hero.dir * (0.5 + random()), vy: -0.6 - random() * 0.8, life: 12, max: 12, colour: random() < 0.5 ? '#ff8c42' : '#8a6a5c', size: 1, gravity: 0.05 });
+        }
         if (a.ticks % 2 === 0) afterimage(sprites.warden.dash[hero.frame], hero.x, hero.y, hero.dir);
-        if (a.ticks >= Math.round(DASH_FRAMES * mods.dashLength)) { hero.act = null; hero.vx = hero.dir * RUN_MAX; hero.anim = 'idle'; }
+        if (a.ticks >= a.frames) { hero.act = null; hero.vx = hero.dir * RUN_MAX; hero.anim = 'idle'; }
         if (hit('attack')) { hero.act = null; hero.combo = 0; startAttack(); }
         return;
       }
@@ -677,6 +684,7 @@
       if (e.status.freeze > 0) damage += mods.frozenBonus;
       if (!AC.hurt(e, damage, fromX, ctx)) return false;
       if (e.boss) { e.vx = 0; e.vy = Math.min(e.vy, 0); } else e.vx *= mods.knockback;
+      if (mods.breaker && !e.boss && e.attack && e.attack.phase === 'windup') { if (e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; e.cooldown = 50; number(e.x, e.y - e.h - 14, 'BROKEN', '#ffb347'); }
       if (mods.slowOnHit) e.status.shock = Math.max(e.status.shock || 0, mods.slowOnHit);
       hero.hits++; countHit();
       if (hero.energy < hero.maxEnergy && hero.hits % mods.hitsPerEnergy === 0) hero.energy++;
