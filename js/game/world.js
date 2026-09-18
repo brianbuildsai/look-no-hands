@@ -269,8 +269,24 @@
 
   // the guardian's arena: a hall with walls at both ends, two ledges, and a door that opens when it is over
   var ARENA_ELEMENT = ['ember', 'frost', 'storm', 'void'];
+  // The Great Kiln: one screen of floor with a pit of lava at either end and two ledges over it
+  function greatKiln(element, floor) {
+    var L = new Level(38, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 38; x++) L.column(x, g);
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(36, k, STONE); L.set(37, k, STONE); }
+    [5, 6, 31, 32].forEach(function (px) { L.set(px, g, HAZARD); });
+    for (x = 11; x < 14; x++) L.set(x, g - 3, LEDGE);
+    for (x = 24; x < 27; x++) L.set(x, g - 3, LEDGE);
+    L.spawn = { x: 3 * TILE + 8, y: g * TILE };
+    L.door = { x: 34 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 3, y: g - 4 }, { x: 12, y: g - 6 }, { x: 25, y: g - 6 }, { x: 34, y: g - 4 });
+    L.boss = true; L.locked = true; L.title = 'The Great Kiln';
+    L.arena = { left: 7 * TILE, right: 31 * TILE, groundY: g * TILE, bossX: 24 * TILE, row: g, pits: [5, 6, 31, 32], edges: [7, 8, 9, 28, 29, 30] };
+    return L;
+  }
   function arena(seed, floor) {
     var element = byName(ARENA_ELEMENT[Math.max(0, Math.min(3, floor - 1))]);
+    if (floor === 1) return greatKiln(element, floor);
     var L = new Level(46, element, floor, 3), g = 11, x, k;
     for (x = 0; x < 46; x++) L.column(x, g);
     for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(44, k, STONE); L.set(45, k, STONE); }

@@ -526,7 +526,16 @@
       count: function () { return creatures.length; },
       summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
       afterimage: function (e) { var set = guardianSprites.mirror, frames = (e.dir >= 0 ? set : set.flipped).dash; afterimages.push({ img: P.silhouette(frames[0], '#5b3fa0'), x: e.x, y: e.y, dir: 1, life: 12 }); },
-      mirrorCast: function (e) { mirrorCast(e); }
+      mirrorCast: function (e) { mirrorCast(e); },
+      glow: function (x, y, r, colour, alpha) { glow(x, y, r, colour, alpha); },
+      sfx: function (name) { sfx(name); },
+      flash: function (colour, life) { flash = { colour: colour, life: life || 8 }; },
+      number: function (x, y, value, colour) { number(x, y, value, colour); },
+      // the floor itself can change under a guardian; if stone closes on the Warden she is lifted out of it
+      setTile: function (tx, ty, t) {
+        level.set(tx, ty, t);
+        if (t === 1 && hero.x + hero.w / 2 > tx * TILE && hero.x - hero.w / 2 < (tx + 1) * TILE && hero.y > ty * TILE && hero.y - hero.h < (ty + 1) * TILE) { hero.y = ty * TILE - 0.001; hero.vy = 0; }
+      }
     };
     // the mirror casts the Warden's own power back at her
     function mirrorCast(e) {
@@ -550,7 +559,7 @@
       for (k = hazards.length - 1; k >= 0; k--) {
         h = hazards[k];
         if (hero.alive && overlaps(heroHurtBox(), h)) { if (hurtHero((h.x0 + h.x1) / 2, h.damage, boss ? boss.kind : h.element)) afflict(h.element); }
-        if (h.life % 3 === 0) particles.push({ x: h.x0 + random() * (h.x1 - h.x0), y: h.y0 + random() * (h.y1 - h.y0), vx: 0, vy: -0.4 - random() * 0.6, life: 14, max: 14, colour: h.colour, size: random() < 0.4 ? 2 : 1, gravity: 0 });
+        if (h.life % (h.fire ? 5 : 3) === 0) particles.push({ x: h.x0 + random() * (h.x1 - h.x0), y: h.y0 + random() * (h.y1 - h.y0), vx: 0, vy: -0.4 - random() * 0.6, life: 14, max: 14, colour: h.colour, size: random() < 0.4 ? 2 : 1, gravity: 0 });
         if (--h.life <= 0) hazards.splice(k, 1);
       }
       for (k = telegraphs.length - 1; k >= 0; k--) if (--telegraphs[k].life <= 0) telegraphs.splice(k, 1);
@@ -566,7 +575,8 @@
         openChoice(3, true);
       }
     }
-    function drawHazards() {
+    // what is about to happen is drawn over the dark, so that it can be read
+    function drawTelegraphs() {
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, h;
       for (k = 0; k < telegraphs.length; k++) {
         h = telegraphs[k];
@@ -574,7 +584,22 @@
         if (h.circle) { fpen.globalAlpha = 0.3 + 0.25 * Math.sin(tick * 0.5); fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.arc(h.x - cx, h.y - cy, h.r * (1 - 0.5 * h.life / h.max), 0, 6.2832); fpen.stroke(); fpen.globalAlpha = 0.12; fpen.fillStyle = h.colour; fpen.beginPath(); fpen.arc(h.x - cx, h.y - cy, h.r, 0, 6.2832); fpen.fill(); fpen.globalAlpha = 1; continue; }
       }
       for (k = 0; k < telegraphs.length; k++) { h = telegraphs[k]; if (h.line || h.circle) continue; var a = 0.25 + 0.25 * Math.sin(tick * 0.5); fpen.globalAlpha = a; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x) - cx, Math.round(h.y) - cy, h.w, h.h); fpen.globalAlpha = 1; fpen.strokeStyle = h.colour; fpen.lineWidth = 1; fpen.strokeRect(Math.round(h.x) - cx + 0.5, Math.round(h.y) - cy + 0.5, h.w - 1, h.h - 1); }
-      for (k = 0; k < hazards.length; k++) { h = hazards[k]; fpen.globalAlpha = 0.45; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x0) - cx, Math.round(h.y0) - cy, Math.round(h.x1 - h.x0), Math.round(h.y1 - h.y0)); fpen.globalAlpha = 1; light((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2, 30, 0.6); }
+    }
+    function drawHazards() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, h;
+      for (k = 0; k < hazards.length; k++) {
+        h = hazards[k];
+        if (!h.fire) continue;
+        var fade = Math.min(1, h.life / 30), fw = Math.round(h.x1 - h.x0);
+        for (var fi = 0; fi < fw; fi += 2) {
+          var fh = Math.round((4 + 7 * Math.abs(Math.sin(fi * 0.9 + tick * 0.21 + h.x0)) * (1 - Math.abs(fi - fw / 2) / fw)) * fade);
+          fpen.fillStyle = '#ff6a2b'; fpen.fillRect(Math.round(h.x0) + fi - cx, Math.round(h.y1) - fh - cy, 2, fh);
+          fpen.fillStyle = '#ffb347'; fpen.fillRect(Math.round(h.x0) + fi - cx, Math.round(h.y1) - Math.round(fh * 0.6) - cy, 2, Math.round(fh * 0.6));
+          if (fi % 4 === 0) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(h.x0) + fi - cx, Math.round(h.y1) - Math.round(fh * 0.3) - cy, 1, Math.round(fh * 0.3)); }
+        }
+        light((h.x0 + h.x1) / 2, h.y1 - 4, 34, 0.7); glow((h.x0 + h.x1) / 2, h.y1 - 4, 20, '#ff6a2b', 0.18 * fade);
+      }
+      for (k = 0; k < hazards.length; k++) { h = hazards[k]; if (h.fire) continue; fpen.globalAlpha = 0.45; fpen.fillStyle = h.colour; fpen.fillRect(Math.round(h.x0) - cx, Math.round(h.y0) - cy, Math.round(h.x1 - h.x0), Math.round(h.y1 - h.y0)); fpen.globalAlpha = 1; light((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2, 30, 0.6); }
     }
     function drawBossBar() {
       if (!boss || boss.dying > 60) return;
@@ -583,7 +608,13 @@
       fpen.fillStyle = '#0b0b12'; fpen.fillRect(x - 1, y - 1, w + 2, 5);
       fpen.fillStyle = '#3a3936'; fpen.fillRect(x, y, w, 3);
       fpen.fillStyle = boss.phase ? '#ff4f7b' : element.glow; fpen.fillRect(x, y, Math.round(w * boss.hp / boss.maxHp), 3);
-      if (boss.state === 'wake') text(boss.name.toUpperCase(), W / 2, 70, element.glow, 2, 'center');
+      if (boss.spec.phases) for (var pk = 0; pk < boss.spec.phases.length; pk++) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x + Math.round(w * boss.spec.phases[pk]), y - 1, 1, 5); }
+      if (boss.state === 'wake') {
+        var shown = Math.min(1, (boss.clock || 0) / 30);
+        text(boss.name.toUpperCase(), W / 2, 62, element.glow, 2, 'center');
+        if (boss.title) text(boss.title, W / 2, 80, '#e9e6df', 1, 'center');
+        fpen.fillStyle = element.glow; fpen.fillRect(Math.round(W / 2 - 60 * shown), 76, Math.round(120 * shown), 1);
+      }
     }
     function stepCreatures() {
       var k, e;
@@ -609,9 +640,10 @@
         p.x += p.vx; p.y += p.vy; p.vy += p.gravity || 0;
         if (tick % 2 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 8, max: 8, colour: p.colour, size: 1, gravity: 0 });
         var gone = --p.life <= 0 || (!p.wave && tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1) || (p.wave && tileAt(Math.floor((p.x + p.vx * 3) / TILE), Math.floor(p.y / TILE)) === 1);
+        var struckStone = gone && p.life > 0;
         var pbox = { x0: p.x - p.size / 2, x1: p.x + p.size / 2, y0: p.y - p.size / 2, y1: p.y + p.size / 2 };
         if (p.from === 'enemy' && hero.alive && overlaps(heroHurtBox(), pbox)) {
-          if (hurtHero(p.x, p.damage, p.wave ? 'wave' : p.seek ? 'beam' : p.cloud ? 'spore' : 'shard')) afflict(p.element);
+          if (hurtHero(p.x, p.damage, p.cause ? p.cause : p.wave ? 'wave' : p.seek ? 'beam' : p.cloud ? 'spore' : 'shard')) afflict(p.element);
           gone = true;
         }
         if (p.from === 'hero') {
@@ -623,7 +655,7 @@
             if (touched) { (p.struck || (p.struck = [])).push(c); if (!p.pierce) { gone = true; break; } }
           }
         }
-        if (gone) { spark(p.x, p.y, p.colour, 5, 1, 12, 0); projectiles.splice(k, 1); }
+        if (gone) { if (p.land && struckStone) p.land(p); spark(p.x, p.y, p.colour, 5, 1, 12, 0); projectiles.splice(k, 1); }
       }
       for (k = zaps.length - 1; k >= 0; k--) if (--zaps[k].life <= 0) zaps.splice(k, 1);
     }
@@ -680,7 +712,7 @@
         if (!boxes.length && e.vars && e.vars.shelled && overlaps(box, { x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y })) { spark(e.x, e.y - e.h, '#ffffff', 5, 1.6, 10, 0.04); sfx('select'); }
         for (var j = 0; j < boxes.length; j++) {
           if (!overlaps(box, boxes[j])) continue;
-          if (wound(e, Math.max(1, Math.round(damage * (boxes[j].mult || 1))), hero.x, elementName)) any = true;
+          if (wound(e, Math.max(1, Math.round(damage * (boxes[j].mult || 1))), hero.x, elementName)) { any = true; if (boxes[j].mult > 1) { spark((boxes[j].x0 + boxes[j].x1) / 2, (boxes[j].y0 + boxes[j].y1) / 2, '#ffdc9a', 10, 2.2, 18, 0.02); number(e.x, e.y - e.h - 16, 'SOFT', '#ffdc9a'); } }
           break;
         }
       }
@@ -710,7 +742,17 @@
         e = creatures[k];
         if (e.x < cam.x - 40 || e.x > cam.x + W + 40) continue;
         var set, frames, img, scale, w, h, x, y;
-        if (e.boss) {
+        if (e.boss && e.spec.modern) {
+          set = guardianSprites[e.kind]; if (set.byPhase) set = set.byPhase[Math.min(e.phase, set.byPhase.length - 1)];
+          frames = (e.dir >= 0 ? set.frames : set.flipped)[e.anim] || (e.dir >= 0 ? set.frames : set.flipped).idle; img = frames[Math.min(e.frame, frames.length - 1)];
+          scale = 1; w = img.width; h = img.height;
+          x = Math.round(e.x) - (e.dir >= 0 ? set.anchor.x : img.width - set.anchor.x) - cx; y = Math.round(e.y) - set.anchor.y - cy;
+          if (e.dying) {
+            fpen.globalAlpha = e.dying > 60 ? Math.max(0, 1 - (e.dying - 60) / 30) : 1;
+            fpen.drawImage(e.dying < 60 && e.dying % 10 < 2 ? P.silhouette(img, '#ffffff') : img, x, y);
+            fpen.globalAlpha = 1; continue;
+          }
+        } else if (e.boss) {
           set = guardianSprites[e.kind]; frames = (e.dir >= 0 ? set : set.flipped)[e.anim] || set.idle; img = frames[Math.min(e.frame, frames.length - 1)];
           scale = 1; w = img.width; h = img.height;
           x = Math.round(e.x) - w / 2 - cx; y = Math.round(e.y) - h - cy + (e.spec.flying ? h / 2 : 0);
@@ -728,9 +770,9 @@
         if (e.status.burn > 0 && tick % 3 === 0) ember(e.x + (random() - 0.5) * w, e.y - h / 2);
         if (e.status.poison > 0 && tick % 6 === 0) particles.push({ x: e.x + (random() - 0.5) * w, y: e.y - h / 2, vx: 0, vy: -0.3, life: 20, max: 20, colour: '#9ae66e', size: 1, gravity: 0 });
         if (e.hp < e.maxHp && !e.boss) { fpen.fillStyle = '#0b0b12'; fpen.fillRect(x, y - 4, w, 2); fpen.fillStyle = glow; fpen.fillRect(x, y - 4, Math.round(w * e.hp / e.maxHp), 2); }
-        light(e.x, e.spec.flying && !e.boss ? e.y : e.y - h / 2, (e.elder ? 30 : 18) * (mods.glowFar ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
+        light(e.x, e.spec.flying && !e.boss ? e.y : e.y - (e.boss ? e.h : h) / 2, (e.boss ? 56 : e.elder ? 30 : 18) * (mods.glowFar && !e.boss ? 2 : 1), mods.glowFar ? 0.8 : 0.55);
       }
-      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.flame) { var fx = Math.round(p.x) - cx, fy = Math.round(p.y) - cy; fpen.fillStyle = '#ff6a2b'; fpen.beginPath(); fpen.arc(fx, fy, 7, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffb347'; fpen.beginPath(); fpen.arc(fx + (p.vx > 0 ? 2 : -2), fy, 5, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffdc9a'; fpen.beginPath(); fpen.arc(fx + (p.vx > 0 ? 3 : -3), fy, 2, 0, 6.2832); fpen.fill(); for (var fl = 0; fl < 2; fl++) particles.push({ x: p.x - p.vx * 2, y: p.y + (random() - 0.5) * 10, vx: -p.vx * 0.2, vy: -0.4 - random() * 0.6, life: 12 + random() * 8, max: 20, colour: random() < 0.5 ? '#ff8c42' : '#ffdc9a', size: random() < 0.4 ? 2 : 1, gravity: -0.02 }); } else if (p.icicle) { fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 5 - cy, 3, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - 4 - cy, 1, 4); fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) + 2 - cy, 1, 2); } else if (p.ember) { fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 2 - cy, 4, 4); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 1 - cy, 2, 2); } else if (p.wave) { fpen.fillRect(Math.round(p.x) - 4 - cx, Math.round(p.y) - 6 - cy, 8, 8); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 8 - cy, 4, 3); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
+      for (k = 0; k < projectiles.length; k++) { var p = projectiles[k]; fpen.fillStyle = p.colour; if (p.flame) { var fx = Math.round(p.x) - cx, fy = Math.round(p.y) - cy; fpen.fillStyle = '#ff6a2b'; fpen.beginPath(); fpen.arc(fx, fy, 7, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffb347'; fpen.beginPath(); fpen.arc(fx + (p.vx > 0 ? 2 : -2), fy, 5, 0, 6.2832); fpen.fill(); fpen.fillStyle = '#ffdc9a'; fpen.beginPath(); fpen.arc(fx + (p.vx > 0 ? 3 : -3), fy, 2, 0, 6.2832); fpen.fill(); for (var fl = 0; fl < 2; fl++) particles.push({ x: p.x - p.vx * 2, y: p.y + (random() - 0.5) * 10, vx: -p.vx * 0.2, vy: -0.4 - random() * 0.6, life: 12 + random() * 8, max: 20, colour: random() < 0.5 ? '#ff8c42' : '#ffdc9a', size: random() < 0.4 ? 2 : 1, gravity: -0.02 }); } else if (p.icicle) { fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 5 - cy, 3, 7); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) - 4 - cy, 1, 4); fpen.fillStyle = p.colour; fpen.fillRect(Math.round(p.x) - cx, Math.round(p.y) + 2 - cy, 1, 2); } else if (p.ember) { fpen.fillRect(Math.round(p.x) - 2 - cx, Math.round(p.y) - 2 - cy, 4, 4); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(Math.round(p.x) - 1 - cx, Math.round(p.y) - 1 - cy, 2, 2); } else if (p.wave) { var wx = Math.round(p.x) - cx, wy = Math.round(p.y) + 5 - cy, wd = p.vx > 0 ? 1 : -1; for (var wi = 0; wi < 5; wi++) { var wh = [11, 9, 7, 5, 3][wi] + ((tick >> 2) + wi) % 2 * 2; fpen.fillStyle = p.colour; fpen.fillRect(wx - wd * wi * 3 - 1, wy - wh, 3, wh); fpen.fillStyle = p.core || '#ffdc9a'; fpen.fillRect(wx - wd * wi * 3 - 1, wy - Math.round(wh * 0.45), 3, Math.round(wh * 0.45)); } if (tick % 2 === 0) particles.push({ x: p.x - wd * 6, y: p.y - 2 - random() * 6, vx: -wd * 0.4, vy: -0.5 - random() * 0.5, life: 14, max: 14, colour: p.colour, size: 1, gravity: -0.01 }); } else if (p.coal) { var qx = Math.round(p.x) - cx, qy = Math.round(p.y) - cy; fpen.fillStyle = '#1a0806'; fpen.fillRect(qx - 3, qy - 3, 6, 6); fpen.fillStyle = '#ff6a2b'; fpen.fillRect(qx - 2, qy - 2, 4, 4); fpen.fillStyle = (tick >> 2) % 2 ? '#ffdc9a' : '#ffb347'; fpen.fillRect(qx - 1, qy - 1, 2, 2); glows.push({ x: p.x, y: p.y, r: 9, colour: '#ff6a2b', alpha: 0.3 }); } else if (p.lance) { var dir = p.vx > 0 ? 1 : -1; fpen.fillRect(Math.round(p.x) - (dir > 0 ? 10 : 2) - cx, Math.round(p.y) - 1 - cy, 12, 3); fpen.fillStyle = '#ffffff'; fpen.fillRect(Math.round(p.x) + (dir > 0 ? 1 : -3) - cx, Math.round(p.y) - cy, 2, 1); } else fpen.fillRect(Math.round(p.x) - p.size / 2 - cx, Math.round(p.y) - p.size / 2 - cy, p.size, p.size); light(p.x, p.y, 14, 0.6); }
       for (k = 0; k < zaps.length; k++) { var z = zaps[k]; if (z.beam) { fpen.strokeStyle = z.colour; fpen.globalAlpha = 0.5; fpen.lineWidth = 6; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); fpen.globalAlpha = 1; fpen.strokeStyle = '#ffffff'; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light((z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2, 40, 0.7); light(z.x1, z.y1, 24, 0.8); continue; } fpen.strokeStyle = z.colour; fpen.lineWidth = 1; fpen.beginPath(); fpen.moveTo(z.x0 - cx, z.y0 - cy); var mx = (z.x0 + z.x1) / 2 + (random() - 0.5) * 12, my = (z.y0 + z.y1) / 2 + (random() - 0.5) * 12; fpen.lineTo(mx - cx, my - cy); fpen.lineTo(z.x1 - cx, z.y1 - cy); fpen.stroke(); light(mx, my, 20, 0.7); }
     }
 
@@ -1269,7 +1311,7 @@
     function light(x, y, radius, strength) { lights.push({ x: x, y: y, r: radius, s: strength || 1 }); }
     function drawDark(flicker) {
       dpen.globalCompositeOperation = 'source-over';
-      dpen.fillStyle = 'rgba(2,2,8,0.74)';
+      dpen.fillStyle = level.boss ? 'rgba(2,2,8,0.5)' : 'rgba(2,2,8,0.74)';   // a guardian's hall is lit by the guardian
       dpen.fillRect(0, 0, W, H);
       dpen.globalCompositeOperation = 'destination-out';
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, r;
@@ -1498,6 +1540,7 @@
       drawCrescents();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
+      drawTelegraphs();
       drawGlows();
       drawBoxes();
       drawFlash();
@@ -1729,11 +1772,11 @@
       summary: function () { return summary; },
       kept: function (reset) { if (reset) { kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false }; save(); } return kept; },
       lastHurtBy: function () { return lastHurtBy; },
-      guardian: function () { return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y) } : null; },
+      guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length } : null; },
       stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
       arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
-      command: function (stateName, wait) { if (boss && !boss.dying) { boss.state = stateName; boss.wait = wait || 40; boss.cooldown = 0; } return boss ? boss.state : null; },
+      command: function (stateName, wait) { if (boss && !boss.dying) return GD.command(boss, stateName, ctx); return null; },
       drop: function (kind, id, dx) { dropPickup({ kind: kind, id: id }, hero.x + (dx === undefined ? 0 : dx), hero.y - 12); return pickups.length; },
       finds: function () { return { chests: chests.map(function (c) { return { x: c.x, y: c.y, open: c.open, rarity: c.rarity, loot: c.loot }; }), pickups: pickups.map(function (q) { return { kind: q.kind, id: q.id, rarity: q.rarity, x: Math.round(q.x), y: Math.round(q.y), ground: q.ground }; }), prompt: prompt ? prompt.id : null, ceremony: ceremony ? ceremony.loot.id : null, banner: banner ? banner.text : null, slowmo: slowmo, bell: !!bell, flakes: flakes.length }; },
       equip: function (id) { return equip(id) ? { id: weaponId, name: weapon.name, rarity: weapon.rarity, swings: swings.length } : null; },
@@ -1756,7 +1799,7 @@
       sheet: function (on, scale, only, set) {
         sheetMode = on !== false;
         if (!sheetMode) return;
-        var ratio = canvas.width / size.w, S = scale || 5, group = set === 'creatures' ? (function () { var g = {}; Object.keys(actorSprites).forEach(function (n) { var f = actorSprites[n].frames; g[n] = f.walk.concat(f.windup, f.attack, f.hurt); }); return g; })() : sprites[set || 'warden'];
+        var ratio = canvas.width / size.w, S = scale || 5, group = guardianSprites[String(set).split(':')[0]] && guardianSprites[String(set).split(':')[0]].anchor ? (function () { var gs = guardianSprites[String(set).split(':')[0]], ph = +String(set).split(':')[1] || 0; return (gs.byPhase ? gs.byPhase[ph] : gs).frames; })() : set === 'creatures' ? (function () { var g = {}; Object.keys(actorSprites).forEach(function (n) { var f = actorSprites[n].frames; g[n] = f.walk.concat(f.windup, f.attack, f.hurt); }); return g; })() : sprites[set || 'warden'];
         pen.setTransform(ratio, 0, 0, ratio, 0, 0);
         pen.fillStyle = '#101018'; pen.fillRect(0, 0, size.w, size.h);
         pen.imageSmoothingEnabled = false;
