@@ -24,6 +24,11 @@
     for (var yy = y - 10; yy < y + 96; yy += 4) { var tile = T.tileAt(Math.floor(x / 16), Math.floor(yy / 16)); if (tile === 1 || tile === 2) return Math.floor(yy / 16) * 16; }
     return y;
   }
+  // is there floor to stand on under x within three tiles, with nothing that burns in the way
+  function safeFloor(T, x, y) {
+    for (var yy = y + 2; yy < y + 56; yy += 8) { var tile = T.tileAt(Math.floor(x / 16), Math.floor(yy / 16)); if (tile === 1 || tile === 2) return true; if (tile === 3 || tile === 4) return false; }
+    return false;
+  }
   function bit(T, x, y, vx, vy, life, colour, size, gravity) { T.particle({ x: x, y: y, vx: vx, vy: vy, life: life, max: life, colour: colour, size: size || 1, gravity: gravity || 0 }); }
 
   /* ---- shots: anything a weapon throws that flies straight ---- */
@@ -218,6 +223,133 @@
     T.light(s.x, s.y, r * 0.8, 0.3 * (1 - p));
   };
 
+  /* ---- Thunderhead: the last thrust calls a storm, and her dash leaves lightning behind it ---- */
+
+  function jagged(x0, y0, x1, y1, rnd, sway) {
+    var pts = [x0, y0], n = Math.max(4, Math.round(Math.abs(y1 - y0) / 16));
+    for (var k = 1; k < n; k++) { var f = k / n; pts.push(x0 + (x1 - x0) * f + (rnd() - 0.5) * sway * (1 - f * 0.6), y0 + (y1 - y0) * f); }
+    pts.push(x1, y1);
+    return pts;
+  }
+  function strokePath(g, pts, cx, cy) { g.beginPath(); for (var k = 0; k < pts.length; k += 2) { if (k) g.lineTo(pts[k] - cx, pts[k + 1] - cy); else g.moveTo(pts[k] - cx, pts[k + 1] - cy); } g.stroke(); }
+
+  FIRE.tempest = function (T) {
+    var h = T.hero, list = T.creatures().filter(function (c) { return !c.dying && Math.abs(c.x - h.x) < 220 && Math.abs(c.y - h.y) < 130; }), bolts = [], k;
+    list.sort(function (a, b) { return Math.abs(a.x - h.x) - Math.abs(b.x - h.x); });
+    for (k = 0; k < 6; k++) {
+      var c = list.length ? list[k % list.length] : null;
+      bolts.push({ at: 16 + k * 8, target: c, again: !!c && k >= list.length, x: c ? c.x : h.x + h.dir * (30 + k * 26), y: c ? c.y : h.y, path: null, fork: null, life: 0 });
+    }
+    add({ kind: 'tempest', bolts: bolts, max: 16 + 6 * 8 + 24, lit: 0 });
+    T.sfx('roarherald'); T.flash('#8fa3ff', 4);
+  };
+  STEP.tempest = function (s, T) {
+    if (s.lit > 0) s.lit--;
+    for (var k = 0; k < s.bolts.length; k++) {
+      var b = s.bolts[k];
+      if (b.life > 0) b.life--;
+      if (s.t !== b.at) continue;
+      if (b.target && !b.target.dying) { b.x = b.target.x; b.y = b.target.y; }
+      var gy = groundAt(T, b.x, b.y - 8), top = T.cam.y - 10, sx = b.x + (T.random() - 0.5) * 60;
+      b.path = jagged(sx, top, b.x, gy, T.random, 26);
+      var mid = Math.floor(b.path.length / 4) * 2;
+      b.fork = jagged(b.path[mid], b.path[mid + 1], b.path[mid] + (T.random() - 0.5) * 70, b.path[mid + 1] + 40 + T.random() * 30, T.random, 14);
+      b.life = 9; s.lit = 4;
+      T.strike({ x0: b.x - 13, x1: b.x + 13, y0: gy - 150, y1: gy + 3 }, (b.again ? 2 : 4) + T.mods().damage, 2, 'storm');
+      T.spark(b.x, gy - 2, '#ffffff', 16, 2.8, 16, 0.05); T.spark(b.x, gy - 2, '#8fa3ff', 10, 2, 22, 0.02);
+      T.ring({ x: b.x, y: gy, r: 3, grow: 2.2, life: 10, max: 10, colour: '#c9b8ff' });
+      T.shake(4); T.sfx('thunder');
+    }
+    return s.t < s.max;
+  };
+  DRAW.tempest = function (s, T) { for (var k = 0; k < s.bolts.length; k++) { var b = s.bolts[k]; if (b.life > 0) { T.light(b.x, b.y - 20, 110, b.life / 9); T.light(b.x, b.y - 90, 70, b.life / 12); } } };
+  OVER.tempest = function (s, T, g, cx, cy) {
+    var a = Math.min(1, s.t / 10) * Math.min(1, (s.max - s.t) / 14), k, W = T.W;
+    // the cloud: a dark band along the top of the picture that rolls, and lights from inside when a bolt goes
+    for (k = 0; k < 17; k++) {
+      var px = ((k * 27 + s.t * (k % 2 ? 0.5 : -0.35)) % (W + 40) + W + 40) % (W + 40) - 20, r = 13 + (k * 7) % 9, py = -2 + (k * 5) % 8;
+      g.globalAlpha = a * 0.92; g.fillStyle = s.lit > 0 && k % 3 === s.t % 3 ? '#6b5aa8' : '#15122a'; g.beginPath(); g.arc(px, py, r, 0, 6.2832); g.fill();
+      g.globalAlpha = a * 0.5; g.fillStyle = '#3a2f6a'; g.beginPath(); g.arc(px + 2, py + 4, r * 0.62, 0, 3.1416); g.fill();
+    }
+    g.globalAlpha = 1;
+    for (k = 0; k < s.bolts.length; k++) {
+      var b = s.bolts[k];
+      // where the next one will fall: a thin line for a few steps before it
+      if (s.t >= b.at - 7 && s.t < b.at) { var tx = Math.round((b.target && !b.target.dying ? b.target.x : b.x)) - cx; g.globalAlpha = 0.35; g.fillStyle = '#c9b8ff'; g.fillRect(tx, 0, 1, T.H); g.globalAlpha = 1; }
+      if (b.life <= 0 || !b.path) continue;
+      var f = b.life / 9;
+      g.lineJoin = 'round';
+      g.globalAlpha = 0.35 * f; g.strokeStyle = '#8fa3ff'; g.lineWidth = 7; strokePath(g, b.path, cx, cy);
+      g.globalAlpha = 0.8 * f; g.strokeStyle = '#c9b8ff'; g.lineWidth = 3; strokePath(g, b.path, cx, cy); g.lineWidth = 1; strokePath(g, b.fork, cx, cy);
+      g.globalAlpha = Math.min(1, f * 1.5); g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; strokePath(g, b.path, cx, cy);
+      g.globalAlpha = 1;
+    }
+  };
+  // the wake of a dash: it lies where she went for a moment, and bites once
+  var lastX = null, wakeSeen = [], wasDashing = false;
+  function stormWake(T) {
+    var h = T.hero, dashing = !!(h.act && h.act.kind === 'dash') && T.weapon().ability === 'stormdash';
+    if (dashing && !wasDashing) wakeSeen = [];
+    if (dashing && lastX !== null && Math.abs(h.x - lastX) > 0.5) add({ kind: 'wake', x0: lastX, x1: h.x, y: h.y - 11, max: 38, seen: wakeSeen, seed: Math.floor(T.random() * 1000) });
+    wasDashing = dashing; lastX = h.x;
+  }
+  STEP.wake = function (s, T) {
+    if (s.t % 4 === 1) T.touch({ x0: Math.min(s.x0, s.x1) - 2, x1: Math.max(s.x0, s.x1) + 2, y0: s.y - 12, y1: s.y + 10 }, 2 + T.mods().damage, 'storm', (s.x0 + s.x1) / 2, s.seen, false);
+    return s.t < s.max;
+  };
+  DRAW.wake = function (s, T, g, cx, cy) {
+    var f = 1 - s.t / s.max, n = Math.max(1, Math.round(Math.abs(s.x1 - s.x0) / 5)), k, ph = s.seed + Math.floor(s.t / 3) * 7;
+    g.globalAlpha = f; g.strokeStyle = (s.t >> 1) % 2 ? '#ffffff' : '#8fa3ff'; g.lineWidth = 1; g.beginPath();
+    for (k = 0; k <= n; k++) { var x = s.x0 + (s.x1 - s.x0) * k / n, y = s.y + Math.sin((k + ph) * 12.9898) * 4 * f; if (k) g.lineTo(x - cx, y - cy); else g.moveTo(x - cx, y - cy); }
+    g.stroke(); g.globalAlpha = 1;
+    if (s.t % 6 === 0) T.light((s.x0 + s.x1) / 2, s.y, 18, 0.4 * f);
+  };
+
+  /* ---- Last Light: she is already past them; the picture goes out but for one line; a beat later, the cut ---- */
+
+  FIRE.nightfall = function (T) {
+    var h = T.hero, d = h.dir, from = h.x, to = from, step, half = h.w / 2;
+    for (step = 4; step <= 124; step += 4) { var nx = from + d * step; if (T.blocked(nx - half, h.y - h.h, nx + half, h.y, false)) break; to = nx; }
+    // not into a pit: come back until there is floor within three tiles
+    while (Math.abs(to - from) > 8 && !safeFloor(T, to, h.y)) to -= d * 4;
+    h.x = to; h.vx = 0; h.vy = 0; h.invuln = Math.max(h.invuln, 44);
+    add({ kind: 'nightfall', x0: from, x1: to, y: h.y - 13, dir: d, max: 46, damage: T.weapon().damage[2] + T.mods().damage, marks: [] });
+    T.sfx('eclipse');
+  };
+  STEP.nightfall = function (s, T) {
+    var list = T.creatures(), k;
+    if (s.t === 26) {
+      var box = { x0: Math.min(s.x0, s.x1) - 8, x1: Math.max(s.x0, s.x1) + 8, y0: s.y - 16, y1: s.y + 14 };
+      for (k = 0; k < list.length; k++) { var c = list[k]; if (c.dying) continue; var bs = T.boxesOf(c); for (var j = 0; j < bs.length; j++) if (bs[j].x0 < box.x1 && bs[j].x1 > box.x0 && bs[j].y0 < box.y1 && bs[j].y1 > box.y0) { s.marks.push({ x: Math.max(box.x0, Math.min(box.x1, c.x)), y: (bs[j].y0 + bs[j].y1) / 2, a: -0.9 + T.random() * 0.5 }); break; } }
+      T.strike(box, s.damage, 2, null);
+      T.flash('#ffffff', 7); T.shake(7); T.sfx('shatter');
+      for (k = 0; k < 24; k++) bit(T, s.x0 + (s.x1 - s.x0) * T.random(), s.y + (T.random() - 0.5) * 6, (T.random() - 0.5) * 2, -0.5 - T.random() * 1.5, 26, T.random() < 0.5 ? '#ffffff' : '#ffd24d', 1, 0.03);
+    }
+    return s.t < s.max;
+  };
+  OVER.nightfall = function (s, T, g, cx, cy) {
+    var y = Math.round(s.y) - cy, xa = s.x0 - cx, xb = s.x1 - cx, k;
+    if (s.t < 26) {
+      g.fillStyle = 'rgba(0,0,0,' + Math.min(0.94, s.t / 5).toFixed(2) + ')'; g.fillRect(0, 0, T.W, T.H);
+      // the line: drawn at once from where she was to where she is, then thinning to a hair
+      var drawn = Math.min(1, s.t / 4), thick = s.t < 8 ? 3 : s.t < 16 ? 2 : 1;
+      g.fillStyle = '#ffffff'; g.fillRect(Math.min(xa, xa + (xb - xa) * drawn), y - Math.floor(thick / 2), Math.abs(xb - xa) * drawn, thick);
+      g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(0, y, T.W, 1);
+      T.heroShape('#ffffff', 1);
+      // the click of the guard against the sheath
+      if (s.t >= 18) { var gl = (s.t - 18) / 8, gx = Math.round(xb - s.dir * 5), gy = y + 2, r = Math.round(7 * Math.sin(gl * 3.1416)); g.fillStyle = '#ffd24d'; g.fillRect(gx - r, gy, r * 2 + 1, 1); g.fillRect(gx, gy - r, 1, r * 2 + 1); }
+    } else {
+      var f = 1 - (s.t - 26) / (s.max - 26);
+      g.globalAlpha = f; g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+      for (k = 0; k < s.marks.length; k++) { var m = s.marks[k], len = 26 * (1.2 - f * 0.4); g.beginPath(); g.moveTo(m.x - cx - Math.cos(m.a) * len, m.y - cy - Math.sin(m.a) * len); g.lineTo(m.x - cx + Math.cos(m.a) * len, m.y - cy + Math.sin(m.a) * len); g.stroke(); }
+      g.lineWidth = 1; g.beginPath(); g.moveTo(xa, y); g.lineTo(xb, y); g.stroke();
+      g.globalAlpha = 1;
+    }
+  };
+
+  // while this is true the engine holds everything but her still
+  function stopped() { for (var k = 0; k < fx.length; k++) { var s = fx[k]; if (s.kind === 'nightfall' && s.t < 26 || s.holds) return true; } return false; }
+
   /* ---- the way in ---- */
 
   function fire(name, T) { if (!FIRE[name]) return false; FIRE[name](T); return true; }
@@ -232,6 +364,7 @@
     return false;
   }
   function step(T) {
+    stormWake(T);
     for (var k = fx.length - 1; k >= 0; k--) { var s = fx[k]; s.t++; if (!STEP[s.kind] || !STEP[s.kind](s, T)) fx.splice(fx.indexOf(s), 1); }
     // whatever a toll has stopped sees stars
     var list = T.creatures();
@@ -239,8 +372,8 @@
   }
   function draw(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (DRAW[fx[k].kind]) DRAW[fx[k].kind](fx[k], T, T.pen, cx, cy); }
   function over(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (OVER[fx[k].kind]) OVER[fx[k].kind](fx[k], T, T.pen, cx, cy); }
-  function clear() { fx.length = 0; }
+  function clear() { fx.length = 0; lastX = null; wasDashing = false; }
   function count(kind) { var n = 0; for (var k = 0; k < fx.length; k++) if (!kind || fx[k].kind === kind) n++; return n; }
 
-  window.Arms = { fire: fire, swing: swing, step: step, draw: draw, over: over, clear: clear, count: count, FIRE: FIRE, STEP: STEP, DRAW: DRAW, OVER: OVER, add: add, shot: shot, bit: bit, groundAt: groundAt };
+  window.Arms = { stopped: stopped, fire: fire, swing: swing, step: step, draw: draw, over: over, clear: clear, count: count, FIRE: FIRE, STEP: STEP, DRAW: DRAW, OVER: OVER, add: add, shot: shot, bit: bit, groundAt: groundAt };
 })();

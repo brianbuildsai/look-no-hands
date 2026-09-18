@@ -1045,6 +1045,7 @@
       return armsKit || (armsKit = { hero: hero, cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
         creatures: function () { return creatures; }, projectiles: function () { return projectiles; }, mods: function () { return mods; }, weapon: function () { return weapon; }, tick: function () { return tick; }, random: random,
         spark: spark, particle: function (p) { particles.push(p); }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
+        blocked: blocked, heroShape: function (colour, alpha) { var nm = hero.anim in sprites.warden ? hero.anim : 'idle', img = facing('warden', nm, Math.min(hero.frame, sprites.warden[nm].length - 1), hero.dir); fpen.globalAlpha = alpha; fpen.drawImage(P.silhouette(img, colour), Math.round(hero.x) - P.warden.anchor.x - Math.round(cam.x), Math.round(hero.y) - P.warden.anchor.y - Math.round(cam.y)); fpen.globalAlpha = 1; },
         light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text });
     }
     function stepWeapons() {
@@ -2066,7 +2067,8 @@
       stepWeapons();
       stepItems();
       stepAfflictions();
-      if (!slowmo || tick % 2 === 0) { stepLit.lights.length = 0; stepLit.glows.length = 0; stepCreatures(); stepHazards(); }
+      if (AR && AR.stopped()) { /* a weapon is holding the world still: only she moves */ }
+      else if (!slowmo || tick % 2 === 0) { stepLit.lights.length = 0; stepLit.glows.length = 0; stepCreatures(); stepHazards(); }
       stepFx();
       stepCamera(false);
     }

@@ -64,6 +64,12 @@
       { anim: 'attack1', seq: [0, 1, 2, 3], ticks: [4, 3, 3, 5], active: [1], shape: 'throw', reach: 1, lunge: -0.2 },
       { anim: 'attack1', seq: [0, 0, 1, 2, 3], ticks: [6, 5, 3, 4, 8], active: [2], shape: 'throw', reach: 1, lunge: -0.8, finisher: true }
     ],
+    // a blade kept in its sheath: a wait, then the cut is already over; the third is not a stroke at all (arms.js)
+    iai: [
+      { anim: 'attack1', seq: [0, 1, 2, 3], ticks: [7, 2, 2, 7], active: [1, 2], shape: 'arc', reach: 1.2, lunge: 1.4 },
+      { anim: 'attack2', seq: [0, 1, 2, 3], ticks: [6, 2, 2, 7], active: [1, 2], shape: 'rise', reach: 1.2, lunge: 1.2, lift: true },
+      { anim: 'attack3', seq: [0, 1, 2, 3, 4, 4], ticks: [9, 2, 2, 3, 14, 12], active: [1], shape: 'none', reach: 1, lunge: 0, finisher: true }
+    ],
     bow: [
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
       { anim: 'bow', seq: [0, 1, 2, 2], ticks: [5, 6, 3, 6], active: [2], shape: 'shot', reach: 1, lunge: -0.4 },
@@ -112,11 +118,15 @@
       art: ['...Y...', '..kYk..', '..kYk..', '.kyYyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyWyk.', '.kyYyk.', '.kyyyk.', 'kYYYYYk', 'kyrYryk', '.kkrkk.', '..krk..', '..kyk..', '..krk..', '..kYk..', '..kkk..'] },
     quicksilver: { name: 'Quicksilver', rarity: 'legendary', moveset: 'sword', damage: [4, 4, 6], reach: 30, trail: '#f4f8ff', finisher: 'droplets', flowing: true, line: 'A blade that has not decided to be solid. It ends in drops that seek', grip: [2, 14],
       art: ['..J..', '.kJk.', '.kjJk', 'kJjk.', 'kjJk.', '.kJjk', '.kjJk', 'kJjk.', 'kjJk.', '.kJjk', '.kjJk', '.kJjk', 'jJJJj', '.kjk.', '.kgk.', '.kkk.'] },
+    thunderhead: { name: 'Thunderhead', rarity: 'legendary', moveset: 'spear', damage: [4, 4, 6], reach: 42, trail: '#8fa3ff', element: 'storm', finisher: 'tempest', ability: 'stormdash', line: 'A spear with weather in it. Its last thrust calls the storm down, and your dash leaves lightning where you were', grip: [3, 21],
+      art: ['...Z...', '..kZk..', '..kZk..', '.kzZzk.', '.kzZzk.', 'kzzZzzk', '.kzZzk.', '..kzk..', 'y.kzk.y', 'kyyzyyk', '..kzk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kgk..', '..kgk..', '..kwk..', '..kyk..', '..kkk..'] },
+    lastlight: { name: 'Last Light', rarity: 'legendary', moveset: 'iai', damage: [5, 5, 14], reach: 30, trail: '#ffffff', finisher: 'nightfall', line: 'A blade kept in its sheath. The third time, you are already past them; the picture goes dark, and then the cut arrives', grip: [1, 18],
+      art: ['....W', '...kW', '..kWk', '..kWk', '..kWk', '.kWwk', '.kWwk', '.kWwk', '.kWwk', '.kWwk', '.kWwk', 'kWwk.', 'kWwk.', 'kWwk.', 'kWwk.', 'yYYy.', 'kDk..', 'kvk..', 'kDk..', 'kvk..', 'kyk..', 'kkk..'] },
     murmuration: { name: 'Murmuration', rarity: 'legendary', moveset: 'bow', damage: [2, 2, 3], reach: 0, trail: '#ffd24d', finisher: 'flock', line: 'A bow that looses a flock of lights. They wheel, and fall on what you face', grip: [4, 9],
       art: ['..kk...', '.kYyk..', '..kyk..', '...kyk.', '...kyYk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h...kyk', 'h...kyk', 'h...kYk', 'h...kyk', 'h..kyYk', '...kyk.', '..kyk..', '.kYyk..', '..kk...'] }
   };
   /* What each weapon does, said plainly: the infobox reads these, and works out the damage and reach lines itself. */
-  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts', spear: 'Three long thrusts', thrown: 'Two throws and a great one' };
+  var STROKES = { sword: 'Cut, rising cut, thrust', quick: 'Four fast cuts', heavy: 'Two slow overhead blows', sweep: 'Three wide sweeps', whip: 'Three long lashes', bow: 'Three shots', pole: 'Three bolts', spear: 'Three long thrusts', iai: 'Two draw-cuts, then the crossing', thrown: 'Two throws and a great one' };
   var DETAILS = {
     shortsword:  ['The third stroke is a lunging thrust'],
     forgehammer: ['+Finisher: the floor cracks both ways, 4 damage along it, through everything'],
@@ -138,10 +148,12 @@
     bellmaul:    ['+Finisher: a toll. Lesser creatures within 84 pixels are stunned for 1.7 s', '+and whatever they were doing is broken off'],
     dawnbreaker: ['+Finisher: a pillar of light from vault to floor, 12 damage', '+and a wave of gold each way along the floor, 5 damage, through everything'],
     quicksilver: ['+The blade leaves a ribbon where its tip has been', '+Finisher: 8 drops orbit you, then seek the nearest creatures, 3 damage each'],
+    thunderhead: ['+Every hit shocks: the creature moves at 40% speed for 1 s', '+Finisher: six bolts fall one after another on the nearest creatures, 4 damage each (2 to one already struck)', '+Your dash leaves a line of lightning for 0.6 s: 2 damage to what touches it'],
+    lastlight:   ['+Finisher: you cross up to 124 pixels through everything, unharmed, and the world stops', '+0.4 s later everything on that line takes the third number', '+You cannot be hurt until the cut lands'],
     murmuration: ['+Each shot looses 5 lights that wheel and home on what you face', '+Finisher: a flock of 16']
   };
   Object.keys(WEAPONS).forEach(function (id) { WEAPONS[id].detail = DETAILS[id] || [WEAPONS[id].line]; WEAPONS[id].strokes = STROKES[WEAPONS[id].moveset] || ''; });
-  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'handaxe', 'daggers', 'hammer', 'pike', 'disc', 'emberbrand', 'frostglaive', 'stormrapier', 'trident', 'mainspring', 'glasssabre', 'scythe', 'thornwhip', 'umbralflail', 'bellmaul', 'dawnbreaker', 'quicksilver', 'murmuration'];
+  var ORDER = ['shortsword', 'forgehammer', 'lamppole', 'handaxe', 'daggers', 'hammer', 'pike', 'disc', 'emberbrand', 'frostglaive', 'stormrapier', 'trident', 'mainspring', 'glasssabre', 'scythe', 'thornwhip', 'umbralflail', 'bellmaul', 'dawnbreaker', 'quicksilver', 'murmuration', 'thunderhead', 'lastlight'];
 
   // a weapon by chance: first a rarity (deeper floors and guardians lean toward the rarer), then any weapon of it,
   // so that adding weapons to a rarity does not make that rarity commoner
