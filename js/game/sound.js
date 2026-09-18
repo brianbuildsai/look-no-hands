@@ -1,12 +1,14 @@
-/* sound.js: what the undercroft sounds like, all of it synthesised.
+/* sound.js: what the undercroft sounds like.
 
-   No recordings, as everywhere in this building. Every effect is an
-   oscillator or a burst of noise shaped by an envelope and a filter: the
-   sword's swing is filtered noise sweeping down, a hit is a thump under a
-   click, a jump a square wave rising, each power its own crackle, chime,
-   spark or chord. The music is written as it plays: a drone on the floor's
-   root, a pentatonic arpeggio drawn from a seeded chance, and a pulse whose
-   pace rises as a guardian's life falls. Nothing sounds until asked. */
+   The effects are recordings now: some sixty short files made by ElevenLabs'
+   sound-effects model from the words in tools/sounds.js, listed in
+   samples.js, fetched when sound is first asked for, and played with a
+   little variation each time. Under them is what was here before, and it
+   still answers for anything that has not loaded or was never recorded: an
+   oscillator or a burst of noise shaped by an envelope and a filter. The
+   music is still written as it plays: a drone on the floor's root, a
+   pentatonic arpeggio drawn from a seeded chance, and a pulse whose pace
+   rises as a guardian's life falls. Nothing loads or sounds until asked. */
 (function () {
   'use strict';
 
@@ -32,8 +34,8 @@
   }
   function setOn(want) {
     on = !!want;
-    if (on) { if (!start()) { on = false; return false; } if (ctx.state === 'suspended') ctx.resume(); if (music.element) playMusic(music.element); }
-    else stopMusic();
+    if (on) { if (!start()) { on = false; return false; } if (ctx.state === 'suspended') ctx.resume(); loadSamples(); if (music.element) playMusic(music.element); }
+    else { stopMusic(); hush(); }
     return on;
   }
 
@@ -82,7 +84,71 @@
     legend: function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { setTimeout(function () { tone('sine', f, f, 0.5, 0.01, 0.12, 0.7, 0.16); tone('triangle', f / 2, f / 2, 0.5, 0.01, 0.12, 0.7, 0.08); }, i * 110); }); noise(1.2, 0.12, 'highpass', 6000, 9000); },
     shot: function () { tone('triangle', 900, 300, 0.12, 0.002, 0.02, 0.1, 0.12, 2500); }
   };
-  function play(name) { if (!on || !ctx) return; var fx = EFFECTS[name]; if (fx) fx(); }
+  /* ---- the recorded effects ----
+     Listed in samples.js, fetched and decoded the first time sound is asked
+     for. Each is trimmed of the silence before it, measured, and played at a
+     level worked out from its peak and the volume the list gives it, a touch
+     faster or slower each time so that a run of hits is not one hit repeated.
+     Until a recording has arrived, and for anything the list does not have,
+     the synthesised effect plays instead. */
+
+  var samples = {}, asked = false, lastPlayed = {}, voices = {}, hums = {};
+  // what to synthesise when there is no recording under that name
+  var STAND_IN = { swingheavy: 'swing', swingquick: 'swing', whip: 'swing', lash: 'swing', bolt: 'shot', spit: 'shot', clink: 'select', confirm: 'select', flip: 'jump', blink: 'dash', charge: 'dash', flare: 'castember', brazier: 'castember', breath: 'castember', gust: 'castfrost', icicle: 'freeze', crack: 'freeze', eclipse: 'freeze', thunder: 'caststorm', beam: 'caststorm', perk: 'pickup', font: 'pickup', flamelost: 'pickup', portal: 'door', clap: 'boom', moon: 'boom', shatter: 'boom', roots: 'hit', victory: 'legend', roargolem: 'roar', roarwyrm: 'roar', roarherald: 'roar', roarthorn: 'roar', roarorrery: 'roar', roarlightless: 'roar' };
+  function base() {
+    var tags = document.getElementsByTagName('script');
+    for (var k = 0; k < tags.length; k++) { var src = tags[k].src || '', at = src.indexOf('js/game/sound.js'); if (at >= 0) return src.slice(0, at); }
+    return '';
+  }
+  function loadSamples() {
+    if (asked || !ctx || !window.UndercroftSamples || !window.fetch) return;
+    asked = true;
+    var list = window.UndercroftSamples, root = base();
+    Object.keys(list).forEach(function (name) {
+      fetch(root + list[name].file).then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(function (raw) {
+        return new Promise(function (done, fail) { ctx.decodeAudioData(raw, done, fail); });
+      }).then(function (buffer) {
+        var data = buffer.getChannelData(0), peak = 0.001, first = 0, k;
+        for (k = 0; k < data.length; k++) { var a = data[k] < 0 ? -data[k] : data[k]; if (a > peak) peak = a; }
+        for (k = 0; k < data.length; k++) { if ((data[k] < 0 ? -data[k] : data[k]) > peak * 0.04) { first = k; break; } }
+        samples[name] = { buffer: buffer, gain: list[name].volume * Math.min(3, 0.9 / peak), offset: list[name].loop ? 0 : Math.max(0, first / buffer.sampleRate - 0.004), loop: !!list[name].loop, short: buffer.duration < 1.3 };
+        if (hums[name] && hums[name].want > 0) hum(name, hums[name].want);
+      }).catch(function () { /* this one stays synthesised */ });
+    });
+  }
+  function playSample(name) {
+    var s = samples[name], now = ctx.currentTime;
+    if (lastPlayed[name] && now - lastPlayed[name] < 0.045) return true;          // the same blow landing on three things is one sound
+    if ((voices[name] || 0) >= 4) return true;
+    lastPlayed[name] = now; voices[name] = (voices[name] || 0) + 1;
+    var src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = s.buffer; src.playbackRate.value = s.short ? 0.93 + Math.random() * 0.14 : 1;
+    g.gain.value = s.gain * (s.short ? 0.9 + Math.random() * 0.2 : 1);
+    src.connect(g); g.connect(master);
+    src.onended = function () { voices[name] = Math.max(0, (voices[name] || 1) - 1); };
+    src.start(now, s.offset);
+    return true;
+  }
+  // something that runs on (the portal's hum): ask for a level from 0 to 1, as often as you like
+  function hum(name, level) {
+    var h = hums[name] || (hums[name] = { want: 0, src: null, gain: null });
+    h.want = on ? Math.max(0, Math.min(1, level || 0)) : 0;
+    if (!ctx || !samples[name]) return;
+    if (h.want > 0 && !h.src) {
+      h.src = ctx.createBufferSource(); h.gain = ctx.createGain(); h.src.buffer = samples[name].buffer; h.src.loop = true; h.gain.gain.value = 0.0001;
+      h.src.connect(h.gain); h.gain.connect(master); h.src.start();
+    }
+    if (h.gain) h.gain.gain.setTargetAtTime(Math.max(0.0001, h.want * samples[name].gain), ctx.currentTime, 0.12);
+    if (h.want <= 0 && h.src) { var old = h.src, og = h.gain; h.src = null; h.gain = null; setTimeout(function () { try { old.stop(); og.disconnect(); } catch (e) { /* already gone */ } }, 500); }
+  }
+  function hush() { Object.keys(hums).forEach(function (n) { hum(n, 0); }); }
+
+  function play(name) {
+    if (!on || !ctx) return;
+    if (samples[name] && !samples[name].loop) { playSample(name); return; }
+    var fx = EFFECTS[name] || EFFECTS[STAND_IN[name]];
+    if (fx) fx();
+  }
 
   /* ---- the music ---- */
 
@@ -130,5 +196,6 @@
   }
   function tension(v) { music.tension = Math.max(0, Math.min(1, v || 0)); }
 
-  window.Sound = { setOn: setOn, isOn: function () { return on; }, play: play, music: playMusic, stop: function () { stopMusic(); }, tension: tension, effects: Object.keys(EFFECTS) };
+  window.Sound = { setOn: setOn, isOn: function () { return on; }, play: play, hum: hum, music: playMusic, stop: function () { stopMusic(); hush(); }, tension: tension, effects: Object.keys(EFFECTS),
+    recorded: function () { return { listed: window.UndercroftSamples ? Object.keys(window.UndercroftSamples).length : 0, loaded: Object.keys(samples).length, names: Object.keys(samples) }; } };
 })();

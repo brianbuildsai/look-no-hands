@@ -111,7 +111,7 @@
       name: name, windup: 58, active: 40, recover: 38, cooldown: 50, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
       start: function (e, ctx) { e.vars.lashes = make(e, ctx); },
       telling: function (e, ctx, t, w) { e.vars.lashes.forEach(function (L) { if (t === 1) lashTell(e, ctx, L, w); lashPose(e, L, t, w, false); }); if (t === 1) ctx.sfx('select'); },
-      fire: function (e, ctx) { ctx.sfx('swing'); ctx.shake(2); },
+      fire: function (e, ctx) { ctx.sfx('lash'); ctx.shake(2); },
       during: function (e, ctx, t) { e.vars.lashes.forEach(function (L) { var far = Math.abs(wallOn(e, L.side) - e.x) - 18; L.len = t <= 20 ? far * t / 20 : t <= 28 ? far : far * Math.max(0, 1 - (t - 28) / 12); lashPose(e, L, t, 0, true); if (t <= 20 && t % 2 === 0) burst(ctx, e.x + L.side * (18 + L.len), e.arena.groundY - (L.high ? 34 : 3), 2, 1.6, !L.high); }); },
       box: function (e, t) { return t > 30 ? [] : e.vars.lashes.map(function (L) { return lashBox(e, L); }); },
       end: function (e) { e.vars.vines.forEach(function (vn) { vn.busy = false; vn.hot = false; }); }
@@ -129,7 +129,7 @@
       name: 'roots', windup: 50, active: 70, recover: 130, cooldown: 40, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
       start: function (e, ctx) { var v = e.vars, s = sideOf(e, ctx.hero), sides = e.phase ? [s, -s] : [s], k; v.rootAt = []; sides.forEach(function (sd) { for (k = 0; k < 6; k++) { var x = e.x + sd * (34 + k * 27); if (x > e.arena.left + 8 && x < e.arena.right - 8) v.rootAt.push({ x: x, at: k * 9, done: false }); } }); },
       telling: function (e, ctx, t, w) { var v = e.vars, A = e.arena; if (t === 1) { v.rootAt.forEach(function (r) { ctx.telegraphCrack(r.x, A.groundY, 14, w + r.at, '#c5ff9a'); ctx.telegraph(r.x - 6, A.groundY - 30, 12, 30, w + r.at, '#9ae66e'); }); ctx.sfx('select'); } if (t % 10 === 0) ctx.shake(1); },
-      during: function (e, ctx, t) { var v = e.vars, A = e.arena; v.rootAt.forEach(function (r) { if (!r.done && t - 1 >= r.at) { r.done = true; v.spikes.push({ x: r.x, t: 0, life: 26 }); burst(ctx, r.x, A.groundY - 2, 10, 2.6, true); ctx.sfx('hit'); ctx.shake(1.5); } }); },
+      during: function (e, ctx, t) { var v = e.vars, A = e.arena; v.rootAt.forEach(function (r) { if (!r.done && t - 1 >= r.at) { r.done = true; v.spikes.push({ x: r.x, t: 0, life: 26 }); burst(ctx, r.x, A.groundY - 2, 10, 2.6, true); ctx.sfx('roots'); ctx.shake(1.5); } }); },
       box: function (e) { var A = e.arena; return e.vars.spikes.filter(function (s) { return s.t >= 2 && s.t < 16; }).map(function (s) { return { x0: s.x - 6, x1: s.x + 6, y0: A.groundY - 30, y1: A.groundY, damage: 1, element: 'plain' }; }); },
       resting: function (e, ctx, t) { openFor(e, ctx, t, 130); }
     },
@@ -146,7 +146,7 @@
         if (Math.abs(tx - e.x) < 34) tx = e.x + sideOf(e, ctx.hero) * 40;
         ctx.projectile({ x: hx, y: hy, vx: (tx - hx) / T, vy: (A.groundY - hy) / T - g * (T - 1) / 2, gravity: g, life: 240, colour: '#9ae66e', size: 5, damage: 1, element: 'bloom', pod: true, cause: 'pod',
           land: function (p) { if (v.brambles.length < 6) v.brambles.push({ x: p.x, hp: 4, age: 0, life: 600, flash: 0, fruit: e.phase ? 300 : 0 }); burst(ctx, p.x, A.groundY - 2, 10, 2, true); ctx.sfx('hit'); } });
-        ctx.telegraphCircle(tx, A.groundY - 2, 11, T, '#9ae66e'); ctx.sfx('shot');
+        ctx.telegraphCircle(tx, A.groundY - 2, 11, T, '#9ae66e'); ctx.sfx('spit');
       },
       resting: function (e, ctx, t) { openFor(e, ctx, t, 130); }
     },

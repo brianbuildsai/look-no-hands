@@ -119,7 +119,7 @@
     var A = e.arena;
     ctx.zap(x, A.ceilY, x + (ctx.random() - 0.5) * 8, A.groundY, '#ffffff'); ctx.beam(x, A.ceilY, x, A.groundY, '#5b3fa0');
     ctx.hazard({ x0: x - 6, x1: x + 6, y0: A.ceilY, y1: A.groundY, life: 7, damage: 1, element: 'void', colour: '#a48cff' });
-    motes(ctx, x, A.groundY - 2, 12, 2.4, true); ctx.light(x, A.groundY - 40, 60, 1); ctx.shake(2.5); ctx.sfx('caststorm');
+    motes(ctx, x, A.groundY - 2, 12, 2.4, true); ctx.light(x, A.groundY - 40, 60, 1); ctx.shake(2.5); ctx.sfx('thunder');
   }
 
   var DOUBLE = {
@@ -265,7 +265,7 @@
       during: function (e, ctx, t) {
         var v = e.vars, A = e.arena, H = v.hands, s = Math.min(1, t / 14);
         H[0].x = v.cx - 112 + 104 * s; H[1].x = v.cx + 112 - 104 * s; H[0].y = H[1].y = A.groundY - 14;
-        if (s >= 1 && !v.met) { v.met = true; ctx.shake(6); ctx.sfx('boom'); ctx.flash('#5b3fa0', 5); motes(ctx, v.cx, A.groundY - 14, 40, 3.6, false); }
+        if (s >= 1 && !v.met) { v.met = true; ctx.shake(6); ctx.sfx('clap'); ctx.flash('#5b3fa0', 5); motes(ctx, v.cx, A.groundY - 14, 40, 3.6, false); }
       },
       box: function (e, t) { var H = e.vars.hands; return t > 15 ? [] : [handBox(H[0], 8, 14), handBox(H[1], 8, 14)]; },
       resting: function (e, ctx, t) { var v = e.vars; v.eyeTo = 0; if (t > 44) v.hands.forEach(function (h) { h.busy = false; h.pose = 'fist'; }); },
@@ -285,7 +285,7 @@
         var v = e.vars, A = e.arena, eye = eyeOf(e);
         v.bx += v.sweep * (A.right - A.left - 16) / 124; v.look = clamp((v.bx - e.x) / 60, -3, 3);
         ctx.beam(eye.x, eye.y, v.bx, A.groundY, '#a48cff'); motes(ctx, v.bx, A.groundY - 2, 3, 2.4, true); ctx.light(v.bx, A.groundY - 10, 40, 1);
-        if (t % 10 === 1) ctx.sfx('caststorm');
+        if (t === 1 || t === 62) ctx.sfx('beam');
       },
       box: function (e) { var v = e.vars, A = e.arena, eye = eyeOf(e), out = [], n = 14; for (var k = 3; k <= n; k++) { var x = eye.x + (v.bx - eye.x) * k / n, y = eye.y + (A.groundY - eye.y) * k / n; out.push({ x0: x - 5, x1: x + 5, y0: y - 6, y1: y + 6, damage: 1, element: 'void' }); } return out; },
       resting: function (e, ctx, t) { sink(e, ctx, t, 130); },
@@ -392,7 +392,7 @@
       v.hands = [{ x: mid - 84, y: A.ceilY + 84, pose: 'fist', flip: false, busy: false }, { x: mid + 84, y: A.ceilY + 84, pose: 'fist', flip: true, busy: false }];
     } else {
       v.dark = true; ctx.blackout(true); v.hands.forEach(function (h) { h.busy = false; h.pose = 'fist'; }); v.spent = false;
-      ctx.number(e.x, e.y + 34, 'IT PUTS OUT THE LIGHTS', '#a48cff'); ctx.sfx('freeze');
+      ctx.number(e.x, e.y + 34, 'IT PUTS OUT THE LIGHTS', '#a48cff'); ctx.sfx('eclipse');
     }
   }
   function fall(e, ctx) { var v = e.vars; v.dark = false; v.exposed = false; ctx.blackout(false); ctx.flash('#ffffff', 14); v.eyeTo = 1; v.eye = 1; v.braziers.forEach(function (b) { b.lit = 1; }); }
@@ -411,7 +411,7 @@
       var v = e.vars, boxes = [], mult = v.exposed ? 2 : 1;
       if (v.form === 'double') return [{ x0: e.x - 5, x1: e.x + 5, y0: e.y - 22, y1: e.y, mult: 1 }];
       if (v.appear < 60) return boxes;
-      if (v.dark) v.braziers.forEach(function (b) { if (!b.lit) boxes.push({ x0: b.x - 8, x1: b.x + 8, y0: b.y - 20, y1: b.y, mult: 1, onHit: function (g, ctx) { b.lit = 1; ctx.sfx('castember'); ctx.flash('#ffdc9a', 4); ctx.spark(b.x, b.y - 18, '#ffdc9a', 16, 2.2, 24, 0.03); return true; } }); });
+      if (v.dark) v.braziers.forEach(function (b) { if (!b.lit) boxes.push({ x0: b.x - 8, x1: b.x + 8, y0: b.y - 20, y1: b.y, mult: 1, onHit: function (g, ctx) { b.lit = 1; ctx.sfx('brazier'); ctx.flash('#ffdc9a', 4); ctx.spark(b.x, b.y - 18, '#ffdc9a', 16, 2.2, 24, 0.03); return true; } }); });
       if (v.spent) boxes.push({ x0: e.x - 16, x1: e.x + 16, y0: e.y - 12, y1: e.y + 8, mult: 1.5 * mult, hand: -1 });
       boxes.push({ x0: e.x - 27, x1: e.x + 27, y0: e.y - 26, y1: e.y + 29, mult: mult, hand: -1 });
       v.hands.forEach(function (h, i) { var w = h.pose === 'palm' ? 7 : 10, hh = h.pose === 'palm' ? 10 : 7; boxes.push({ x0: h.x - w, x1: h.x + w, y0: h.y - hh, y1: h.y + hh, mult: mult, hand: i }); });

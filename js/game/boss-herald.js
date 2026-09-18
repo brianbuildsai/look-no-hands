@@ -139,7 +139,7 @@
     var A = e.arena;
     ctx.zap(x, A.ceilY, x + (ctx.random() - 0.5) * 8, A.groundY, '#ffffff'); ctx.zap(x + 2, A.ceilY, x - 2, A.groundY, '#8fa3ff'); ctx.beam(x, A.ceilY, x, A.groundY, '#a48cff');
     ctx.hazard({ x0: x - wide / 2, x1: x + wide / 2, y0: A.ceilY, y1: A.groundY, life: 7, damage: 1, element: 'storm', colour: '#8fa3ff' });
-    crackle(ctx, x, A.groundY - 2, 14, 2.6); ctx.light(x, A.groundY - 40, 70, 1); ctx.shake(2.5); ctx.sfx('caststorm');
+    crackle(ctx, x, A.groundY - 2, 14, 2.6); ctx.light(x, A.groundY - 40, 70, 1); ctx.shake(2.5); ctx.sfx('thunder');
   }
   // after a great piece it has nothing left: it sinks to the floor and hangs there
   function spend(e, ctx, t, span) {

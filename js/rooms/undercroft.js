@@ -319,7 +319,7 @@
       hero.combo = n + 1; hero.queued = false;
       hero.anim = spec.anim; hero.frame = spec.seq[0]; hero.clock = 0;
       hero.vx = hero.dir * spec.lunge + hero.vx * 0.3;
-      sfx('swing');
+      var ms = weapon.moveset; if (ms !== 'bow' && ms !== 'pole') sfx(ms === 'heavy' ? 'swingheavy' : ms === 'quick' ? 'swingquick' : ms === 'whip' ? 'whip' : 'swing');
       if (spec.lift && !hero.onGround) hero.vy = Math.min(hero.vy, -1.5);
     }
     // the Kite's dash: as far ahead as there is room for, at once, leaving himself behind in ribbons
@@ -344,7 +344,7 @@
       hero.dashCd = Math.round(DASH_COOLDOWN * (klass.dash === 'charge' ? 1.5 : klass.dash === 'blink' ? 0.7 : 1) * mods.dashCooldown); hero.invuln = Math.max(hero.invuln, klass.dash === 'blink' ? 16 : hero.act.frames + 2);
       if (!hero.onGround) hero.airDash = false;
       dust(hero.x, hero.y, -hero.dir, 6);
-      sfx('dash');
+      sfx(klass.dash === 'blink' ? 'blink' : klass.dash === 'charge' ? 'charge' : 'dash');
       if (mods.snowflake) leaveFlake(hero.x, hero.y);
     }
     function startCast() {
@@ -463,7 +463,7 @@
       if (mayJump && hero.buffer > 0 && hero.wall && !hero.onGround) { hero.vy = JUMP_V * 0.95; hero.vx = -hero.wall * 2.6; hero.dir = -hero.wall; hero.jumping = true; hero.buffer = 0; hero.wall = 0; if (klass.flips) hero.flip = 18; sfx('jump'); dust(hero.x, hero.y - 8, hero.dir, 4); }
       // everyone has a second jump, from the air; the Boots give a third
       if (mayJump && hero.buffer > 0 && !hero.onGround && hero.coyote <= 0 && !hero.wall && airJumped < mods.airJumps && hero.vy > -2) {
-        hero.vy = JUMP_V * 0.9; hero.jumping = true; airJumped++; hero.buffer = 0; sfx('jump'); if (klass.flips) hero.flip = 18;
+        hero.vy = JUMP_V * 0.9; hero.jumping = true; airJumped++; hero.buffer = 0; sfx(klass.flips ? 'flip' : 'jump'); if (klass.flips) hero.flip = 18;
         spark(hero.x, hero.y, '#9fd8ff', 8, 1.2, 14, 0.02); rings.push({ x: hero.x, y: hero.y, r: 2, grow: 1.4, life: 8, max: 8, colour: '#9fd8ff' });
       }
       if (mayJump && hero.buffer > 0 && (hero.onGround || hero.coyote > 0)) {
@@ -491,7 +491,7 @@
       if (hero.landed > 0) hero.landed--;
       if (hero.alive) touchHazards();
       if (shieldUp > 0) shieldUp--;
-      if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('pickup'); }
+      if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('font'); }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
       if (!level.portal && hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
       stepPortal(); stepPerks();
@@ -501,6 +501,7 @@
           while (run.stage > 0 && STAGES[run.stage - 1].floor === STAGES[run.stage].floor) run.stage--;
           loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
           particles.length = 0; afterimages.length = 0; numbers.length = 0; hero.invuln = 120;
+          sfx('flamelost');
           banner = { t: 0, text: flames === 1 ? 'The last flame' : 'A flame goes out', sub: 'YOU RISE AT THE HEAD OF THE FLOOR', colour: '#ffb347' };
         } else endRun(false);
       }
@@ -554,6 +555,7 @@
     var GD = window.Guardians;
     if (!GD) { env.fail('The undercroft\u2019s guardians did not load. The other rooms still run.'); return null; }
     var stepLit = { lights: [], glows: [] };
+    var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless' };
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
@@ -579,7 +581,8 @@
       glow: function (x, y, r, colour, alpha) { stepLit.glows.push({ x: x, y: y, r: r, colour: colour, alpha: alpha }); },
       // a guardian has fallen: whatever it had in the air is gone with it
       calm: function () { telegraphs.length = 0; hazards.length = 0; projectiles = projectiles.filter(function (p) { return p.from !== 'enemy'; }); },
-      sfx: function (name) { sfx(name); },
+      // a guardian's roar is its own
+      sfx: function (name) { sfx(name === 'roar' && boss && ROARS[boss.kind] ? ROARS[boss.kind] : name); },
       flash: function (colour, life) { flash = { colour: colour, life: life || 8 }; },
       number: function (x, y, value, colour) { number(x, y, value, colour); },
       // the floor itself can change under a guardian; if stone closes on the Warden she is lifted out of it
@@ -594,7 +597,7 @@
       for (var k = 0; k < level.enemies.length; k++) creatures.push(AC.spawn(level.enemies[k], element.name, run.floor, rnd));
       boss = null; hazards = []; telegraphs = []; blackout = false; stepLit.lights.length = 0; stepLit.glows.length = 0;
       placeChests(); placePerks();
-      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd, guardianFor(STAGES[run.stage])); creatures.push(boss); sfx('roar'); }
+      if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd, guardianFor(STAGES[run.stage])); creatures.push(boss); }
     }
     function stepHazards() {
       var k, h;
@@ -757,7 +760,7 @@
         var e = creatures[k];
         if (e.dying) continue;
         var boxes = boxesOf(e);
-        if (!boxes.length && e.vars && e.vars.shelled && overlaps(box, { x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y })) { spark(e.x, e.y - e.h, '#ffffff', 5, 1.6, 10, 0.04); sfx('select'); }
+        if (!boxes.length && e.vars && e.vars.shelled && overlaps(box, { x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: e.y - e.h, y1: e.y })) { spark(e.x, e.y - e.h, '#ffffff', 5, 1.6, 10, 0.04); sfx('clink'); }
         for (var j = 0; j < boxes.length; j++) {
           if (!overlaps(box, boxes[j])) continue;
           if (boxes[j].onHit) { if (boxes[j].onHit(e, ctx, damage, hero.x)) any = true; break; }
@@ -957,7 +960,7 @@
       } else if (sw.shape === 'bolt') {
         var big = !!sw.finisher;
         projectiles.push({ from: 'hero', x: hero.x + d * 16, y: hero.y - 24, vx: d * (big ? 5.2 : 4.4), vy: 0, gravity: 0, life: big ? 90 : 60, colour: weapon.trail, size: big ? 8 : 5, damage: weapon.damage[n] + mods.damage, element: weapon.element || null, bolt: true, big: big, pierce: big });
-        spark(hero.x + d * 16, hero.y - 24, '#ffffff', big ? 10 : 5, 1.6, 10, 0); sfx('shot'); if (big) shake(1.5);
+        spark(hero.x + d * 16, hero.y - 24, '#ffffff', big ? 10 : 5, 1.6, 10, 0); sfx('bolt'); if (big) shake(1.5);
       } else if (sw.shape === 'shot') {
         loose(sw.finisher ? 16 : 5);
       }
@@ -999,7 +1002,7 @@
         var q = delayed[k];
         if (--q.t > 0) continue;
         if (q.fn === 'spike') { spikes.push({ x: q.x, y: q.y, life: 34, max: 34 }); strike({ x0: q.x - 8, x1: q.x + 8, y0: q.y - 34, y1: q.y }, 3 + mods.damage, 1, 'frost'); spark(q.x, q.y - 6, '#d8f1ff', 8, 1.8, 16, 0.05); }
-        else if (q.fn === 'flare') { strike({ x0: q.x - 30, x1: q.x + 30, y0: q.y - 30, y1: q.y + 22 }, 3 + mods.damage, 1, null); rings.push({ x: q.x, y: q.y, r: 4, grow: 2.6, life: 12, max: 12, colour: '#ffdc9a' }); spark(q.x, q.y, '#ffdc9a', 20, 2.6, 18, 0); flash = { colour: '#ffdc9a', life: 3 }; sfx('castember'); }
+        else if (q.fn === 'flare') { strike({ x0: q.x - 30, x1: q.x + 30, y0: q.y - 30, y1: q.y + 22 }, 3 + mods.damage, 1, null); rings.push({ x: q.x, y: q.y, r: 4, grow: 2.6, life: 12, max: 12, colour: '#ffdc9a' }); spark(q.x, q.y, '#ffdc9a', 20, 2.6, 18, 0); flash = { colour: '#ffdc9a', life: 3 }; sfx('flare'); }
         else if (q.fn === 'sun') strike({ x0: q.x - 24, x1: q.x + 24, y0: q.y - 220, y1: q.y + 4 }, 12 + mods.damage, 2, null);
         delayed.splice(k, 1);
       }
@@ -1250,10 +1253,11 @@
     function portalOpen() { return !level.locked && !(level.sanctuary && !level.taken); }
     function stepPortal() {
       nearPortal = false;
+      if (SND) { var hd = level.portal && portalOpen() && state === 'run' ? Math.sqrt(Math.pow(hero.x - level.door.x, 2) + Math.pow(hero.y - level.door.y, 2)) : 9999; SND.hum('portalhum', Math.max(0, 1 - hd / 260)); }
       if (!level.portal || !hero.alive || transition !== 0) return;
       var px = level.door.x, py = level.door.y - 16, open = portalOpen();
       if (open && tick % 2 === 0) { var a = random() * 6.2832, r = 22 + random() * 10; particles.push({ x: px + Math.cos(a) * r, y: py + Math.sin(a) * r * 1.3, vx: -Math.cos(a) * r / 18 - Math.sin(a) * 0.8, vy: -Math.sin(a) * r * 1.3 / 18 + Math.cos(a) * 0.8, life: 18, max: 18, colour: random() < 0.4 ? '#ffffff' : element.glow, size: 1, gravity: 0 }); }
-      if (open && Math.abs(hero.x - px) < 12 && Math.abs(hero.y - level.door.y) < 26) { nearPortal = true; if (hit('up') && !prompt) { transition = 1; sfx('door'); flash = { colour: element.glow, life: 10 }; } }
+      if (open && Math.abs(hero.x - px) < 12 && Math.abs(hero.y - level.door.y) < 26) { nearPortal = true; if (hit('up') && !prompt) { transition = 1; sfx('portal'); flash = { colour: element.glow, life: 10 }; } }
       // the chambers she has stood in are drawn on her map
       if (level.grid) { var G = level.grid, ccx = Math.floor((hero.x / TILE - 1) / G.cw), ccy = Math.floor(((hero.y - 4) / TILE - 1) / G.ch); if (ccx >= 0 && ccy >= 0 && ccx < G.gw && ccy < G.gh) seenCells[ccy * G.gw + ccx] = true; }
     }
@@ -1354,7 +1358,7 @@
         if (level.boss) { level.locked = false; sfx('door'); }
         rings.push({ x: took.x, y: took.y - 30, r: 4, grow: 3, life: 16, max: 16, colour: rarity(took.relic.rarity).colour });
         banner = { t: 0, text: took.relic.name, sub: level.boss ? 'THE DOOR IS OPEN' : 'THE WAY ON IS OPEN', colour: rarity(took.relic.rarity).colour };
-        sfx('chest'); nearPerk = null;
+        sfx('perk'); nearPerk = null;
       }
     }
     function drawPerks() {
@@ -1860,6 +1864,8 @@
       if (floorsDown > kept.best) kept.best = floorsDown;
       if (wonRun) { kept.wins++; if (!kept.fastest || clockSeconds < kept.fastest) kept.fastest = Math.round(clockSeconds); }
       save();
+      if (SND) SND.hum('portalhum', 0);
+      if (wonRun) sfx('victory');
       summary = { who: klass.name, won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
       state = 'summary';
     }
@@ -1892,7 +1898,7 @@
       if (hit('left')) { choose.index = (choose.index + n - 1) % n; choose.t = 0; sfx('select'); }
       if (hit('right')) { choose.index = (choose.index + 1) % n; choose.t = 0; sfx('select'); }
       if (hit('dash') || hit('pause')) { state = 'title'; return; }
-      if (choose.t > 8 && (hit('start') || hit('jump') || hit('attack') || hit('up'))) { pickClass(CL.ORDER[choose.index]); kept.klass = classId; save(); var c = chosenSeed(); run.seed = c.seed; begin(); }
+      if (choose.t > 8 && (hit('start') || hit('jump') || hit('attack') || hit('up'))) { sfx('confirm'); pickClass(CL.ORDER[choose.index]); kept.klass = classId; save(); var c = chosenSeed(); run.seed = c.seed; begin(); }
     }
     // what the chosen one does while you look: stands, runs, strikes, dashes, and whatever else is theirs
     function showcase(K, F, t) {

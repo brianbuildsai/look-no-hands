@@ -72,7 +72,7 @@
   // a moon struck: it has a life of its own, and when it breaks the shell cracks
   function strikeMoon(e, ctx, m, damage) {
     m.hp -= damage; m.flash = 5; ctx.sfx('hit'); ctx.spark(m.x, m.y, '#c4c1ba', 6, 1.6, 14, 0.04); ctx.number(m.x, m.y - 12, damage, '#c4c1ba');
-    if (m.hp <= 0) { m.broken = 420; m.away = false; m.hot = false; e.vars.cracked = 300; dustOf(ctx, m.x, m.y, 30, 3, false); ctx.shake(5); ctx.sfx('boom'); ctx.flash('#a48cff', 6); ctx.number(e.x, e.y - 26, 'THE SHELL CRACKS', '#ffffff'); if (e.attack && e.attack.def.name === 'fling') { e.attack.t = 9999; } }
+    if (m.hp <= 0) { m.broken = 420; m.away = false; m.hot = false; e.vars.cracked = 300; dustOf(ctx, m.x, m.y, 30, 3, false); ctx.shake(5); ctx.sfx('shatter'); ctx.flash('#a48cff', 6); ctx.number(e.x, e.y - 26, 'THE SHELL CRACKS', '#ffffff'); if (e.attack && e.attack.def.name === 'fling') { e.attack.t = 9999; } }
     return true;
   }
 
@@ -109,7 +109,7 @@
       during: function (e, ctx, t) {
         var v = e.vars, A = e.arena, m = v.shot; if (!m || m.broken > 0) return;
         if (t <= 14) { var s = t / 14; m.x = m.from.x + (v.tx - m.from.x) * s; m.y = m.from.y + (A.groundY - 7 - m.from.y) * s * s; ctx.particle({ x: m.x, y: m.y, vx: 0, vy: 0, life: 10, max: 10, colour: '#a48cff', size: 2, gravity: 0 }); }
-        if (t === 14) { ctx.shake(6); ctx.sfx('boom'); dustOf(ctx, m.x, A.groundY - 2, 28, 3.2, true); [1, -1].forEach(function (d) { ctx.projectile({ x: m.x + d * 14, y: A.groundY - 5, vx: d * 2.5, vy: 0, life: 170, colour: '#5b3fa0', core: '#a48cff', size: 9, damage: 1, element: 'plain', gravity: 0, wave: true, cause: 'orrery' }); }); if (e.phase) dustOf(ctx, m.x, A.groundY - 10, 10, 2, false); }
+        if (t === 14) { ctx.shake(6); ctx.sfx('moon'); dustOf(ctx, m.x, A.groundY - 2, 28, 3.2, true); [1, -1].forEach(function (d) { ctx.projectile({ x: m.x + d * 14, y: A.groundY - 5, vx: d * 2.5, vy: 0, life: 170, colour: '#5b3fa0', core: '#a48cff', size: 9, damage: 1, element: 'plain', gravity: 0, wave: true, cause: 'orrery' }); }); if (e.phase) dustOf(ctx, m.x, A.groundY - 10, 10, 2, false); }
       },
       box: function (e, t) { var m = e.vars.shot; return m && m.broken <= 0 && t <= 16 ? [{ x0: m.x - 9, x1: m.x + 9, y0: m.y - 9, y1: m.y + 9, damage: 1, element: 'void' }] : []; },
       // it lies where it fell, dim, and then rolls home
@@ -137,7 +137,7 @@
     eclipse: {
       name: 'eclipse', windup: 40, active: 36, recover: 24, cooldown: 10, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
       start: function (e, ctx) { var A = e.arena, mid = (A.left + A.right) / 2, spots = [mid - 96, mid, mid + 96].filter(function (x) { return Math.abs(x - e.x) > 40; }); e.vars.toX = spots[Math.floor(ctx.random() * spots.length)]; },
-      telling: function (e, ctx, t) { if (t === 1) ctx.sfx('freeze'); },
+      telling: function (e, ctx, t) { if (t === 1) ctx.sfx('eclipse'); },
       fire: function (e, ctx) { ctx.blackout(true); },
       during: function (e, ctx, t) { var v = e.vars; e.x += (v.toX - e.x) * 0.16; ctx.glow(e.x, e.y, 26, '#a48cff', 0.5); ctx.light(e.x, e.y, 30, 0.6); },
       resting: function (e, ctx, t) { if (t === 1) { ctx.blackout(false); ctx.flash('#a48cff', 5); dustOf(ctx, e.x, e.y, 24, 2.6, false); } },

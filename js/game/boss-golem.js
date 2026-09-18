@@ -188,7 +188,8 @@
         // and the vent screams
         ctx.particle({ x: e.x - e.dir * 20, y: e.y - 26 + (ctx.random() - 0.5) * 6, vx: -e.dir * (1 + ctx.random()), vy: -0.3, life: 18, max: 18, colour: '#ffdc9a', size: 1, gravity: -0.02 });
         ctx.glow(e.x + e.dir * 50, e.y - 14, 60, '#ff6a2b', 0.3); ctx.light(e.x + e.dir * 50, e.y - 14, 70, 0.9);
-        if (t % 14 === 1) { ctx.sfx('castember'); ctx.shake(1.5); }
+        if (t === 1 || t === 44) ctx.sfx('breath');
+        if (t % 14 === 1) ctx.shake(1.5);
       },
       resting: function (e, ctx, t) { if (t % 7 === 0) ctx.particle({ x: e.x + e.dir * 12, y: e.y - 22, vx: e.dir * 0.4, vy: -0.5, life: 30, max: 30, colour: '#5a3e38', size: 2, gravity: -0.01 }); }
     },

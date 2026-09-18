@@ -129,7 +129,7 @@
   function breachTell(holds) {
     return function (e, ctx, t, w) {
       var v = e.vars, A = e.arena;
-      if (t === 1) { ctx.telegraphCrack(v.x0, A.groundY, 30, w + 6, '#d8f1ff'); if (!holds) ctx.telegraphCrack(v.x1, A.groundY, 30, w + 80, '#9fd8ff'); ctx.sfx('freeze'); }
+      if (t === 1) { ctx.telegraphCrack(v.x0, A.groundY, 30, w + 6, '#d8f1ff'); if (!holds) ctx.telegraphCrack(v.x1, A.groundY, 30, w + 80, '#9fd8ff'); ctx.sfx('crack'); }
       if (t % 4 === 0) ctx.particle({ x: v.x0 + (ctx.random() - 0.5) * 24, y: A.groundY - 1, vx: (ctx.random() - 0.5) * 0.6, vy: -0.8 - ctx.random(), life: 16, max: 16, colour: ICE[t % 4], size: 1, gravity: 0.05 });
       if (t % 14 === 0) ctx.shake(1.2);
     };
@@ -196,7 +196,7 @@
       during: function (e, ctx, t) {
         var v = e.vars, A = e.arena, every = e.phase ? 4 : 5, k;
         for (k = 0; k < v.hung.length; k++) { v.hung[k].age++; v.hung[k].shake = k < v.dropped + 3; }
-        if (t % every === 0 && v.hung.length) { var h = v.hung.shift(); ctx.projectile({ x: h.x, y: A.ceilY + 8, vx: 0, vy: 1.2, gravity: 0.2, life: 120, colour: '#d8f1ff', size: 6, damage: 1, element: 'frost', icicle: true, big: true, cause: 'icicle', land: function (p) { shards(ctx, p.x, A.groundY - 2, 8, 2, true); } }); }
+        if (t % every === 0 && v.hung.length) { var h = v.hung.shift(); ctx.projectile({ x: h.x, y: A.ceilY + 8, vx: 0, vy: 1.2, gravity: 0.2, life: 120, colour: '#d8f1ff', size: 6, damage: 1, element: 'frost', icicle: true, big: true, cause: 'icicle', land: function (p) { shards(ctx, p.x, A.groundY - 2, 8, 2, true); ctx.sfx('icicle'); } }); }
       },
       end: function (e) { var A = e.arena; e.vars.hung = []; putHead(e, clamp(e.x, A.left + 30, A.right - 30), A.groundY + DEEP, 0); }
     },
@@ -217,7 +217,8 @@
         var v = e.vars, A = e.arena, out = -v.side, reach = Math.min(A.right - A.left, 20 + t * 7), k;
         for (k = 0; k < 7; k++) { var s = 4 + ctx.random() * 4; ctx.particle({ x: e.x + out * (10 + ctx.random() * reach * 0.5), y: A.groundY - 2 - ctx.random() * 15, vx: out * s, vy: (ctx.random() - 0.5) * 0.4, life: 14 + ctx.random() * 14, max: 28, colour: ICE[k % 4], size: k < 2 ? 2 : 1, gravity: 0 }); }
         ctx.glow(e.x + out * 40, A.groundY - 8, 50, '#9fd8ff', 0.2);
-        if (t % 12 === 1) { ctx.sfx('castfrost'); ctx.shake(1.2); }
+        if (t === 1 || t === 50) ctx.sfx('gust');
+        if (t % 12 === 1) ctx.shake(1.2);
       },
       resting: function (e, ctx, t) {
         var v = e.vars, out = -v.side;
