@@ -145,7 +145,7 @@
   function spend(e, ctx, t, span) {
     var A = e.arena;
     if (t < span - 26) { hover(e, e.x, A.groundY - 3, 0.08); e.anim = 'spent'; e.frame = Math.floor(t / 20) % 2; if (t % 18 === 0) ctx.particle({ x: e.x + (ctx.random() - 0.5) * 10, y: e.y - 40, vx: 0, vy: -0.3, life: 24, max: 24, colour: '#7a7099', size: 1, gravity: -0.01 }); }
-    else { hover(e, e.x, A.groundY - 34, 0.1); e.anim = 'idle'; e.frame = 0; }
+    else { hover(e, e.x, A.groundY - 46, 0.1); e.anim = 'idle'; e.frame = 0; }
   }
   var BARS = [[0, 24, 48, 60], [0, 16, 32, 40, 56, 64]];
 
@@ -266,7 +266,7 @@
     // it keeps its distance, above the reach of a standing blade
     var side = e.x < hero.x ? -1 : 1, tx = clamp(hero.x + side * 86, A.left + 24, A.right - 24);
     if (Math.abs(tx - hero.x) < 50) tx = clamp(hero.x - side * 86, A.left + 24, A.right - 24);
-    hover(e, tx, A.groundY - 34 + Math.sin(e.clock * 0.05) * 5, 0.03);
+    hover(e, tx, A.groundY - 46 + Math.sin(e.clock * 0.05) * 5, 0.05);
     e.dir = GD.towards(e, hero); e.anim = 'idle'; e.frame = Math.floor(e.clock / 10) % 4; e.state = 'idle';
     if (e.cooldown > 0 || !hero.alive) return null;
     var script = SCRIPTS[e.phase], want = script[e.script % script.length];
@@ -275,7 +275,7 @@
     return ATTACKS[want];
   }
 
-  function start(e, arena) { e.y = arena.groundY - 34; e.vars.balls = []; }
+  function start(e, arena) { e.y = arena.groundY - 46; e.vars.balls = []; }
   function waking(e, ctx, t) { if (t === 1) { crackle(ctx, e.x, e.y - 26, 24, 2.6); ctx.sfx('dash'); } if (t === 96) { ctx.sfx('roar'); ctx.shake(3); pylons(e.arena).forEach(function (p) { crackle(ctx, p.x, p.y, 10, 2); }); } e.vars.hot = t > 96 ? [1, 1, 1, 1] : null; if (t >= 119) e.vars.hot = null; }
 
   function always(e, ctx) {
@@ -317,7 +317,7 @@
 
   GD.register('herald', {
     name: 'The Storm Herald', title: 'WHO CONDUCTS THE GALLERY OF RAILS', element: 'storm', flying: true, ownBody: true,
-    hp: 140, body: { w: 14, h: 52 }, phases: [0.5], wake: 120, reel: 60,
+    hp: 170, body: { w: 14, h: 52 }, phases: [0.5], wake: 120, reel: 60,
     rig: buildRig, scenery: scenery, attacks: ATTACKS, think: think, always: always, onPhase: onPhase, fall: fall, waking: waking, start: start, dyingStep: dyingStep,
     tempo: function (e) { return e.phase ? 0.7 : 1; },
     hurtBoxes: function (e) {

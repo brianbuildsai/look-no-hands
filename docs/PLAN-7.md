@@ -144,3 +144,42 @@ for a breath: a pillar of gold, motes that orbit in, the name written large.
 10. The Lightless and the Vault.
 11. Balance by scripted fights, then the final pass (copy, README, plan
     status, audits, consoles).
+
+## Status
+
+All eleven tasks done on `feat/undercroft-bosses` (off `feat/undercroft`), one
+commit each, every one verified in the browser with a clean console in a
+fresh tab.
+
+What was decided along the way:
+
+- Guardians live in files of their own (`js/game/boss-*.js`) and register with
+  `guardians.js`, which now holds only what they share: the registry, the rig,
+  pieces turned through twenty-four headings, the attack clock, the phase
+  marks, soft hurt boxes, and boxes that answer a blow themselves (the
+  Herald's balls, the Lightless's braziers). The old flat guardians are gone.
+- A single jump reaches 43 pixels, so ledges in guardians' halls sit two tiles
+  up, not three.
+- Telegraphs are drawn over the dark, guardians' halls are lit more than the
+  floors, and a fallen guardian takes its telegraphs, hazards and missiles
+  with it.
+- Light and glow a guardian asks for during a step are held until the next
+  step. Before that they were lost on any picture drawn without a step
+  between, which would have flickered on screens faster than sixty hertz.
+- Fists, waves and tails wound once; only fire, frost and the rest lay an
+  affliction on top. Every guardian's blow costs one heart.
+- The last guardian's fall opens the door and nothing else: there is nothing
+  to choose after it.
+
+Balance, measured by a scripted fighter with the common short sword who never
+dodges and is healed when nearly dead (seconds to win, hits taken a minute):
+Kiln Golem 31 s, 13; Rime Wyrm 64 s, 7; Storm Herald 46 s, 7; the Lightless
+about 65 s, 14. A player who dodges spends longer and is hit less, which puts
+the three guardians at roughly a minute to a minute and a half each and the
+last one a little over. With six hearts, a fountain before every door, a full
+heal after every guardian and three lantern flames, a run can absorb two
+deaths and still finish.
+
+Audits: the static audit is clean; all 32 pages load at 1440 and 375 pixels
+with no overflow, no errors and no fallbacks; the game fits a phone with its
+touch zones under it.

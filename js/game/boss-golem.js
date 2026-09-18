@@ -294,7 +294,7 @@
 
   GD.register('golem', {
     name: 'The Kiln Golem', title: 'KEEPER OF THE GREAT KILN', element: 'ember', flying: false,
-    hp: 150, body: { w: 24, h: 38 }, phases: [0.6, 0.3], wake: 110, reel: 80,
+    hp: 270, body: { w: 24, h: 38 }, phases: [0.6, 0.3], wake: 110, reel: 80,
     rig: buildRig, attacks: ATTACKS, think: think, always: always, onPhase: onPhase, fall: fall, waking: waking,
     // it does not go quietly: the plates burst one after another, and then the fire is out
     dyingStep: function (e, ctx) { if (e.dying < 60 && e.dying % 9 === 0) { cinders(e, ctx, e.x + (ctx.random() - 0.5) * 24, e.y - 8 - ctx.random() * 26, 14, 2.6); ctx.shake(2.5); ctx.sfx('hit'); } if (e.dying === 58) { cinders(e, ctx, e.x, e.y - 12, 50, 4); ctx.sfx('boom'); } },

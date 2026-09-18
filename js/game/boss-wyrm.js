@@ -329,7 +329,7 @@
 
   GD.register('wyrm', {
     name: 'The Rime Wyrm', title: 'THAT SWIMS IN THE FROZEN CISTERN', element: 'frost', flying: true, ownBody: true,
-    hp: 130, body: { w: 18, h: 14 }, phases: [0.5], wake: 130, reel: 1,
+    hp: 120, body: { w: 18, h: 14 }, phases: [0.5], wake: 130, reel: 1,
     rig: buildRig, draw: draw, attacks: ATTACKS, think: think, always: always, onPhase: onPhase, fall: fall, waking: waking, start: start, dyingStep: dyingStep,
     tempo: function (e) { return e.phase ? 0.7 : 1; },
     hurtBoxes: function (e) {

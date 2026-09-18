@@ -405,7 +405,7 @@
 
   GD.register('lightless', {
     name: 'The Lightless', title: 'WHAT THE UNDERCROFT WAS BUILT OVER', element: 'void', flying: true, ownBody: true,
-    hp: 300, body: { w: 10, h: 22 }, phases: [0.667, 0.333], wake: 96, reel: 90,
+    hp: 270, body: { w: 10, h: 22 }, phases: [0.667, 0.333], wake: 96, reel: 90,
     rig: buildRig, draw: draw, attacks: null, think: think, always: always, onPhase: onPhase, fall: fall, waking: waking, start: start, dyingStep: dyingStep,
     hurtBoxes: function (e) {
       var v = e.vars, boxes = [], mult = v.exposed ? 2 : 1;

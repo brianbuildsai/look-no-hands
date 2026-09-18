@@ -1,10 +1,12 @@
 /* Undercroft — room 36.
 
    A rogue-like platformer, and the last room. The building has an undercroft
-   and it draws itself again every time you go down: five floors, one for each
-   element, stitched from a seeded grammar of chunks; a Warden with a sword, a
-   lantern and one power; enemies, guardians, relics; and nothing carried back
-   up except what was learned.
+   and it draws itself again every time you go down: three floors and a vault,
+   stitched from a seeded grammar of chunks in five elements; a Warden with a
+   weapon, a lantern of three flames and one power; creatures that wind up
+   before they strike; weapons and items in four rarities; a guardian in a
+   hall of its own at the foot of each floor and a last one under them; and
+   nothing carried back up except what was learned.
 
    The engine here is small and plain: a fixed step of one sixtieth of a
    second, tiles of sixteen pixels, axis-by-axis collision, a camera with a
@@ -1788,7 +1790,7 @@
       summary: function () { return summary; },
       kept: function (reset) { if (reset) { kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false }; save(); } return kept; },
       lastHurtBy: function () { return lastHurtBy; },
-      guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length, balls: boss.vars && boss.vars.balls ? boss.vars.balls.map(function (b) { return { x: Math.round(b.x), y: Math.round(b.y), struck: b.struck }; }) : undefined } : null; },
+      guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length, targets: boxesOf(boss).map(function (b) { return { x: Math.round((b.x0 + b.x1) / 2), y: Math.round((b.y0 + b.y1) / 2), mult: b.onHit ? 3 : b.mult }; }), balls: boss.vars && boss.vars.balls ? boss.vars.balls.map(function (b) { return { x: Math.round(b.x), y: Math.round(b.y), struck: b.struck }; }) : undefined } : null; },
       stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
       arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },

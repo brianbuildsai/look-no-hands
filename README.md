@@ -63,11 +63,16 @@ js/rooms/lightning.js     room 34  dielectric breakdown over a live-relaxed Lapl
 js/rooms/docent.js        room 35  a Markov chain that writes and typesets a label for a room that does not exist
 js/corpus.js          every wall text, written by make-rooms.js for room 35 to read
 js/rooms/undercroft.js    room 36  the game's engine: fixed step, tiles, camera, HUD, the run, persistence
-js/game/pixels.js         room 36  the sprite compiler (text art to canvases) and the Warden's frames
-js/game/world.js          room 36  five elements, the chunk grammar, the seeded generator, reachability
-js/game/actors.js         room 36  ten creatures and their behaviours
-js/game/relics.js         room 36  four powers, eighteen relics
-js/game/guardians.js      room 36  five guardians and their patterns
+js/game/pixels.js         room 36  the sprite compiler (text art to canvases), part-based rigs, the Warden's frames per weapon
+js/game/weapons.js        room 36  eleven weapons in five rarities: movesets, grips, finishers
+js/game/world.js          room 36  five elements, the chunk grammar, the seeded generator, reachability, four guardians' halls
+js/game/actors.js         room 36  ten creatures as rigs: hurt boxes, attack boxes, the wind-up/active/recover clock
+js/game/relics.js         room 36  four powers, twenty-eight items in four rarities
+js/game/guardians.js      room 36  what the guardians share: registry, rig, turned pieces, attack clock, phases, soft boxes
+js/game/boss-golem.js     room 36  the Kiln Golem: slam and wave, coals, furnace breath, leap, the vent on its back
+js/game/boss-wyrm.js      room 36  the Rime Wyrm: eleven pieces on a rope; breach, beach, icicle rain, gust, coil and nova, lash
+js/game/boss-herald.js    room 36  the Storm Herald: rhythm bolts, the live rail, blink, the waltzing balls, the turning pylons
+js/game/boss-lightless.js room 36  the Lightless: your double, then the mask and hands, then the dark and three braziers
 js/game/sound.js          room 36  synthesised effects and floor music
 tools/                authoring tools (Node): rooms.js is the copy, make-rooms.js stamps the pages
 docs/                 design and task plans
@@ -120,9 +125,11 @@ Gallery.inspect('docent').label()       // rooms/docent.html: the label being wr
 Gallery.inspect('undercroft').state()   // rooms/undercroft.html: the Warden, the run, the creatures, the frame cost
 Gallery.inspect('undercroft').press('right jump', 12)  // hold keys for so many steps (left right up down jump attack dash cast start pause)
 Gallery.inspect('undercroft').generate(seed, floor, section)  // a floor: columns, reachable, enemies, relics
-Gallery.inspect('undercroft').arena(floor); .guardian(); .slay()  // straight to a guardian, watch it, end it
-Gallery.inspect('undercroft').summon('hound', 40); .setPower('frostlance'); .take('aeolian'); .offer(3)
-Gallery.inspect('undercroft').sheet(true, 6, 'run,attack1', 'warden')  // draw sprite frames large on the stage; sheet(false) resumes
+Gallery.inspect('undercroft').stage(n)  // any of the eleven stages of the way down; .arena(floor) goes straight to a guardian (1 to 4)
+Gallery.inspect('undercroft').guardian(); .command('slam'); .slay()  // watch it (attack, phase, hurt-box targets), make it begin an attack by name, end it
+Gallery.inspect('undercroft').boxes(true)  // draw every hurt box, attack box and strike over the game
+Gallery.inspect('undercroft').summon('hound', 40, true); .equip('scythe'); .setPower('frostlance'); .take('aeolian'); .offer(3); .drop('weapon', 'dawnbreaker')
+Gallery.inspect('undercroft').sheet(true, 3, 'idle,slamUp', 'golem')  // sprite frames large on the stage ('warden', 'creatures', 'golem', 'golem:2', 'herald'); sheet(false) resumes
 ```
 
 ## Notes
