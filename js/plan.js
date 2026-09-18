@@ -401,6 +401,18 @@
     tree(0, s * 0.42, s * 0.3, -Math.PI / 2, 4);
   };
 
+  glyphs.lightning = function (pen, s) {
+    // a forked bolt from the top down to a ground line
+    pen.beginPath();
+    pen.moveTo(-s * 0.05, -s * 0.46); pen.lineTo(s * 0.08, -s * 0.2); pen.lineTo(-s * 0.06, -s * 0.02); pen.lineTo(s * 0.1, s * 0.22); pen.lineTo(0, s * 0.44);
+    pen.stroke();
+    pen.save(); pen.globalAlpha = 0.55;
+    pen.beginPath(); pen.moveTo(s * 0.08, -s * 0.2); pen.lineTo(s * 0.26, -s * 0.06); pen.lineTo(s * 0.22, s * 0.08); pen.stroke();
+    pen.beginPath(); pen.moveTo(-s * 0.06, -s * 0.02); pen.lineTo(-s * 0.24, s * 0.12); pen.lineTo(-s * 0.2, s * 0.3); pen.stroke();
+    pen.restore();
+    pen.beginPath(); pen.moveTo(-s * 0.42, s * 0.44); pen.lineTo(s * 0.42, s * 0.44); pen.stroke();
+  };
+
   /* [glyphs] */
 
   function draw(canvas) {

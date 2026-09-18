@@ -762,6 +762,29 @@ module.exports = {
   </div>
 </div>`,
       wall: 'Richard Dawkins wrote the biomorph program for The Blind Watchmaker in 1986 to show that cumulative selection, one small step at a time, can reach forms that no single lucky step could, and that no plan was needed. He reported losing an insect he had bred and searching the space of genes for weeks to find it again. The encoding of the nine genes here is his: eight direction vectors and a depth.'
+    },
+    {
+      number: 34,
+      slug: 'lightning',
+      ready: true,
+      title: 'Lightning',
+      line: 'A bolt that feels its way down through the field ahead of it, one step at a time, and strikes.',
+      description: 'Lightning by the dielectric breakdown model: the electric field between cloud and ground is solved live, and the leader grows one cell at a time toward the strongest field ahead. Tap to raise a lightning rod.',
+      canvasLabel: 'A tall dark sky with faint grey contour lines of the electric field bending around a branched, pale blue leader that creeps down from the top. When it reaches the ground line at the bottom the connecting channel flares white and the whole sky brightens for a moment before a new bolt begins.',
+      medium: '2026. A discharge choosing each step by the potential ahead of it, raised to the power <span class="live" data-live="lightning.eta">2.5</span>, over a field re-solved as it grows. Bolt <span class="live" data-live="lightning.strikes">0</span>; this one has taken <span class="live" data-live="lightning.steps">0</span> steps and forked <span class="live" data-live="lightning.branches">0</span> times.',
+      text: 'Between the cloud at the top and the ground at the bottom lies an electric field, worked out here by the oldest method there is: every cell is the average of its neighbours, swept over and over until it settles. The bolt is a set of cells at the cloud’s potential, and at each step one of the cells touching it is added, chosen by lot with the odds set by the field there raised to a power. A low power gives a fluffy bush that fills the sky; a high one a nearly straight strike; three or so gives lightning, forked and hesitant, feeling for the ground. When it arrives, the channel that connects cloud and ground lights, and the rest is left as the dim branches a photograph shows. Tap the sky to raise a lightning rod, and watch the field bend toward it.',
+      controls: `
+<div class="controls" role="group" aria-label="Lightning controls">
+  <label class="dial">
+    <span class="dial__label"><span>How choosy each step is</span><span data-lightning-eta-value></span></span>
+    <input class="dial__input" type="range" min="10" max="50" step="1" value="25" data-lightning-eta>
+  </label>
+  <div class="controls__row">
+    <button class="btn" type="button" data-lightning-strike>Another bolt</button>
+    <button class="btn" type="button" data-lightning-field aria-pressed="true">Show the field</button>
+  </div>
+</div>`,
+      wall: 'Niemeyer, Pietronero and Wiesmann published the dielectric breakdown model in 1984, after photographing discharges spreading across glass plates. Their single parameter, the power the field is raised to, sets the shape of the whole: at one, the discharge fills space like frost; at four or five, it is a single stroke. Real lightning, measured from photographs, behaves as though the power were about three. The field solver here is Gauss–Seidel relaxation, sped up a little by over-correcting, the method David Young worked out in 1950.'
     }
   ]
 };
