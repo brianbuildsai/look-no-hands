@@ -178,7 +178,7 @@
 
     // once a step: what was pressed since the last one
     function poll() {
-      pad = sample();
+      pad = sample(); if (cur) cur.pad = pad;
     }
     function down(name) { return (pad.held & BIT[name]) !== 0; }
     function hit(name) { return (pad.pressed & BIT[name]) !== 0; }
@@ -281,13 +281,16 @@
 
     var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22, airJumped = 0;
 
-    var hero = {
-      x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
-      onGround: false, coyote: 0, buffer: 0, drop: 0, jumping: false,
-      anim: 'idle', frame: 0, clock: 0, landed: 0,
-      hp: 6, maxHp: 6, energy: 3, maxEnergy: 3,
-      act: null, combo: 0, queued: false, dashCd: 0, airDash: true, invuln: 0, flash: 0, alive: true, deadFor: 0, hits: 0
-    };
+    function freshHero() {
+      return {
+        x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
+        onGround: false, coyote: 0, buffer: 0, drop: 0, jumping: false,
+        anim: 'idle', frame: 0, clock: 0, landed: 0,
+        hp: 6, maxHp: 6, energy: 3, maxEnergy: 3,
+        act: null, combo: 0, queued: false, dashCd: 0, airDash: true, invuln: 0, flash: 0, alive: true, deadFor: 0, hits: 0
+      };
+    }
+    var hero = freshHero();
 
     function spawnHero() {
       hero.x = level.spawn.x; hero.y = level.spawn.y; hero.vx = 0; hero.vy = 0; hero.dir = 1;
@@ -587,7 +590,7 @@
     var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless', bellkeeper: 'roarbell', regulator: 'roarclock', reflected: 'roarglass' };
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null;
     var ctx = {
-      hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
+      tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
       particle: function (q) { particles.push(q); },
       // what a guardian lights while it is stepped is held until it is stepped again, however many pictures are drawn between
       light: function (x, y, r, str) { stepLit.lights.push({ x: x, y: y, r: r, s: str || 1 }); },
@@ -1077,11 +1080,11 @@
 
     // what arms.js is given to work with
     function kit() {
-      return armsKit || (armsKit = { hero: hero, cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
+      return armsKit || (armsKit = liveHero({ cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
         creatures: function () { return creatures; }, projectiles: function () { return projectiles; }, mods: function () { return mods; }, weapon: function () { return weapon; }, tick: function () { return tick; }, random: random,
         spark: spark, particle: function (p) { particles.push(p); }, projectile: function (p) { projectiles.push(p); }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
         blocked: blocked, heroShape: function (colour, alpha) { var nm = hero.anim in sprites.warden ? hero.anim : 'idle', img = facing('warden', nm, Math.min(hero.frame, sprites.warden[nm].length - 1), hero.dir); fpen.globalAlpha = alpha; fpen.drawImage(P.silhouette(img, colour), Math.round(hero.x) - P.warden.anchor.x - Math.round(cam.x), Math.round(hero.y) - P.warden.anchor.y - Math.round(cam.y)); fpen.globalAlpha = 1; },
-        light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text });
+        light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text }));
     }
     function stepWeapons() {
       var k, b, t;
@@ -2098,6 +2101,45 @@
 
     /* ---- the loop and the room's wiring ---- */
 
+    /* ---- who is playing ----
+       Everything that belongs to one hero (the body, the class and its frames, hands, items, power, afflictions, the
+       weapon effects that follow her, what she stands next to, her buttons) lives in loose variables above, because
+       that is how a one-hero game was written. A player is a record of all of them. `use(P)` puts the loaded
+       player's away and takes P's out, so every function above works on whoever is loaded, unchanged. One player
+       is simply a list of one. Outside step() the local player (`me`) is always the one loaded. */
+    var players = [], me = 0, cur = null;
+    function store() {
+      var Q = cur; if (!Q) return;
+      Q.hero = hero; Q.classId = classId; Q.klass = klass; Q.sprites = sprites; Q.afflictions = afflictions;
+      Q.power = power; Q.held = held; Q.mods = mods; Q.casts = casts; Q.shieldUp = shieldUp;
+      Q.weaponId = weaponId; Q.weapon = weapon; Q.swings = swings; Q.hands = hands; Q.handIn = handIn; Q.swapT = swapT;
+      Q.ribbon = ribbon; Q.droplets = droplets; Q.flock = flock; Q.lash = lash; Q.delayed = delayed; Q.reaped = reaped; Q.hitCount = hitCount;
+      Q.airJumped = airJumped; Q.pounding = pounding; Q.onIce = onIce; Q.slick = slick;
+      Q.prompt = prompt; Q.nearPerk = nearPerk; Q.nearPortal = nearPortal; Q.lastHurtBy = lastHurtBy; Q.pad = pad;
+    }
+    function use(Q) {
+      if (Q === cur) return Q;
+      store(); cur = Q;
+      hero = Q.hero; classId = Q.classId; klass = Q.klass; sprites = Q.sprites; afflictions = Q.afflictions;
+      power = Q.power; held = Q.held; mods = Q.mods; casts = Q.casts; shieldUp = Q.shieldUp;
+      weaponId = Q.weaponId; weapon = Q.weapon; swings = Q.swings; hands = Q.hands; handIn = Q.handIn; swapT = Q.swapT;
+      ribbon = Q.ribbon; droplets = Q.droplets; flock = Q.flock; lash = Q.lash; delayed = Q.delayed; reaped = Q.reaped; hitCount = Q.hitCount;
+      airJumped = Q.airJumped; pounding = Q.pounding; onIce = Q.onIce; slick = Q.slick;
+      prompt = Q.prompt; nearPerk = Q.nearPerk; nearPortal = Q.nearPortal; lastHurtBy = Q.lastHurtBy; pad = Q.pad;
+      return Q;
+    }
+    // a new player: their own everything, at its beginnings
+    function makePlayer(index, who, powerId) {
+      var K = CL.CLASSES[who] ? who : 'warden';
+      return { index: index, hero: freshHero(), classId: K, klass: CL.CLASSES[K], sprites: { warden: P.hero.build(K) }, afflictions: { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0 },
+        power: powerId || 'emberwave', held: [], mods: RL.baseMods(), casts: 0, shieldUp: 0,
+        weaponId: 'shortsword', weapon: WP.WEAPONS.shortsword, swings: WP.MOVESETS.sword, hands: ['shortsword', null], handIn: 0, swapT: 0,
+        ribbon: [], droplets: [], flock: [], lash: null, delayed: [], reaped: 0, hitCount: 0, airJumped: 0, pounding: false, onIce: false, slick: false,
+        prompt: null, nearPerk: null, nearPortal: false, lastHurtBy: '', pad: { held: 0, pressed: 0 } };
+    }
+    function liveHero(table) { Object.defineProperty(table, 'hero', { get: function () { return hero; }, enumerable: true }); return table; }
+    liveHero(ctx);
+
     function pickClass(who) { if (CL.CLASSES[who]) { classId = who; klass = CL.CLASSES[who]; } return classId; }
     function begin() {
       state = 'run'; tick = 0; freeze = 0;
@@ -2162,6 +2204,7 @@
       });
     }
 
+    cur = { index: 0 }; store(); players = [cur];
     loadSection();
     placeCreatures();
     spawnHero();
