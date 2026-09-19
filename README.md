@@ -9,6 +9,53 @@ browser.
 The source is at <https://github.com/brianbuildsai/look-no-hands> and the site itself is served from `main` by GitHub Pages at
 <https://brianbuildsai.github.io/look-no-hands/>. There is no build: what is in the repository is what is served (`.nojekyll` tells Pages to leave it alone).
 
+## Two players (room 36)
+
+Open the Undercroft, choose who you go down as, press **Host a game**, and send
+the six-character code (or the link with it in) to someone. They open the same
+page, enter the code, press **Join**; you press **Start together**.
+
+How it works, because it decides how new things must be written:
+
+- **Nothing about the game is sent but the buttons.** Both browsers run the
+  whole simulation from the same seed (`js/game/net.js`). Each sends the other
+  what its player pressed, stamped with the step it belongs to, and a step is
+  simulated when both players' buttons for it are in hand. Your own buttons
+  are applied two to twelve steps late, set from the measured round trip. Every
+  thirty steps both hash their state; if they ever differ the host sends the
+  small record of the run and both begin that stage again from it.
+- So a new guardian, creature, weapon or item needs **no network code**. It
+  needs to keep three rules:
+  1. **Chance comes from the engine** (`ctx.random`, `T.random`, the engine's
+     `random()`), never `Math.random()`, and nothing in the simulation reads
+     the clock, the camera, the screen or the sound switch. (Drawing may: while
+     the picture is drawn `random()` answers from a separate stream.)
+  2. **Drawing does not change the game.** Timers that matter are counted in
+     steps, in step code.
+  3. **There may be two heroes.** `ctx.hero` is whoever this creature is going
+     for (the engine chooses and loads her before it steps). For anything of
+     your own that can touch a hero (a bubble, a cog, an echo) use
+     `ctx.touch(box, damage, element, e)`, which tries everybody;
+     `ctx.heroes()` lists who is up.
+- `tools/lockstep.html` (serve the site, then open it) proves it: two copies of
+  the room on the same buttons, one drawn every frame and one every seventh,
+  each seated as a different player, hashed after every step; then joined by
+  a wire that delays, jitters, reorders and drops. Run it after adding
+  anything. When it fails, `Gallery.inspect('undercroft').hashed()` lists every
+  value in the hash and `.traced([...])` lists who drew on the stream that step.
+- The connection (`js/game/wire.js`) is WebRTC, browser to browser. Only the
+  handshake behind the code uses a third party (the PeerJS project's free
+  public broker, and Google's STUN servers); neither sees the game. There is
+  no relay, so two networks that both refuse direct connections cannot be
+  joined, and the page says so. A transport is four functions
+  (`send`, `onmessage`, `onclose`, `close`); another can be put in its place
+  without touching the game.
+
+Rules for two: the three flames are shared; whoever is down rises half whole
+at the next stage; a portal takes both; in a sanctuary and after a guardian
+each takes one of the three; creatures have half again their life and
+guardians three fifths more; pause is either player's, for both.
+
 ## Running it
 
 Double-click `index.html`. It works from disk.
@@ -87,6 +134,8 @@ js/game/boss-reflected.js room 36  the Reflected: three mirrors and the true one
 js/game/boss-orrery.js    room 36  the Orrery: a core and three moons on rings; lit orbits, a flung moon, the pull, the eclipse
 js/game/boss-herald.js    room 36  the Storm Herald: rhythm bolts, the live rail, blink, the waltzing balls, the turning pylons
 js/game/boss-lightless.js room 36  the Lightless: your double, then the mask and hands, then the dark and three braziers
+js/game/net.js            room 36  two machines, one game: lockstep over any transport (buttons only, hashes, resync, leaving)
+js/game/wire.js           room 36  a WebRTC line between two browsers and the six-character code that finds it
 js/game/samples.js        room 36  written by tools/make-sounds.js: the recorded effects sound.js may load
 js/game/sound.js          room 36  plays the recordings (with the synthesised effect under each as a fallback) and the synthesised floor music
 audio/undercroft/         room 36  about sixty short mp3 effects made by ElevenLabs from the prompts in tools/sounds.js
@@ -146,6 +195,9 @@ Gallery.inspect('undercroft').portal(); .perks(); .reward()  // where the portal
 Sound.recorded()  // rooms/undercroft.html: how many recorded effects are listed and loaded
 Gallery.inspect('undercroft').stage(n)  // any of the thirty-three stages of the way down; .arena(floor) goes straight to a guardian (1 to 9)
 Gallery.inspect('undercroft').guardian(); .command('slam'); .slay()  // watch it (attack, phase, hurt-box targets), make it begin an attack by name, end it
+Gallery.inspect('undercroft').party([{ who: 'smith' }, { who: 'kite' }], 0); .begin(36); .together(['right attack', 'left'], true); .players(); .place(1, x, y)  // two heroes in one simulation, driven by script
+Gallery.inspect('undercroft').checksum(); .hashed(); .traced(['', '']); .record()  // the state's hash, what went into it, who drew chance this step, the run's small record
+Gallery.inspect('undercroft').netInfo()  // the session: role, step, delay, round trip, resyncs
 Gallery.inspect('undercroft').boxes(true)  // draw every hurt box, attack box and strike over the game
 Gallery.inspect('undercroft').hands(); .swap(); .wield('lastlight'); .arms('whale')  // the two hands; change them; take a weapon as if found; count arms.js effects alive
 Gallery.inspect('undercroft').summon('hound', 40, true); .equip('scythe'); .setPower('frostlance'); .take('aeolian'); .offer(3); .drop('weapon', 'dawnbreaker')

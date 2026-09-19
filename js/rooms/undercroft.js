@@ -2346,8 +2346,9 @@
     (function lobby() {
       var box = env.room.querySelector('[data-undercroft-together]'), WIRE = window.UndercroftWire;
       if (!box) return;
-      function el(name) { return box.querySelector('[data-together-' + name + ']'); }
-      var who = el('who'), hostBtn = el('host'), joinBtn = el('join'), leaveBtn = el('leave'), startBtn = el('start'), copyBtn = el('copy'), field = el('code'), status = el('status'), invite = el('invite'), codeOut = el('codeout'), joinField = el('joinfield');
+      function find(sel) { return box.querySelector(sel); }
+      var who = find('[data-together-who]'), hostBtn = find('[data-together-host]'), joinBtn = find('[data-together-join]'), leaveBtn = find('[data-together-leave]'), startBtn = find('[data-together-start]'), copyBtn = find('[data-together-copy]'),
+        field = find('[data-together-code]'), status = find('[data-together-status]'), invite = find('[data-together-invite]'), codeOut = find('[data-together-codeout]'), joinField = find('[data-together-joinfield]');
       if (!NET || !WIRE || !WIRE.supported()) { box.hidden = true; return; }
       var handle = null, heart = null, link = '';
       CL.ORDER.forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = CL.CLASSES[id].name; who.appendChild(o); });
