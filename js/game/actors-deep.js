@@ -10,6 +10,7 @@
      glass  the Reflection (it turns what is thrown) and the Prism (its beam splits in three) */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var AC = window.Actors;
   if (!AC || !AC.kit) return;
   var KINDS = AC.KINDS, BY_ELEMENT = AC.BY_ELEMENT, rig = AC.kit.rig, front = AC.kit.front, turnToward = AC.kit.turnToward, groundBelow = AC.kit.groundBelow;
@@ -103,18 +104,18 @@
   }
   KINDS.angler = { element: 'tide', flying: true, body: { w: 12, h: 10 }, hurt: { w: 18, h: 13 }, hp: 8, speed: 0.55, sight: 170, move: 'hover', stand: 70, height: 26, rig: anglerRig,
     attacks: [{ name: 'bite', range: [28, 130], above: 60, below: 70, windup: 48, active: 22, recover: 44, cooldown: 130, moves: true,
-      start: function (e, ctx) { e.vars.angle = Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x); ctx.sfx('select'); },
+      start: function (e, ctx) { e.vars.angle = ST.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x); ctx.sfx('select'); },
       telling: function (e, ctx, t, w) {
-        if (t < w - 14) e.vars.angle = turnToward(e.vars.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.05);
+        if (t < w - 14) e.vars.angle = turnToward(e.vars.angle, ST.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.05);
         e.vx *= 0.85; e.vy *= 0.85;
-        ctx.telegraphLine(e.x, e.y, e.x + Math.cos(e.vars.angle) * 118, e.y + Math.sin(e.vars.angle) * 118, 2, '#5fd4c4');
+        ctx.telegraphLine(e.x, e.y, e.x + ST.cos(e.vars.angle) * 118, e.y + ST.sin(e.vars.angle) * 118, 2, '#5fd4c4');
       },
-      fire: function (e, ctx) { e.vx = Math.cos(e.vars.angle) * 5.2; e.vy = Math.sin(e.vars.angle) * 5.2; e.dir = e.vx >= 0 ? 1 : -1; ctx.sfx('dash'); },
+      fire: function (e, ctx) { e.vx = ST.cos(e.vars.angle) * 5.2; e.vy = ST.sin(e.vars.angle) * 5.2; e.dir = e.vx >= 0 ? 1 : -1; ctx.sfx('dash'); },
       box: function (e) { return [{ x0: e.x - 9 * e.size, x1: e.x + 9 * e.size, y0: e.y - 7 * e.size, y1: e.y + 7 * e.size }]; },
       during: function (e, ctx, t) { if (t % 2 === 0) ctx.particle({ x: e.x - e.vx, y: e.y + (ctx.random() - 0.5) * 8, vx: 0, vy: -0.2, life: 14, max: 14, colour: '#9ff5e6', size: 1, gravity: -0.01 }); },
       resting: function (e) { e.vx *= 0.88; e.vy *= 0.88; } }],
     // the lure: a small light that goes wherever it goes, and goes out when it means to bite
-    always: function (e, ctx) { if (e.dying || e.attack && e.attack.phase !== 'recover') return; var lx = e.x + e.dir * 9 * e.size, ly = e.y - 7 * e.size + Math.sin(e.clock * 0.08) * 1.5; ctx.light(lx, ly, 20, 0.95); ctx.glow(lx, ly, 9, '#9ff5e6', 0.55); } };
+    always: function (e, ctx) { if (e.dying || e.attack && e.attack.phase !== 'recover') return; var lx = e.x + e.dir * 9 * e.size, ly = e.y - 7 * e.size + ST.sin(e.clock * 0.08) * 1.5; ctx.light(lx, ly, 20, 0.95); ctx.glow(lx, ly, 9, '#9ff5e6', 0.55); } };
 
   BY_ELEMENT.tide = ['diver', 'angler'];
   /* ---- gear ---- */
@@ -195,7 +196,7 @@
     var x = Math.round(p.x) - cx, y = Math.round(p.y) - cy, a = tick * 0.4 * (p.vx < 0 ? -1 : 1), k;
     g.fillStyle = '#140d04'; g.beginPath(); g.arc(x, y, 5.5, 0, 6.2832); g.fill();
     g.fillStyle = '#c9a44c'; g.beginPath();
-    for (k = 0; k < 12; k++) { var r = k % 2 ? 3.2 : 5, an = a + k / 12 * 6.2832; if (k) g.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); else g.moveTo(x + Math.cos(an) * r, y + Math.sin(an) * r); }
+    for (k = 0; k < 12; k++) { var r = k % 2 ? 3.2 : 5, an = a + k / 12 * 6.2832; if (k) g.lineTo(x + ST.cos(an) * r, y + ST.sin(an) * r); else g.moveTo(x + ST.cos(an) * r, y + ST.sin(an) * r); }
     g.fill(); g.fillStyle = '#efd27a'; g.fillRect(x - 1, y - 1, 2, 2);
   }
   function steerCog(p, ctx) {
@@ -304,16 +305,16 @@
     });
   }
   function ray(e, ctx, x0, y0, angle, max, out) {
-    var c = Math.cos(angle), s = Math.sin(angle), len = 6;
+    var c = ST.cos(angle), s = ST.sin(angle), len = 6;
     for (; len < max; len += 8) { var x = x0 + c * len, y = y0 + s * len; if (ctx.tileAt(Math.floor(x / 16), Math.floor(y / 16)) === 1) break; if (out) out.push({ x0: x - 4, x1: x + 4, y0: y - 4, y1: y + 4 }); }
     return { x: x0 + c * len, y: y0 + s * len, len: len };
   }
   KINDS.prism = { element: 'glass', flying: true, body: { w: 10, h: 14 }, hurt: { w: 13, h: 18 }, hp: 7, speed: 0.45, sight: 190, move: 'hover', stand: 84, height: 40, rig: prismRig,
     attacks: [{ name: 'refract', range: [44, 180], above: 90, below: 120, windup: 58, active: 40, recover: 44, cooldown: 170,
-      start: function (e, ctx) { var dx = ctx.hero.x - e.x, dy = ctx.hero.y - 11 - e.y; e.vars.angle = Math.atan2(dy, dx); e.vars.split = Math.max(36, Math.min(96, Math.sqrt(dx * dx + dy * dy) * 0.55)); },
+      start: function (e, ctx) { var dx = ctx.hero.x - e.x, dy = ctx.hero.y - 11 - e.y; e.vars.angle = ST.atan2(dy, dx); e.vars.split = Math.max(36, Math.min(96, Math.sqrt(dx * dx + dy * dy) * 0.55)); },
       telling: function (e, ctx, t, w) {
         var v = e.vars;
-        if (t < w - 18) v.angle = turnToward(v.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.05);
+        if (t < w - 18) v.angle = turnToward(v.angle, ST.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.05);
         var first = ray(e, ctx, e.x, e.y, v.angle, v.split, null);
         ctx.telegraphLine(e.x, e.y, first.x, first.y, 2, '#ff9ecb');
         if (first.len >= v.split) { for (var n = -1; n <= 1; n++) { var b = ray(e, ctx, first.x, first.y, v.angle + n * 0.42, 110, null); ctx.telegraphLine(first.x, first.y, b.x, b.y, 2, n ? '#c46a98' : '#ff9ecb'); } ctx.telegraphCircle(first.x, first.y, 4, 2, '#ffe8f4'); }

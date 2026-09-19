@@ -8,6 +8,7 @@
    sprite stays the same creature while it runs, swings and falls. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
 
   var PALETTE = {
     k: '#0b0b12',            // outline
@@ -319,18 +320,18 @@
     F.run = [];
     for (k = 0; k < 8; k++) {
       t = k / 8 * Math.PI * 2;
-      var swing = Math.round(Math.sin(t) * 4), lift = Math.round(Math.max(0, Math.sin(t)) * 2);
-      var swingB = Math.round(Math.sin(t + Math.PI) * 4), liftB = Math.round(Math.max(0, Math.sin(t + Math.PI)) * 2);
+      var swing = Math.round(ST.sin(t) * 4), lift = Math.round(Math.max(0, ST.sin(t)) * 2);
+      var swingB = Math.round(ST.sin(t + Math.PI) * 4), liftB = Math.round(Math.max(0, ST.sin(t + Math.PI)) * 2);
       F.run.push(pose({
         bob: k % 4 === 1 ? -1 : k % 4 === 3 ? 0 : k % 4 === 2 ? -1 : 0,
         lean: 1,
         trail: 3,
         front: { x: swing, y: -lift, bent: lift > 1 },
         back: { x: swingB, y: -liftB, bent: liftB > 1 },
-        frontArm: { x: Math.round(-Math.sin(t) * 2), y: 0 },
-        backArm: { x: Math.round(Math.sin(t) * 2), y: 0 },
+        frontArm: { x: Math.round(-ST.sin(t) * 2), y: 0 },
+        backArm: { x: Math.round(ST.sin(t) * 2), y: 0 },
         scarf: { x: -2 - (k % 2), y: (k % 4 < 2 ? -1 : 0) },
-        lantern: { x: Math.round(Math.sin(t) * 1.5), y: 0 },
+        lantern: { x: Math.round(ST.sin(t) * 1.5), y: 0 },
         sword: { kind: 'up', x: 0, y: 0 }
       }));
     }

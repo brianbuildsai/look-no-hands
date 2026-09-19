@@ -26,23 +26,42 @@ How it works, because it decides how new things must be written:
   thirty steps both hash their state; if they ever differ the host sends the
   small record of the run and both begin that stage again from it.
 - So a new guardian, creature, weapon or item needs **no network code**. It
-  needs to keep three rules:
+  needs to keep four rules:
   1. **Chance comes from the engine** (`ctx.random`, `T.random`, the engine's
      `random()`), never `Math.random()`, and nothing in the simulation reads
      the clock, the camera, the screen or the sound switch. (Drawing may: while
      the picture is drawn `random()` answers from a separate stream.)
   2. **Drawing does not change the game.** Timers that matter are counted in
      steps, in step code.
-  3. **There may be two heroes.** `ctx.hero` is whoever this creature is going
+  3. **Arithmetic that every browser does alike.** Two different browsers may
+     be playing. Adding, multiplying, dividing, `Math.sqrt`, rounding are the
+     same everywhere; `Math.sin`, `cos`, `atan2`, `pow`, `exp`, `log` are not
+     (each engine has its own, and one last place of difference puts both
+     players back at the head of the stage for ever). Use `ST.sin` and the
+     rest from `js/game/steady.js`. Never shuffle by sorting with a random
+     comparator (engines sort differently): `ST.shuffle(list, random)`.
+  4. **There may be two heroes.** `ctx.hero` is whoever this creature is going
      for (the engine chooses and loads her before it steps). For anything of
      your own that can touch a hero (a bubble, a cog, an echo) use
      `ctx.touch(box, damage, element, e)`, which tries everybody;
      `ctx.heroes()` lists who is up.
+- **Both machines must run the same code to the letter.** Room 36's page
+  carries a stamp (`data-build`, a hash of its scripts), asks for its scripts
+  by that stamp so a browser cannot mix an old file with a new page, and a
+  host refuses a guest whose stamp differs, saying so. `tools/make-rooms.js`
+  writes the stamp: **run it after editing any script of the game**
+  (`tools/lockstep.html` says when the stamp is stale).
 - `tools/lockstep.html` (serve the site, then open it) proves it: two copies of
   the room on the same buttons, one drawn every frame and one every seventh,
   each seated as a different player, hashed after every step; then joined by
   a wire that delays, jitters, reorders and drops. Run it after adding
-  anything. When it fails, `Gallery.inspect('undercroft').hashed()` lists every
+  anything. It also reads the sources for arithmetic that differs between
+  browsers, and its last line (`across browsers: ...`) must be the same in
+  every browser it is run in: run it in two. `tools/crossplay.html` goes
+  further: one player of a real two-player game, played by script, so that
+  two browsers (or two machines) can be set against each other over the real
+  wire with nobody at either keyboard; it passes if `resyncs` stays 0.
+  When a run fails, `Gallery.inspect('undercroft').hashed()` lists every
   value in the hash and `.traced([...])` lists who drew on the stream that step.
 - There are two ways from one browser to the other, and both are tried at
   once under the same code (`js/game/wire.js`). The direct way is WebRTC,
@@ -134,6 +153,7 @@ js/rooms/lightning.js     room 34  dielectric breakdown over a live-relaxed Lapl
 js/rooms/docent.js        room 35  a Markov chain that writes and typesets a label for a room that does not exist
 js/corpus.js          every wall text, written by make-rooms.js for room 35 to read
 js/rooms/undercroft.js    room 36  the game's engine: fixed step, tiles, camera, HUD, the run, persistence
+js/game/steady.js         room 36  sines, arctangents and powers that every browser computes alike, and a proper shuffle: two machines must agree to the bit
 js/game/pixels.js         room 36  the sprite compiler (text art to canvases), part-based rigs, the Warden's frames per weapon
 js/game/classes.js        room 36  the four who go down: skins for the shared skeleton, numbers, what a dash is
 js/game/weapons.js        room 36  twenty-six weapons in five rarities: movesets, grips, what each says it does

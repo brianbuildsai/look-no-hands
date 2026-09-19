@@ -13,6 +13,7 @@
    with steam. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -121,7 +122,7 @@
   // the floor it may stand on: narrower once the lava has climbed
   function floorOf(e) { var A = e.arena, inset = e.vars.lavaUp ? 48 : 0; return { left: A.left + inset, right: A.right - inset }; }
   function cinders(e, ctx, x, y, n, speed) {
-    for (var k = 0; k < n; k++) { var a = -Math.PI * ctx.random(), v = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 20 + ctx.random() * 24, max: 44, colour: FLAME[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.06 }); }
+    for (var k = 0; k < n; k++) { var a = -Math.PI * ctx.random(), v = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * v, vy: ST.sin(a) * v, life: 20 + ctx.random() * 24, max: 44, colour: FLAME[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.06 }); }
   }
   // a wave of cinders that runs along the floor until it meets a wall; it is jumped
   function wave(e, ctx, dir, from) {
@@ -178,7 +179,7 @@
         var b = GD.front(e, 12, 112, 28, 0);
         if (t === 1) { ctx.telegraph(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, w, '#ff6a2b'); ctx.sfx('roar'); }
         // the air goes in
-        for (var k = 0; k < 2; k++) { var a = (ctx.random() - 0.5) * 1.2, r = 40 + ctx.random() * 50; ctx.particle({ x: e.x + e.dir * (12 + Math.cos(a) * r), y: e.y - 24 + Math.sin(a) * r, vx: -e.dir * Math.cos(a) * r / 16, vy: -Math.sin(a) * r / 16, life: 15, max: 15, colour: k ? '#ffdc9a' : '#8a6a5c', size: 1, gravity: 0 }); }
+        for (var k = 0; k < 2; k++) { var a = (ctx.random() - 0.5) * 1.2, r = 40 + ctx.random() * 50; ctx.particle({ x: e.x + e.dir * (12 + ST.cos(a) * r), y: e.y - 24 + ST.sin(a) * r, vx: -e.dir * ST.cos(a) * r / 16, vy: -ST.sin(a) * r / 16, life: 15, max: 15, colour: k ? '#ffdc9a' : '#8a6a5c', size: 1, gravity: 0 }); }
         ctx.glow(e.x + e.dir * 3, e.y - 22, 18 + t / w * 22, '#ffdc9a', 0.15 + 0.3 * t / w);
       },
       box: function (e, t) { var b = GD.front(e, 12, Math.min(112, 28 + t * 5), 28, 0); b.damage = 1; b.element = 'ember'; return [b]; },
@@ -262,7 +263,7 @@
     v.heroBehind = (hero.x - e.x) * e.dir < -4;
     if (e.onGround) e.x = clamp(e.x, F.left + 14, F.right - 14);
     // the fire shows through the grate, and the chimney smokes
-    ctx.glow(e.x + e.dir * 2, e.y - 22, 15 + 2 * Math.sin(e.clock * 0.1), '#ff6a2b', 0.16 + e.phase * 0.07);
+    ctx.glow(e.x + e.dir * 2, e.y - 22, 15 + 2 * ST.sin(e.clock * 0.1), '#ff6a2b', 0.16 + e.phase * 0.07);
     ctx.light(e.x, e.y - 24, 64, 0.85);
     if (e.clock % (e.phase === 2 ? 5 : 9) === 0) ctx.particle({ x: e.x - e.dir * 9 + (ctx.random() - 0.5) * 3, y: e.y - 40, vx: -e.dir * 0.15 + (ctx.random() - 0.5) * 0.2, vy: -0.45, life: 46, max: 46, colour: e.phase === 2 && ctx.random() < 0.4 ? '#ff8c42' : '#5a3e38', size: 2, gravity: -0.006 });
     if (e.phase && e.clock % 7 === 0) ctx.particle({ x: e.x + (ctx.random() - 0.5) * 22, y: e.y - 8 - ctx.random() * 26, vx: 0, vy: -0.3, life: 18, max: 18, colour: FLAME[e.clock % 4], size: 1, gravity: -0.02 });

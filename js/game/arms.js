@@ -15,6 +15,7 @@
      Arms.clear()            a new stage, a new run */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
 
   var fx = [];                      // everything alive
   var FIRE = {}, STEP = {}, DRAW = {}, OVER = {};
@@ -46,7 +47,7 @@
     return true;
   };
   DRAW.shot = function (s, T, g, cx, cy) {
-    var a = Math.atan2(s.vy, s.vx), x = Math.round(s.x) - cx, y = Math.round(s.y) - cy;
+    var a = ST.atan2(s.vy, s.vx), x = Math.round(s.x) - cx, y = Math.round(s.y) - cy;
     g.save(); g.translate(x, y); g.rotate(a);
     g.fillStyle = s.colour; g.beginPath(); g.moveTo(6, 0); g.lineTo(0, -2.5); g.lineTo(-5, 0); g.lineTo(0, 2.5); g.fill();
     g.fillStyle = '#ffffff'; g.fillRect(-1, -0.5, 5, 1);
@@ -58,7 +59,7 @@
 
   function throwDisc(T, n, big, angle) {
     var h = T.hero, w = T.weapon(), d = h.dir, sp = big ? 5.4 : 4.6;
-    add({ kind: 'disc', x: h.x + d * 10, y: h.y - 15, vx: Math.cos(angle) * sp * d, vy: Math.sin(angle) * sp, dir: d, out: true, seen: [], spin: 0, big: big, damage: w.damage[n] + T.mods().damage, colour: w.trail, trail: [] });
+    add({ kind: 'disc', x: h.x + d * 10, y: h.y - 15, vx: ST.cos(angle) * sp * d, vy: ST.sin(angle) * sp, dir: d, out: true, seen: [], spin: 0, big: big, damage: w.damage[n] + T.mods().damage, colour: w.trail, trail: [] });
   }
   STEP.disc = function (s, T) {
     var h = T.hero;
@@ -120,7 +121,7 @@
     var t = s.t / s.max, rise = t < 0.2 ? t / 0.2 : t > 0.7 ? Math.max(0, 1 - (t - 0.7) / 0.3) : 1, hgt = Math.round(72 * rise), x = Math.round(s.x) - cx, y = Math.round(s.y) - cy, k;
     if (s.t < 8) { g.fillStyle = 'rgba(95,212,196,0.5)'; g.fillRect(x - 10, y - 1, 20, 2); return; }
     for (k = 0; k < hgt; k += 2) {
-      var wob = Math.round(Math.sin((k + s.t * 3) * 0.3) * 2), wd = Math.round(9 - k / 72 * 4);
+      var wob = Math.round(ST.sin((k + s.t * 3) * 0.3) * 2), wd = Math.round(9 - k / 72 * 4);
       g.fillStyle = '#1f7a70'; g.fillRect(x - wd + wob, y - k - 2, wd * 2, 2);
       g.fillStyle = '#5fd4c4'; g.fillRect(x - wd + 2 + wob, y - k - 2, wd * 2 - 4, 2);
       g.fillStyle = '#d6fff8'; g.fillRect(x - 1 + wob, y - k - 2, 2, 2);
@@ -151,7 +152,7 @@
     var x = Math.round(s.x) - cx, y = Math.round(s.y) - 7 - cy, k;
     g.fillStyle = '#0b0b12'; g.beginPath(); g.arc(x, y, 7.5, 0, 6.2832); g.fill();
     g.fillStyle = '#c9a44c'; g.beginPath();
-    for (k = 0; k < 16; k++) { var a = s.spin + k / 16 * 6.2832, r = k % 2 ? 4.5 : 7; if (k) g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); else g.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+    for (k = 0; k < 16; k++) { var a = s.spin + k / 16 * 6.2832, r = k % 2 ? 4.5 : 7; if (k) g.lineTo(x + ST.cos(a) * r, y + ST.sin(a) * r); else g.moveTo(x + ST.cos(a) * r, y + ST.sin(a) * r); }
     g.fill();
     g.fillStyle = '#efd27a'; g.beginPath(); g.arc(x, y, 3, 0, 6.2832); g.fill();
     g.fillStyle = '#0b0b12'; g.fillRect(x - 1, y - 1, 2, 2);
@@ -162,7 +163,7 @@
 
   FIRE.shardfan = function (T) {
     var h = T.hero, d = h.dir;
-    for (var k = -1; k <= 1; k++) shot(T, { x: h.x + d * 18, y: h.y - 14, vx: d * 4.6 * Math.cos(k * 0.28), vy: 4.6 * Math.sin(k * 0.28), damage: 3 + T.mods().damage, element: 'glass', colour: '#ff9ecb', life: 44 });
+    for (var k = -1; k <= 1; k++) shot(T, { x: h.x + d * 18, y: h.y - 14, vx: d * 4.6 * ST.cos(k * 0.28), vy: 4.6 * ST.sin(k * 0.28), damage: 3 + T.mods().damage, element: 'glass', colour: '#ff9ecb', life: 44 });
     T.sfx('icicle'); T.flash('#ff9ecb', 3);
   };
 
@@ -184,7 +185,7 @@
         if (T.tileAt(Math.floor((c.x + nx + (nx > 0 ? c.w / 2 : -c.w / 2)) / 16), Math.floor((c.y - 4) / 16)) !== 1) c.x += nx;
         if (c.spec.flying) c.y += dy / len * pull;
       }
-      for (k = 0; k < 2; k++) { var a = T.random() * 6.2832, r = 30 + T.random() * 30; bit(T, s.x + Math.cos(a) * r, s.y + Math.sin(a) * r, -Math.cos(a) * 2 + Math.sin(a), -Math.sin(a) * 2 - Math.cos(a), 12, T.random() < 0.3 ? '#ffffff' : '#a48cff', 1, 0); }
+      for (k = 0; k < 2; k++) { var a = T.random() * 6.2832, r = 30 + T.random() * 30; bit(T, s.x + ST.cos(a) * r, s.y + ST.sin(a) * r, -ST.cos(a) * 2 + ST.sin(a), -ST.sin(a) * 2 - ST.cos(a), 12, T.random() < 0.3 ? '#ffffff' : '#a48cff', 1, 0); }
     }
     if (s.t === 46) {
       T.strike({ x0: s.x - 30, x1: s.x + 30, y0: s.y - 30, y1: s.y + 30 }, 6 + T.mods().damage, 2, null);
@@ -302,7 +303,7 @@
   DRAW.wake = function (s, T, g, cx, cy) {
     var f = 1 - s.t / s.max, n = Math.max(1, Math.round(Math.abs(s.x1 - s.x0) / 5)), k, ph = s.seed + Math.floor(s.t / 3) * 7;
     g.globalAlpha = f; g.strokeStyle = (s.t >> 1) % 2 ? '#ffffff' : '#8fa3ff'; g.lineWidth = 1; g.beginPath();
-    for (k = 0; k <= n; k++) { var x = s.x0 + (s.x1 - s.x0) * k / n, y = s.y + Math.sin((k + ph) * 12.9898) * 4 * f; if (k) g.lineTo(x - cx, y - cy); else g.moveTo(x - cx, y - cy); }
+    for (k = 0; k <= n; k++) { var x = s.x0 + (s.x1 - s.x0) * k / n, y = s.y + ST.sin((k + ph) * 12.9898) * 4 * f; if (k) g.lineTo(x - cx, y - cy); else g.moveTo(x - cx, y - cy); }
     g.stroke(); g.globalAlpha = 1;
     if (s.t % 6 === 0) T.light((s.x0 + s.x1) / 2, s.y, 18, 0.4 * f);
   };
@@ -339,11 +340,11 @@
       g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(0, y, T.W, 1);
       T.heroShape('#ffffff', 1);
       // the click of the guard against the sheath
-      if (s.t >= 18) { var gl = (s.t - 18) / 8, gx = Math.round(xb - s.dir * 5), gy = y + 2, r = Math.round(7 * Math.sin(gl * 3.1416)); g.fillStyle = '#ffd24d'; g.fillRect(gx - r, gy, r * 2 + 1, 1); g.fillRect(gx, gy - r, 1, r * 2 + 1); }
+      if (s.t >= 18) { var gl = (s.t - 18) / 8, gx = Math.round(xb - s.dir * 5), gy = y + 2, r = Math.round(7 * ST.sin(gl * 3.1416)); g.fillStyle = '#ffd24d'; g.fillRect(gx - r, gy, r * 2 + 1, 1); g.fillRect(gx, gy - r, 1, r * 2 + 1); }
     } else {
       var f = 1 - (s.t - 26) / (s.max - 26);
       g.globalAlpha = f; g.strokeStyle = '#ffffff'; g.lineWidth = 2;
-      for (k = 0; k < s.marks.length; k++) { var m = s.marks[k], len = 26 * (1.2 - f * 0.4); g.beginPath(); g.moveTo(m.x - cx - Math.cos(m.a) * len, m.y - cy - Math.sin(m.a) * len); g.lineTo(m.x - cx + Math.cos(m.a) * len, m.y - cy + Math.sin(m.a) * len); g.stroke(); }
+      for (k = 0; k < s.marks.length; k++) { var m = s.marks[k], len = 26 * (1.2 - f * 0.4); g.beginPath(); g.moveTo(m.x - cx - ST.cos(m.a) * len, m.y - cy - ST.sin(m.a) * len); g.lineTo(m.x - cx + ST.cos(m.a) * len, m.y - cy + ST.sin(m.a) * len); g.stroke(); }
       g.lineWidth = 1; g.beginPath(); g.moveTo(xa, y); g.lineTo(xb, y); g.stroke();
       g.globalAlpha = 1;
     }
@@ -374,10 +375,10 @@
     g.globalAlpha = 0.5 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.stroke();
     g.globalAlpha = 0.25 * f; g.beginPath(); g.arc(x, y, R - 6, 0, 6.2832); g.stroke();
     g.globalAlpha = 0.7 * f; g.fillStyle = '#fff3b0';
-    for (k = 0; k < 12; k++) { var a = k / 12 * 6.2832, len = k % 3 === 0 ? 5 : 2; g.fillRect(Math.round(x + Math.cos(a) * (R - len)), Math.round(y + Math.sin(a) * (R - len)), k % 3 === 0 ? 2 : 1, k % 3 === 0 ? 2 : 1); }
+    for (k = 0; k < 12; k++) { var a = k / 12 * 6.2832, len = k % 3 === 0 ? 5 : 2; g.fillRect(Math.round(x + ST.cos(a) * (R - len)), Math.round(y + ST.sin(a) * (R - len)), k % 3 === 0 ? 2 : 1, k % 3 === 0 ? 2 : 1); }
     var a1 = -1.5708 + s.t / s.max * 6.2832, a2 = -1.5708 + Math.floor(s.t / 5) * 0.5236;
-    g.globalAlpha = 0.85 * f; g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a1) * (R - 8), y + Math.sin(a1) * (R - 8)); g.stroke();
-    g.globalAlpha = 0.5 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a2) * (R - 18), y + Math.sin(a2) * (R - 18)); g.stroke();
+    g.globalAlpha = 0.85 * f; g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + ST.cos(a1) * (R - 8), y + ST.sin(a1) * (R - 8)); g.stroke();
+    g.globalAlpha = 0.5 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + ST.cos(a2) * (R - 18), y + ST.sin(a2) * (R - 18)); g.stroke();
     // what is left of it, as a closing arc
     g.globalAlpha = 0.9 * f; g.strokeStyle = '#ffd24d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, R + 3, -1.5708, -1.5708 + (1 - s.t / s.max) * 6.2832); g.stroke();
     g.globalAlpha = 1;
@@ -399,7 +400,7 @@
   }
   STEP.star = function (s) { return !s.spent && s.t < s.max; };
   DRAW.star = function (s, T, g, cx, cy) {
-    var x = Math.round(s.x) - cx, y = Math.round(s.y) - cy, tw = 0.6 + 0.4 * Math.sin(s.t * 0.15 + s.ph), r = Math.round(2 + tw * 2), fade = Math.min(1, (s.max - s.t) / 60);
+    var x = Math.round(s.x) - cx, y = Math.round(s.y) - cy, tw = 0.6 + 0.4 * ST.sin(s.t * 0.15 + s.ph), r = Math.round(2 + tw * 2), fade = Math.min(1, (s.max - s.t) / 60);
     g.globalAlpha = fade; g.fillStyle = '#d9b8ff'; g.fillRect(x - r, y, r * 2 + 1, 1); g.fillRect(x, y - r, 1, r * 2 + 1);
     g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 1, 3, 3); g.globalAlpha = 1;
     T.light(s.x, s.y, 16 + tw * 8, 0.6 * fade); T.glow(s.x, s.y, 9, '#b06cff', 0.3 * fade);
@@ -429,7 +430,7 @@
     var pts = s.pts, segs = pts.length - 1, drawn = Math.min(1, s.t / 20) * segs, k, mx = 0, my = 1e9;
     for (k = 0; k < segs; k++) {
       var f = Math.max(0, Math.min(1, drawn - k)); if (f <= 0) break;
-      var a = pts[k], b = pts[k + 1], x0 = a.x - cx, y0 = a.y - cy, x1 = x0 + (b.x - a.x) * f, y1 = y0 + (b.y - a.y) * f, flick = 0.75 + 0.25 * Math.sin(s.t * 0.9 + k);
+      var a = pts[k], b = pts[k + 1], x0 = a.x - cx, y0 = a.y - cy, x1 = x0 + (b.x - a.x) * f, y1 = y0 + (b.y - a.y) * f, flick = 0.75 + 0.25 * ST.sin(s.t * 0.9 + k);
       g.globalAlpha = 0.3 * flick; g.strokeStyle = '#b06cff'; g.lineWidth = 5; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
       g.globalAlpha = flick; g.strokeStyle = '#ffffff'; g.lineWidth = 1; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
     }
@@ -445,10 +446,10 @@
     add({ kind: 'whale', xs: h.x - d * 6, y0: gy, dir: d, max: 78, seen: [], x: h.x, y: gy + 40, a: 0, trail: [] });
     T.sfx('whale'); T.shake(5);
   };
-  function whaleAt(s, u) { return { x: s.xs + s.dir * 190 * u, y: s.y0 + 34 - Math.sin(u * Math.PI) * 132 }; }
+  function whaleAt(s, u) { return { x: s.xs + s.dir * 190 * u, y: s.y0 + 34 - ST.sin(u * Math.PI) * 132 }; }
   STEP.whale = function (s, T) {
     var u = Math.min(1, s.t / 66), p = whaleAt(s, u), q = whaleAt(s, Math.min(1, u + 0.02)), k;
-    s.a = Math.atan2(q.y - p.y, Math.abs(q.x - p.x)); s.x = p.x; s.y = p.y;
+    s.a = ST.atan2(q.y - p.y, Math.abs(q.x - p.x)); s.x = p.x; s.y = p.y;
     var above = p.y < s.y0 - 4;
     if (above) T.touch({ x0: p.x - 30, x1: p.x + 30, y0: p.y - 18, y1: p.y + 18 }, 10 + T.mods().damage, 'tide', p.x - s.dir * 20, s.seen, false);
     // through the floor, going up and coming down: spray, and coming down a wave each way
@@ -458,7 +459,7 @@
       if (!above) for (k = -1; k <= 1; k += 2) T.projectile({ x: p.x, y: s.y0 - 5, vx: k * 3.2, vy: 0, life: 44, colour: '#5fd4c4', size: 10, damage: 5 + T.mods().damage, element: 'tide', gravity: 0, from: 'hero', pierce: true, wave: true });
     }
     s.was = above;
-    if (above && s.t % 2 === 0) bit(T, p.x - s.dir * Math.cos(s.a) * 26 + (T.random() - 0.5) * 10, p.y - Math.sin(s.a) * 26, (T.random() - 0.5) * 0.6, 0.4 + T.random(), 26, T.random() < 0.5 ? '#9ff5e6' : '#ffffff', 1, 0.08);
+    if (above && s.t % 2 === 0) bit(T, p.x - s.dir * ST.cos(s.a) * 26 + (T.random() - 0.5) * 10, p.y - ST.sin(s.a) * 26, (T.random() - 0.5) * 0.6, 0.4 + T.random(), 26, T.random() < 0.5 ? '#9ff5e6' : '#ffffff', 1, 0.08);
     return s.t < s.max;
   };
   DRAW.whale = function (s, T) { if (s.y < s.y0 + 10) { T.light(s.x, s.y, 90, 0.9); T.glow(s.x, s.y, 50, '#5fd4c4', 0.3); } };
@@ -469,7 +470,7 @@
     // only what is above the floor shows: the floor is the water's surface
     g.beginPath(); g.rect(0, 0, T.W, Math.round(s.y0) - cy); g.clip();
     g.translate(Math.round(s.x) - cx, Math.round(s.y) - cy); g.scale(d, 1); g.rotate(s.a);
-    var sway = Math.sin(s.t * 0.35) * 0.25;
+    var sway = ST.sin(s.t * 0.35) * 0.25;
     g.globalAlpha = 0.34; g.fillStyle = '#5fd4c4'; g.beginPath(); g.ellipse(0, 0, 40, 17, 0, 0, 6.2832); g.fill();
     g.globalAlpha = 0.86;
     // the body: a long drop, heavy at the head, tapering to the stock of the tail
@@ -517,7 +518,7 @@
     for (var k = fx.length - 1; k >= 0; k--) { var s = fx[k]; T.use(s.owner); current = s.owner; s.t++; if (!STEP[s.kind] || !STEP[s.kind](s, T)) fx.splice(fx.indexOf(s), 1); }
     // whatever a toll has stopped sees stars
     var list = T.creatures();
-    for (var j = 0; j < list.length; j++) { var c = list[j]; if (!c.dying && c.status.stun > 0 && T.tick() % 5 === 0) { var a = T.tick() * 0.2; bit(T, c.x + Math.cos(a) * 7, c.y - c.h - 5 + Math.sin(a) * 2, 0, 0, 10, '#efd27a', 1, 0); } }
+    for (var j = 0; j < list.length; j++) { var c = list[j]; if (!c.dying && c.status.stun > 0 && T.tick() % 5 === 0) { var a = T.tick() * 0.2; bit(T, c.x + ST.cos(a) * 7, c.y - c.h - 5 + ST.sin(a) * 2, 0, 0, 10, '#efd27a', 1, 0); } }
   }
   function draw(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (DRAW[fx[k].kind]) { T.use(fx[k].owner); DRAW[fx[k].kind](fx[k], T, T.pen, cx, cy); } }
   function over(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (OVER[fx[k].kind]) { T.use(fx[k].owner); OVER[fx[k].kind](fx[k], T, T.pen, cx, cy); } T.use(T.me()); sandGauge(T); }

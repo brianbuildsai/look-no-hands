@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crossplay: room 36 played against another browser, by script</title>
+<meta name="robots" content="noindex">
+<style>
+  body { margin: 0; padding: 16px; background: #0b0b12; color: #e9e6df; font: 14px/1.5 ui-monospace, Consolas, monospace; }
+  .crossplay__frame { width: 960px; height: 600px; border: 1px solid #2b2836; display: block; }
+  .crossplay__log { white-space: pre-wrap; margin-top: 12px; color: #9fd8ff; }
+  .crossplay__log--bad { color: #ff8c6a; }
+</style>
+</head>
+<body>
+<p>One player of a two-player game, played by script, so that two different browsers (or two machines) can be set against each other without anybody at either keyboard. Open it twice:</p>
+<p><code>?role=host&amp;relay=1&amp;report=chrome</code> shows a code; then <code>?role=guest&amp;code=THECODE&amp;relay=1&amp;report=firefox</code> in the other browser. <code>relay=1</code> shuts the direct way as a bad network would; <code>secs=60</code> is how long to play; <code>report=name</code> also asks the server for <code>/__crossplay/name/…</code> every five seconds, so that the numbers show in the server's log when the browser has no window. It passes if <code>resyncs</code> stays 0 while <code>step</code> climbs.</p>
+<iframe class="crossplay__frame" data-room src="../rooms/undercroft.html" title="The room"></iframe>
+<div class="crossplay__log" data-log>waiting for the room…</div>
+<script>
+(function () {
+  'use strict';
+  var q = {}; location.search.replace(/[?&]([^=&]+)=([^&]*)/g, function (m, k, v) { q[k] = decodeURIComponent(v); });
+  var role = q.role === 'guest' ? 'guest' : 'host', secs = +q.secs || 60, logEl = document.querySelector('[data-log]'), frame = document.querySelector('[data-room]');
+  var state = window.__crossplay = { role: role, code: '', phase: 'waiting', info: null, done: false };
+  function log(line) { logEl.textContent += '\n' + line; }
+  function note(parts) { if (q.report) { try { fetch('/__crossplay/' + q.report + '/' + parts.join('/')).catch(function () {}); } catch (e) { /* only a note */ } } }
+  function room() { return frame.contentWindow; }
+  function find(sel) { return frame.contentDocument.querySelector(sel); }
+
+  var tries = 0, wait = setInterval(function () {
+    var w = null; try { w = room(); } catch (e) { /* not yet */ }
+    var up = null; try { if (w && w.Gallery && w.Gallery.step && w.UndercroftWire && find('[data-together-host]')) { w.Gallery.step('undercroft', 1); up = w.Gallery.inspect('undercroft'); } } catch (e2) { up = null; }
+    if (up && up.netInfo) { clearInterval(wait); begin(w); }
+    else if (++tries > 200) { clearInterval(wait); log('the room did not come up (serve this over http)'); }
+  }, 100);
+
+  function begin(w) {
+    var G, stage = find('.stage[data-work="undercroft"]'), seed = role === 'host' ? 4711 : 1213, down = {};
+    w.Gallery.step('undercroft', 2); G = w.Gallery.inspect('undercroft');
+    if (q.relay) w.UndercroftWire.test.noDirect = true;
+    // the room's own frame loop, by hand: a window nobody is looking at is not painted
+    // and what went into the hash at each of the first steps, so that an early disagreement can be laid side by side (window.__crossplay.trace)
+    state.trace = {};
+    setInterval(function () { w.Gallery.step('undercroft', 1, 1 / 60); var i = G.netInfo(); if (i && i.state === 'run' && i.step <= 90 && !i.resyncs && !state.trace[i.step]) state.trace[i.step] = G.hashed(); }, 16);
+    function r() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    function key(type, k) { stage.dispatchEvent(new w.KeyboardEvent(type, { key: k, bubbles: true, cancelable: true })); }
+    function mash() { var keys = ['d', 'd', 'a', 'x', 'x', 'z', 'z', 'c', 'v', 'q', 'w', 's'], k = keys[Math.floor(r() * keys.length)]; stage.focus(); key(down[k] ? 'keyup' : 'keydown', k); down[k] = !down[k]; }
+
+    if (role === 'host') { find('[data-together-host]').click(); state.phase = 'hosting'; }
+    else { var f = find('[data-together-code]'); f.value = q.code || ''; f.dispatchEvent(new w.Event('input')); find('[data-together-join]').click(); state.phase = 'joining'; }
+
+    var t0 = Date.now(), startedAt = 0, last = '';
+    var tick = setInterval(function () {
+      var status = find('[data-together-status]').textContent, info = G.netInfo(), st = G.state();
+      if (role === 'host' && !state.code) { var c = find('[data-together-codeout]').textContent; if (c && !find('[data-together-invite]').hidden) { state.code = c; log('code ' + c); note(['code', c]); } }
+      if (role === 'host' && !startedAt && !find('[data-together-start]').disabled) { find('[data-together-start]').click(); find('[data-together-start]').click(); }   // twice, as an eager hand would: only the first may count
+      if (info && info.state === 'run' && !startedAt) { startedAt = Date.now(); state.phase = 'playing'; setInterval(mash, 80); log('playing, ' + info.via); }
+      state.info = info;
+      var line = state.phase + ' | ' + status + (info ? ' | step ' + info.step + ' resyncs ' + info.resyncs + ' asked ' + info.asked + ' delay ' + info.delay + ' rtt ' + Math.round(info.rtt) + ' ' + info.via + ' ' + st.state : '');
+      if (line !== last) { last = line; logEl.textContent = logEl.textContent.split('\n').slice(0, 12).join('\n'); log(line); }
+      if (info && info.resyncs) logEl.classList.add('crossplay__log--bad');
+    }, 500);
+    var every = setInterval(function () {
+      var info = G.netInfo();
+      note(info ? [state.phase, 'step', info.step, 'resyncs', info.resyncs, 'asked', info.asked, 'delay', info.delay, 'via', info.via, info.state, 'hash' + (info.step - info.step % 1), G.checksum()] : [state.phase, encodeURIComponent(find('[data-together-status]').textContent.slice(0, 60))]);
+      if (startedAt && Date.now() - startedAt > secs * 1000) { clearInterval(every); clearInterval(tick); state.done = true; state.phase = 'done'; note(['done', 'step', info ? info.step : -1, 'resyncs', info ? info.resyncs : -1]); log('done'); }
+      if (!startedAt && Date.now() - t0 > 90000) { clearInterval(every); note(['gave-up']); }
+    }, 5000);
+  }
+})();
+</script>
+</body>
+</html>

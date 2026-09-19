@@ -16,6 +16,7 @@
    until it gathers the dark again. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -102,7 +103,7 @@
       pen.fillStyle = '#000000'; pen.fillRect(ex + look, ey - Math.max(1, Math.round(open * 3)), 1, Math.max(2, Math.round(open * 6)));
     } else { pen.fillStyle = '#5b3fa0'; pen.fillRect(ex - 13, ey, 26, 1); }
     // dying, it cracks, and what is inside is light
-    if (e.dying) { pen.fillStyle = '#ffffff'; for (k = 0; k < Math.floor(dying * 9); k++) { var a = k * 2.4, len = 6 + dying * 16; for (var s2 = 2; s2 < len; s2++) pen.fillRect(Math.round(ex + Math.cos(a) * s2 + Math.sin(s2 * 1.3 + k) * 1.5), Math.round(ey + Math.sin(a) * s2 * 1.2), 1, 1); } }
+    if (e.dying) { pen.fillStyle = '#ffffff'; for (k = 0; k < Math.floor(dying * 9); k++) { var a = k * 2.4, len = 6 + dying * 16; for (var s2 = 2; s2 < len; s2++) pen.fillRect(Math.round(ex + ST.cos(a) * s2 + ST.sin(s2 * 1.3 + k) * 1.5), Math.round(ey + ST.sin(a) * s2 * 1.2), 1, 1); } }
     pen.globalAlpha = 1;
   }
 
@@ -110,7 +111,7 @@
 
   var VOID = ['#5b3fa0', '#a48cff', '#ffffff', '#2b2836'];
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function motes(ctx, x, y, n, speed, up) { for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : ctx.random() * 6.2832, s = speed * (0.3 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 16 + ctx.random() * 22, max: 38, colour: VOID[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: up ? 0.05 : -0.01 }); } }
+  function motes(ctx, x, y, n, speed, up) { for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : ctx.random() * 6.2832, s = speed * (0.3 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s, life: 16 + ctx.random() * 22, max: 38, colour: VOID[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: up ? 0.05 : -0.01 }); } }
   function setPose(e, anim, frame) { e.vars.anim = anim; e.vars.frame = frame; }
   function body(e, ctx, damp) { e.vy = Math.min(5.5, e.vy + 0.32); if (damp) e.vx *= damp; var t = ctx.moveBody(e); e.onGround = t.floor; var A = e.arena; e.x = clamp(e.x, A.left + 8, A.right - 8); }
   // a violet wave along the floor, as the Golem's was
@@ -175,8 +176,8 @@
         ctx.flash('#5b3fa0', 5);
         if (v.power === 'frostlance') ctx.projectile({ x: e.x + e.dir * 8, y: e.y - 10, vx: e.dir * 4.6, vy: 0, life: 110, colour: '#a48cff', size: 6, damage: 1, element: 'frost', gravity: 0, lance: true, cause: 'lightless' });
         else if (v.power === 'stormchain') voidBolt(e, ctx, v.markX);
-        else if (v.power === 'emberwave') for (k = 0; k < 34; k++) { var a = (ctx.random() - 0.5) * 0.9, s = 2 + ctx.random() * 2.6; ctx.particle({ x: e.x + e.dir * 6, y: e.y - 14, vx: Math.cos(a) * s * e.dir, vy: Math.sin(a) * s - 0.4, life: 16 + ctx.random() * 14, max: 30, colour: VOID[k % 3], size: k % 3 ? 2 : 3, gravity: -0.02 }); }
-        else { for (k = 0; k < 28; k++) { var a2 = k / 28 * 6.2832; ctx.particle({ x: e.x, y: e.y - 14, vx: Math.cos(a2) * 2.6, vy: Math.sin(a2) * 2.6, life: 18, max: 18, colour: VOID[k % 3], size: 2, gravity: 0 }); } e.hp = Math.min(e.maxHp, e.hp + 5); ctx.number(e.x, e.y - 34, '+5', '#a48cff'); }
+        else if (v.power === 'emberwave') for (k = 0; k < 34; k++) { var a = (ctx.random() - 0.5) * 0.9, s = 2 + ctx.random() * 2.6; ctx.particle({ x: e.x + e.dir * 6, y: e.y - 14, vx: ST.cos(a) * s * e.dir, vy: ST.sin(a) * s - 0.4, life: 16 + ctx.random() * 14, max: 30, colour: VOID[k % 3], size: k % 3 ? 2 : 3, gravity: -0.02 }); }
+        else { for (k = 0; k < 28; k++) { var a2 = k / 28 * 6.2832; ctx.particle({ x: e.x, y: e.y - 14, vx: ST.cos(a2) * 2.6, vy: ST.sin(a2) * 2.6, life: 18, max: 18, colour: VOID[k % 3], size: 2, gravity: 0 }); } e.hp = Math.min(e.maxHp, e.hp + 5); ctx.number(e.x, e.y - 34, '+5', '#a48cff'); }
         ctx.sfx('castfrost');
       },
       during: function (e) { setPose(e, 'cast', e.attack.t % 2 ? 3 : 4); },
@@ -206,7 +207,7 @@
 
   /* ---- then it stops pretending ---- */
 
-  function homeOf(e, i) { var A = e.arena, mid = (A.left + A.right) / 2; return { x: mid + (i ? 84 : -84), y: A.ceilY + 84 + Math.sin(e.clock * 0.05 + i * 2) * 4 }; }
+  function homeOf(e, i) { var A = e.arena, mid = (A.left + A.right) / 2; return { x: mid + (i ? 84 : -84), y: A.ceilY + 84 + ST.sin(e.clock * 0.05 + i * 2) * 4 }; }
   function reach(h, tx, ty, ease) { h.x += (tx - h.x) * ease; h.y += (ty - h.y) * ease; }
   function nearHand(e, x) { var H = e.vars.hands; return Math.abs(H[0].x - x) <= Math.abs(H[1].x - x) ? 0 : 1; }
   function handBox(h, w, hh) { return { x0: h.x - w, x1: h.x + w, y0: h.y - hh, y1: h.y + hh, damage: 1, element: 'plain' }; }
@@ -332,7 +333,7 @@
   function think(e, ctx) {
     var v = e.vars, hero = ctx.hero;
     if (v.form === 'double') return thinkDouble(e, ctx);
-    var A = e.arena; e.x += ((A.left + A.right) / 2 + Math.sin(e.clock * 0.02) * 30 - e.x) * 0.03; e.y += (A.ceilY + HIGH - e.y) * 0.06;
+    var A = e.arena; e.x += ((A.left + A.right) / 2 + ST.sin(e.clock * 0.02) * 30 - e.x) * 0.03; e.y += (A.ceilY + HIGH - e.y) * 0.06;
     v.look = clamp((hero.x - e.x) / 50, -3, 3); v.eyeTo = 0;
     if (e.cooldown > 0 || !hero.alive || v.appear < 60) return null;
     var script = SCRIPTS[e.phase], want = script[e.script % script.length];

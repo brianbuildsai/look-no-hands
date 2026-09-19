@@ -14,6 +14,7 @@
    armoured and take half; the head takes half again as much. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -45,9 +46,9 @@
     return { frames: { idle: [SPR.head.img] }, flipped: { idle: [SPR.head.img] }, anchor: { x: 12, y: 8 }, custom: true };
   }
   function piece(name, angle, white) {
-    var set = SPR[name], k = ((Math.round(angle / (Math.PI * 2) * STEPS) % STEPS) + STEPS) % STEPS, img = (Math.cos(angle) < 0 ? set.left : set.right)[k];
+    var set = SPR[name], k = ((Math.round(angle / (Math.PI * 2) * STEPS) % STEPS) + STEPS) % STEPS, img = (ST.cos(angle) < 0 ? set.left : set.right)[k];
     if (!white) return img;
-    var key = name + (Math.cos(angle) < 0 ? 'L' : 'R') + k;
+    var key = name + (ST.cos(angle) < 0 ? 'L' : 'R') + k;
     return WHITE[key] || (WHITE[key] = window.Pixels.silhouette(img, '#ffffff'));
   }
 
@@ -59,7 +60,7 @@
   var N = 10, GAP = 5, DEEP = 24;
   function moveHead(e, x, y) {
     var v = e.vars, T = v.trail, dx = x - e.x, dy = y - e.y;
-    if (dx * dx + dy * dy > 0.04) v.angle = Math.atan2(dy, dx);
+    if (dx * dx + dy * dy > 0.04) v.angle = ST.atan2(dy, dx);
     e.x = x; e.y = y;
     if (!T.length) T.unshift({ x: x, y: y });
     // a point every two pixels exactly, however fast the head went
@@ -67,9 +68,9 @@
     while (far >= 2) { T.unshift({ x: T[0].x + gx / far * 2, y: T[0].y + gy / far * 2 }); gx = x - T[0].x; gy = y - T[0].y; far = Math.sqrt(gx * gx + gy * gy); if (T.length > N * GAP + 8) T.pop(); }
   }
   // the head is somewhere else, and so is everything behind it
-  function putHead(e, x, y, angle) { var v = e.vars; e.x = x; e.y = y; v.angle = angle; v.trail = []; for (var k = 0; k <= N * GAP; k++) v.trail.push({ x: x - Math.cos(angle) * k * 2, y: y - Math.sin(angle) * k * 2 }); }
+  function putHead(e, x, y, angle) { var v = e.vars; e.x = x; e.y = y; v.angle = angle; v.trail = []; for (var k = 0; k <= N * GAP; k++) v.trail.push({ x: x - ST.cos(angle) * k * 2, y: y - ST.sin(angle) * k * 2 }); }
   function at(e, i) { var T = e.vars.trail; return T[Math.min(T.length - 1, i * GAP)] || { x: e.x, y: e.y }; }
-  function heading(e, i) { var T = e.vars.trail, j = Math.min(T.length - 1, i * GAP), a = T[Math.max(0, j - 2)], b = T[Math.min(T.length - 1, j + 2)]; return a && b && (a.x !== b.x || a.y !== b.y) ? Math.atan2(a.y - b.y, a.x - b.x) : e.vars.angle; }
+  function heading(e, i) { var T = e.vars.trail, j = Math.min(T.length - 1, i * GAP), a = T[Math.max(0, j - 2)], b = T[Math.min(T.length - 1, j + 2)]; return a && b && (a.x !== b.x || a.y !== b.y) ? ST.atan2(a.y - b.y, a.x - b.x) : e.vars.angle; }
   function inAir(e, p, margin) { var A = e.arena; return p.x > A.left - margin && p.x < A.right + margin && p.y > A.ceilY - margin && p.y < A.groundY + margin; }
   // what lies in the air falls to the floor: a stunned or a dying wyrm is a heap
   function slump(e, speed) { var T = e.vars.trail, floor = e.arena.groundY - 6; for (var k = 0; k < T.length; k++) if (T[k].y < floor) T[k].y = Math.min(floor, T[k].y + speed); if (e.y < floor) e.y = Math.min(floor, e.y + speed); }
@@ -99,7 +100,7 @@
     // the tail, lashing along the ice
     if (v.lash && v.lash.len > 0) {
       var L = v.lash, a = L.dir > 0 ? 0 : Math.PI;
-      for (k = 10; k < L.len - 8; k += 9) { img = piece('ringSmall', a, false); pen.drawImage(img, Math.round(L.x + L.dir * k - img.width / 2) - cx, A.groundY - 6 - Math.round(img.height / 2) - cy + (L.rise ? -Math.round(L.rise * Math.sin(k / L.len * 3.1)) : 0)); }
+      for (k = 10; k < L.len - 8; k += 9) { img = piece('ringSmall', a, false); pen.drawImage(img, Math.round(L.x + L.dir * k - img.width / 2) - cx, A.groundY - 6 - Math.round(img.height / 2) - cy + (L.rise ? -Math.round(L.rise * ST.sin(k / L.len * 3.1)) : 0)); }
       img = piece('tail', a + Math.PI, false); pen.drawImage(img, Math.round(L.x + L.dir * L.len - img.width / 2) - cx, A.groundY - 7 - Math.round(img.height / 2) - cy - (L.rise || 0));
     }
     // the fin, where it swims under the floor or over the ceiling
@@ -114,7 +115,7 @@
   var ICE = ['#9fd8ff', '#d8f1ff', '#ffffff', '#7fb8e6'];
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function shards(ctx, x, y, n, speed, up) {
-    for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : Math.PI * 2 * ctx.random(), s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 18 + ctx.random() * 22, max: 40, colour: ICE[k % 4], size: ctx.random() < 0.35 ? 2 : 1, gravity: 0.07 }); }
+    for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : Math.PI * 2 * ctx.random(), s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s, life: 18 + ctx.random() * 22, max: 40, colour: ICE[k % 4], size: ctx.random() < 0.35 ? 2 : 1, gravity: 0.07 }); }
   }
   function headBox(e) { return inAir(e, e, 0) ? [{ x0: e.x - 8, x1: e.x + 8, y0: e.y - 7, y1: e.y + 7, damage: 1, element: 'plain' }] : []; }
   // over the top from one hole in the ice to another
@@ -234,7 +235,7 @@
       telling: function (e, ctx, t, w) { var v = e.vars, A = e.arena; if (t === 1) { ctx.telegraphCircle(v.cx, A.groundY - 8, 50, w + 30, '#9fd8ff'); ctx.telegraphCrack(v.cx - 44, A.groundY, 26, w, '#d8f1ff'); ctx.telegraphCrack(v.cx + 44, A.groundY, 26, w + 30, '#d8f1ff'); ctx.sfx('freeze'); } if (t % 12 === 0) ctx.shake(1.2); },
       during: function (e, ctx, t) {
         var v = e.vars, A = e.arena, r = 30 + Math.min(16, t), th = Math.PI / 2 + t * 0.084, was = e.y < A.groundY;
-        moveHead(e, v.cx + Math.cos(th) * r, A.groundY - 8 + Math.sin(th) * r);
+        moveHead(e, v.cx + ST.cos(th) * r, A.groundY - 8 + ST.sin(th) * r);
         if (was !== (e.y < A.groundY)) { shards(ctx, e.x, A.groundY - 2, 14, 2.8, true); ctx.shake(2.5); ctx.sfx('freeze'); }
         v.face = 'headOpen';
       },
@@ -247,15 +248,15 @@
       start: function (e) { e.vars.rays = []; for (var k = 0; k < 9; k++) e.vars.rays.push(-Math.PI + (k + 0.5) * Math.PI / 9); },
       telling: function (e, ctx, t, w) {
         var v = e.vars, A = e.arena;
-        if (t <= 26) moveHead(e, v.cx + Math.sin(t * 0.3) * 2, A.groundY + 22 - t * 2.7);
-        if (t === 12) v.rays.forEach(function (a) { ctx.telegraphLine(v.cx, A.groundY - 48, v.cx + Math.cos(a) * 220, A.groundY - 48 + Math.sin(a) * 220, w - 12, '#d8f1ff'); });
+        if (t <= 26) moveHead(e, v.cx + ST.sin(t * 0.3) * 2, A.groundY + 22 - t * 2.7);
+        if (t === 12) v.rays.forEach(function (a) { ctx.telegraphLine(v.cx, A.groundY - 48, v.cx + ST.cos(a) * 220, A.groundY - 48 + ST.sin(a) * 220, w - 12, '#d8f1ff'); });
         v.face = t > 26 ? 'headOpen' : 'head'; if (t > 26) v.angle = -Math.PI / 2;
         ctx.glow(e.x, e.y, 10 + t / w * 26, '#d8f1ff', 0.15 + 0.35 * t / w);
-        if (t % 3 === 0) { var a = ctx.random() * 6.28; ctx.particle({ x: e.x + Math.cos(a) * 34, y: e.y + Math.sin(a) * 34, vx: -Math.cos(a) * 2.4, vy: -Math.sin(a) * 2.4, life: 13, max: 13, colour: '#ffffff', size: 1, gravity: 0 }); }
+        if (t % 3 === 0) { var a = ctx.random() * 6.28; ctx.particle({ x: e.x + ST.cos(a) * 34, y: e.y + ST.sin(a) * 34, vx: -ST.cos(a) * 2.4, vy: -ST.sin(a) * 2.4, life: 13, max: 13, colour: '#ffffff', size: 1, gravity: 0 }); }
       },
       fire: function (e, ctx) {
         var v = e.vars;
-        v.rays.forEach(function (a) { ctx.projectile({ x: e.x + Math.cos(a) * 10, y: e.y + Math.sin(a) * 10, vx: Math.cos(a) * 2.7, vy: Math.sin(a) * 2.7, life: 110, colour: '#d8f1ff', size: 5, damage: 1, element: 'frost', shard: true, cause: 'icicle' }); });
+        v.rays.forEach(function (a) { ctx.projectile({ x: e.x + ST.cos(a) * 10, y: e.y + ST.sin(a) * 10, vx: ST.cos(a) * 2.7, vy: ST.sin(a) * 2.7, life: 110, colour: '#d8f1ff', size: 5, damage: 1, element: 'frost', shard: true, cause: 'icicle' }); });
         shards(ctx, e.x, e.y, 40, 4, false); ctx.shake(6); ctx.sfx('boom'); ctx.flash('#d8f1ff', 6);
       },
       resting: function (e, ctx, t) {
@@ -271,7 +272,7 @@
       telling: function (e, ctx, t, w) {
         var v = e.vars, A = e.arena, L = v.lash;
         if (t === 1) { ctx.telegraph(L.dir > 0 ? L.x : L.x - 130, A.groundY - 12, 130, 12, w, '#9fd8ff'); ctx.telegraphCrack(L.x, A.groundY, 22, w, '#d8f1ff'); ctx.sfx('freeze'); }
-        L.len = Math.min(18, t); L.rise = 10 + Math.sin(t * 0.3) * 4;      // the tail stands out of the ice, and sways
+        L.len = Math.min(18, t); L.rise = 10 + ST.sin(t * 0.3) * 4;      // the tail stands out of the ice, and sways
       },
       during: function (e, ctx, t) {
         var L = e.vars.lash; L.rise = 0;
@@ -293,7 +294,7 @@
     if (v.next) { var forced = ATTACKS[v.next]; v.next = null; return forced; }
     var script = SCRIPTS[e.phase], want = script[e.script % script.length];
     var goal = want === 'gust' ? (hero.x < (A.left + A.right) / 2 ? A.left + 30 : A.right - 30) : want === 'coil' ? (A.left + A.right) / 2 : want === 'lash' ? clamp(hero.x + (hero.x > (A.left + A.right) / 2 ? -76 : 76), A.left + 20, A.right - 20) : want === 'rain' ? e.x : hero.x;
-    if (e.cooldown > 0 && want !== 'gust' && want !== 'rain') goal = hero.x + Math.sin(e.clock * 0.05) * 70;      // circling, while it gets its breath
+    if (e.cooldown > 0 && want !== 'gust' && want !== 'rain') goal = hero.x + ST.sin(e.clock * 0.05) * 70;      // circling, while it gets its breath
     goal = clamp(goal, A.left + 20, A.right - 20);
     if (e.y < A.groundY + DEEP - 1) under(e, ctx, goal > e.x ? 1 : -1, 1);
     else { var step = clamp(goal - e.x, -(e.phase ? 3.2 : 2.8), e.phase ? 3.2 : 2.8); moveHead(e, e.x + step, A.groundY + DEEP); if (Math.abs(step) > 0.3) v.finDir = step > 0 ? 1 : -1; }
@@ -309,8 +310,8 @@
   function waking(e, ctx, t) {
     var v = e.vars, A = e.arena;
     if (t === 8) { ctx.telegraphCrack(A.bossX, A.groundY, 30, 30, '#d8f1ff'); ctx.sfx('freeze'); }
-    if (t > 30 && t <= 60) { moveHead(e, A.bossX + Math.sin(t * 0.2) * 5, A.groundY + 40 - (t - 30) * 3.3); if (t === 36) { shards(ctx, A.bossX, A.groundY - 2, 30, 3.4, true); ctx.shake(5); ctx.sfx('boom'); } }
-    if (t > 60 && t <= 96) { v.face = 'headOpen'; v.angle = ctx.hero.x > e.x ? -0.5 : -Math.PI + 0.5; if (t === 64) { ctx.sfx('roar'); ctx.shake(4); } if (t % 3 === 0) { var a = v.angle + (ctx.random() - 0.5); ctx.particle({ x: e.x + Math.cos(v.angle) * 12, y: e.y + Math.sin(v.angle) * 12, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, life: 20, max: 20, colour: '#ffffff', size: 1, gravity: 0 }); } }
+    if (t > 30 && t <= 60) { moveHead(e, A.bossX + ST.sin(t * 0.2) * 5, A.groundY + 40 - (t - 30) * 3.3); if (t === 36) { shards(ctx, A.bossX, A.groundY - 2, 30, 3.4, true); ctx.shake(5); ctx.sfx('boom'); } }
+    if (t > 60 && t <= 96) { v.face = 'headOpen'; v.angle = ctx.hero.x > e.x ? -0.5 : -Math.PI + 0.5; if (t === 64) { ctx.sfx('roar'); ctx.shake(4); } if (t % 3 === 0) { var a = v.angle + (ctx.random() - 0.5); ctx.particle({ x: e.x + ST.cos(v.angle) * 12, y: e.y + ST.sin(v.angle) * 12, vx: ST.cos(a) * 3, vy: ST.sin(a) * 3, life: 20, max: 20, colour: '#ffffff', size: 1, gravity: 0 }); } }
     if (t > 96) { v.face = 'head'; v.trail.forEach(function (p) { p.y += 3.2; }); e.y += 3.2; }
     if (t === 129) putHead(e, A.bossX, A.groundY + DEEP, 0);
   }

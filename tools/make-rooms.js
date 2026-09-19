@@ -48,6 +48,20 @@ function page(room, index) {
     ? { href: next.slug + '.html', label: 'Next room', name: next.number + '. ' + next.title }
     : { href: '../index.html', label: 'Round again', name: data.hall[0].number + '. ' + data.hall[0].title + ', at the entrance' };
   var scripts = ['../js/core.js'].concat((room.scripts || []).map(function (s) { return '../js/' + s; }), ['../js/rooms/' + room.slug + '.js']);
+  // A room with a game in it is played by two machines that must run the same code to the letter. Its scripts are
+  // asked for by what they hash to, so that a browser never mixes an old file with a new page, and the page carries
+  // the hash so that two players can tell each other which game they have (net.js refuses a mismatch). Run this
+  // tool again after editing any of them; tools/lockstep.html says when the stamp is stale.
+  var build = '';
+  if (room.scripts && room.stamp) {
+    var h = 2166136261;
+    scripts.slice(1).forEach(function (src) {
+      var text = fs.readFileSync(path.join(root, 'rooms', src), 'utf8').replace(/\r/g, '');
+      for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    });
+    build = ('0000000' + h.toString(16)).slice(-8);
+    scripts = scripts.map(function (src, k) { return k ? src + '?v=' + build : src; });
+  }
 
   return [
     '<!doctype html>',
@@ -82,7 +96,7 @@ function page(room, index) {
     '',
     '  <main>',
     '    <section class="room room--solo room--' + room.slug + '" id="work" data-room>',
-    '      <div class="stage" data-work="' + room.slug + '"' + (room.stageAttributes ? ' ' + room.stageAttributes : '') + '>',
+    '      <div class="stage" data-work="' + room.slug + '"' + (build ? ' data-build="' + build + '"' : '') + (room.stageAttributes ? ' ' + room.stageAttributes : '') + '>',
     '        <canvas class="stage__canvas" role="img" aria-label="' + escapeHtml(room.canvasLabel) + '"></canvas>',
     '        <p class="stage__notice"></p>',
     '      </div>',
