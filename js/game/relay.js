@@ -25,19 +25,19 @@
    <the rest> :  ? are you there,  ! here,  x full,  f <n> <text> a firm
    message (numbered, acknowledged, resent until it is, handed on in order),
    a <n> got all up to n,  l <text> a loose one (the newest of each sort,
-   thirty times a second),  k still here,  z goodbye.
+   and no more than one a step),  k still here,  z goodbye.
 
    A public broker promises nothing, and anybody who knew the code could
    listen to the buttons or press some. Nothing else crosses it. */
 (function () {
   'use strict';
 
-  // Measured 2026-09-19 at thirty messages a second, as the game sends: these two passed on every one, about an
-  // eighth of a second each way. broker.emqx.io answers soonest of all and then lets through one in three, in
+  // Measured 2026-09-19 at thirty and at sixty messages a second (the game sends one a step): these two passed on
+  // every one, about an eighth of a second each way. broker.emqx.io answers soonest of all and then lets through one in three at thirty a second, in
   // bursts three quarters of a second apart, so it is not here: a relay that connects and cannot be played over
   // is worse than none. Before adding one, put it through the same (docs/PLAN-13.md says how).
   var RELAYS = window.UndercroftRelays || ['wss://test.mosquitto.org:8081/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
-  var ROOT = 'undercroft36/';
+  var ROOT = 'undercroft36/', GAP = 15;   // GAP: of loose messages that begin alike, one in this many milliseconds (a step is 16.7); a machine catching up would otherwise send a burst
   var test = { relays: null, lines: [] };   // a harness may name its own brokers, and hang up on the ones in use
   var enc = window.TextEncoder ? new TextEncoder() : null, dec = window.TextDecoder ? new TextDecoder() : null;
 
@@ -156,7 +156,7 @@
     function gone() { if (W.closed) return; W.closed = true; clearInterval(quick); clearInterval(slow); if (info && info.over) info.over(); if (W.onclose) W.onclose(); }
     function deliver(text) { if (!W.closed && W.onmessage) W.onmessage(text); }
     // the loose ones that were held back because one like them had only just gone
-    var quick = setInterval(function () { var t = now(); for (var key in waiting) if (t - sentAt[key] >= 30) { sentAt[key] = t; tell('l', waiting[key]); delete waiting[key]; } }, 16);
+    var quick = setInterval(function () { var t = now(); for (var key in waiting) if (t - sentAt[key] >= GAP) { sentAt[key] = t; tell('l', waiting[key]); delete waiting[key]; } }, 8);
     // the firm ones not yet acknowledged go again; a word if there has been none; and how long since the other side was heard
     var slow = setInterval(function () {
       var t = now();
@@ -168,7 +168,7 @@
       if (W.closed) return;
       if (!loose) { var m = { n: next++, text: text, at: now() }; out.push(m); tell('f', m.n + ' ' + text); return; }
       var key = text.slice(0, 9), t = now();   // {"t":"in" and its like: of loose messages that begin alike only the newest matters
-      if (t - (sentAt[key] || 0) >= 30) { sentAt[key] = t; delete waiting[key]; tell('l', text); } else waiting[key] = text;
+      if (t - (sentAt[key] || 0) >= GAP) { sentAt[key] = t; delete waiting[key]; tell('l', text); } else waiting[key] = text;
     };
     W.take = function (kind, rest) {
       if (W.closed) return;
