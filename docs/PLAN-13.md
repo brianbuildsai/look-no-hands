@@ -81,7 +81,7 @@ Done, 2026-09-19.
 
 ### Proof
 
-| what | how | result |
+| what (all on localhost, two tabs) | how | result |
 | --- | --- | --- |
 | no direct route at all | two tabs, `test.noDirect` (no candidates gathered) | joined by relay 5 s after the answer; 1300 steps, hashes equal at every fiftieth, no resync |
 | relay hung up on in mid-run | `line.hangUp()` on the host at step 276 | back in 1.1 s, one `want`, no resync, ran on to 651 and beyond |
@@ -112,5 +112,7 @@ delay chosen 10 steps, 58 to 61 steps a second.
 - Relay through public MQTT brokers rather than ask for a TURN account.
   The buttons are readable by anybody who knows the code. Nothing else
   crosses.
-- Merged and deployed without a plan gate: this is the unfinished half of
-  plan 12, and the user tests on the live site.
+- Built without a plan gate: this is the unfinished half of plan 12.
+- Not merged by me: PR #3 waits for the user (merging was refused to the
+  agent this time). The live site has the fix only after it is merged; the
+  live check (two tabs on the Pages URL with `test.noDirect`) is still owed.
