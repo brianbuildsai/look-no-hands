@@ -1,52 +1,62 @@
 /* wire.js: a line between two browsers, and the code that finds it.
 
-   The game's traffic goes straight from one browser to the other over a
-   WebRTC data connection: two channels, a firm one (ordered, retried) for
-   the few messages that must arrive, and a loose one (unordered, never
-   retried) for the buttons, which are sent a dozen times over anyway.
+   There are two ways from one browser to the other, and both are tried at
+   once under the same six-character code.
 
-   Two browsers cannot find each other unaided. The host takes a short code
-   and registers under it with a public broker (the PeerJS project's free
-   one, spoken to here directly over a WebSocket: no library); the guest
-   sends its offer there addressed to the code; the broker passes the offer
-   one way and the answer the other and is not needed again. It never sees
-   the game. Public STUN servers tell each browser its own address from
-   outside.
+   The direct way is a WebRTC data connection: two channels, a firm one
+   (ordered, retried) for the few messages that must arrive, and a loose one
+   (unordered, never retried) for the buttons, which are sent a dozen times
+   over anyway. Two browsers cannot find each other unaided: the host
+   registers under its code with a public broker (the PeerJS project's free
+   one, spoken to here directly over a WebSocket: no library); the guest sends
+   its offer there addressed to the code; the broker passes the offer one way
+   and the answer the other and is not needed again. Public STUN servers tell
+   each browser its own address from outside.
 
-   The broker is strict and silent, and this file is written round that:
+   That broker is strict and silent, and this file is written round that:
 
    - It hangs up on any message not shaped exactly as the PeerJS library
      shapes them, so ours are shaped so.
    - It hangs up on a network candidate with nothing in it, which Firefox
      and Safari send to say "that is all of them". That was the first real
-     failure of this file: the guest was cut off before the answer reached
-     it. So candidates are no longer sent at all. Each side waits until it
-     has gathered its own and sends them inside the offer or the answer:
-     two messages in all.
-   - A message can be lost, and a socket can be dropped (a tab put away
-     stops sending heartbeats). So the guest repeats its offer until it is
-     answered, the host repeats its answer to a repeated offer, and either
-     reconnects to the broker under the same name if it is hung up on.
+     failure of this file. So candidates are not sent at all: each side waits
+     until it has gathered its own and sends them inside the offer or the
+     answer, two messages in all.
+   - A message can be lost, and a socket can be dropped. So the guest repeats
+     its offer until it is answered, the host repeats its answer to a
+     repeated offer, and either reconnects under the same name.
 
-   There is no relay. Two networks that both refuse direct connections
-   (some phone, school and office networks) cannot be joined without a TURN
-   server, which costs somebody money; put one in ICE below (or in
-   window.UndercroftICE before this file loads) and it will be used. When a
-   connection fails the page says at which step, with a short note of what
-   each side had to offer (h: its own addresses, s: as seen from outside,
-   r: relayed).
+   The second real failure was not this file's to mend: the two found each
+   other and no route between their networks would open (each had addresses,
+   none could be reached from the other's). For that there is the long way
+   round (relay.js): the same messages passed along by a public MQTT broker.
+   It is slower, so the direct way is preferred; the guest decides. If the
+   direct connection opens within a few seconds of the answer, its first
+   message says so. If it does not, and the host has answered through some
+   broker, the guest's first message comes that way instead. The host takes
+   whichever arrives. Neither way depends on the other: with the PeerJS
+   broker down the relay still finds the host, and with every relay down a
+   direct connection still works.
 
-   A wire, to net.js, is send(text, loose), onmessage, onclose, close(). */
+   A TURN server, if you have one, goes in ICE below (or in
+   window.UndercroftICE before this file loads) and will be used.
+
+   A wire, to net.js, is send(text, loose), onmessage, onclose, close();
+   `via` says which way it goes, and `most` may raise the delay allowed. */
 (function () {
   'use strict';
 
+  var RELAY = window.UndercroftRelay && window.UndercroftRelay.supported() ? window.UndercroftRelay : null;
   var BROKER = 'wss://0.peerjs.com/peerjs?key=peerjs&version=1.5.4', PREFIX = 'undercroft-36-';
   var ICE = window.UndercroftICE || { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }] };
   var LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // nothing that looks like something else
   var GATHER = 2600, AGAIN = 3500, PATIENCE = 40000;
-  var test = { dropAnswers: 0, dropOffers: 0, hangUp: null };   // a harness may ask for the first few to be lost, or for the broker to be hung up on
+  var SOON = 5000, LATE = 12000, ASK = 1500;   // the direct way has this long after the answer, or this long with no answer at all, before the relay is taken; how often a guest asks a relay for the host
+  var test = { dropAnswers: 0, dropOffers: 0, hangUp: null, noDirect: false, noBroker: false };   // a harness may lose the first few, hang up on the broker, or shut the direct way as a bad network would
 
-  function supported() { return !!(window.RTCPeerConnection && window.WebSocket); }
+  function direct() { return !!window.RTCPeerConnection; }
+  function supported() { return !!window.WebSocket && (direct() || !!RELAY); }
+  function ice() { return test.noDirect ? { iceServers: [], iceTransportPolicy: 'relay' } : ICE; }   // relayed candidates only, and nobody to relay: none at all
   function newCode() { var s = '', a = new Uint32Array(6); (window.crypto || window.msCrypto).getRandomValues(a); for (var k = 0; k < 6; k++) s += LETTERS[a[k] % LETTERS.length]; return s; }
   function tidy(code) { return String(code || '').toUpperCase().split('').filter(function (ch) { return LETTERS.indexOf(ch) >= 0; }).join('').slice(0, 6); }
   function token() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
@@ -57,7 +67,7 @@
   function broker(id, on) {
     var ws = null, beat = null, shut = false, mine = token(), drops = 0;
     function connect() {
-      try { ws = new WebSocket(BROKER + '&id=' + encodeURIComponent(id) + '&token=' + mine); } catch (e) { on.error('The broker could not be reached.'); return; }
+      try { ws = new WebSocket(test.noBroker ? 'wss://localhost:9/none' : BROKER + '&id=' + encodeURIComponent(id) + '&token=' + mine); } catch (e) { on.error('The broker could not be reached.'); return; }
       ws.onopen = function () { if (beat) clearInterval(beat); beat = setInterval(function () { if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'HEARTBEAT' })); }, 5000); };
       ws.onmessage = function (ev) {
         var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
@@ -97,7 +107,7 @@
 
   // the two channels as one wire
   function makeWire(pc) {
-    var W = { onmessage: null, onclose: null, firm: null, loose: null, closed: false, opened: false, onopen: null };
+    var W = { onmessage: null, onclose: null, firm: null, loose: null, closed: false, opened: false, onopen: null, via: 'direct' };
     function gone() { if (W.closed) return; W.closed = true; try { pc.close(); } catch (e) { /* already */ } if (W.onclose) W.onclose(); }
     function adopt(ch) {
       if (ch.label === 'firm') W.firm = ch; else W.loose = ch;
@@ -112,36 +122,44 @@
     pc.addEventListener('connectionstatechange', function () { if (W.opened && (pc.connectionState === 'failed' || pc.connectionState === 'closed')) gone(); });
     return W;
   }
-  function blocked(note) { return 'You found each other, but a direct connection could not be made. One of the networks refuses it (some phone, school and office networks do). Try another network or a phone hotspot. [' + note + ']'; }
+  function noWay(note) { return 'You found each other, but no direct route would open between your two networks, and no relay answered either (a network that blocks unusual ports will do that). Try another network or a phone hotspot. [' + note + ']'; }
 
-  /* Host: take a code, wait under it, answer whoever offers. on: code(text), wire(wire), status(text), error(text) */
+  /* Host: take a code, wait under it both ways, and take whoever's first message arrives. on: code(text), wire(wire), status(text), error(text) */
   function host(on) {
-    if (!supported()) { on.error('This browser cannot make the direct connection the game needs (no WebRTC).'); return { close: function () {} }; }
-    var code = newCode(), B = null, tries = 0, closed = false, got = null, attempt = null;   // attempt: { cid, src, pc, wire, answer, timer, theirs }
-    function drop(a) { if (!a) return; clearTimeout(a.timer); if (!a.wire.opened) { try { a.pc.close(); } catch (e) { /* */ } } if (attempt === a) attempt = null; }
+    if (!supported()) { on.error('This browser cannot make the connection the game needs.'); return { close: function () {} }; }
+    var code = newCode(), B = null, H = null, tries = 0, closed = false, got = null, attempt = null, shown = false, brokerDead = !direct(), brokerWords = '';   // attempt: { cid, src, pc, wire, answer, timer, theirs }
+    function show() { if (shown || closed) return; shown = true; on.code(code); if (!attempt && !got) on.status(brokerDead && direct() ? 'Waiting for someone to join with the code. (The direct broker cannot be reached, so they will come by relay.)' : 'Waiting for someone to join with the code.'); }
+    function drop(a) { if (!a) return; clearTimeout(a.timer); if (!got || got.wire !== a.wire) { a.wire.onclose = null; try { a.pc.close(); } catch (e) { /* */ } } if (attempt === a) attempt = null; }
     function answer(a) { if (test.dropAnswers > 0) { test.dropAnswers--; return; } B.send('ANSWER', a.src, { sdp: a.answer, type: 'data', connectionId: a.cid, browser: 'chrome' }); }
     function begin(src, payload) {
-      var a = attempt = { cid: payload.connectionId || ('dc_' + token().slice(0, 12)), src: src, pc: new RTCPeerConnection(ICE), answer: null, timer: null, theirs: offered(payload.sdp) };
+      var a = attempt = { cid: payload.connectionId || ('dc_' + token().slice(0, 12)), src: src, pc: new RTCPeerConnection(ice()), answer: null, timer: null, theirs: offered(payload.sdp) };
       a.wire = makeWire(a.pc);
       a.pc.ondatachannel = function (ev) { a.wire.adopt(ev.channel); };
-      a.wire.onopen = function () { clearTimeout(a.timer); got = a; on.wire(a.wire); };
+      // open is not yet taken: the guest may have gone round by the relay in the same moment. Its first message this way settles it.
+      a.wire.onmessage = function (text) {
+        if (got || closed || attempt !== a) return;
+        clearTimeout(a.timer); got = { wire: a.wire }; attempt = null; if (H) { H.close(); H = null; }
+        a.wire.onmessage = null; on.wire(a.wire);
+        if (text !== '!direct' && a.wire.onmessage) a.wire.onmessage(text);   // a page from before the relay says hello straight away
+      };
       a.pc.addEventListener('iceconnectionstatechange', function () {
         if (attempt !== a || a.wire.opened) return;
-        if (a.pc.iceConnectionState === 'checking') on.status('Found each other. Trying the routes between you…');
-        if (a.pc.iceConnectionState === 'failed') { on.status(blocked('host ' + offered(a.answer) + ', guest ' + a.theirs) + ' Still waiting under the same code.'); drop(a); }
+        if (a.pc.iceConnectionState === 'checking') on.status('Found each other. Trying the direct route…');
+        if (a.pc.iceConnectionState === 'failed') { on.status(H && H.any() ? 'No direct route between your networks. Waiting for them to come round by a relay…' : noWay('host ' + offered(a.answer) + ', guest ' + a.theirs) + ' Still waiting under the same code.'); drop(a); }
       });
-      a.timer = setTimeout(function () { if (!a.wire.opened && !closed && attempt === a) { on.status('That attempt did not get through. Still waiting under the same code.'); drop(a); } }, PATIENCE);
+      a.timer = setTimeout(function () { if (!got && !closed && attempt === a) { on.status('That attempt did not get through. Still waiting under the same code.'); drop(a); } }, PATIENCE);
       on.status('Someone is joining…');
       a.pc.setRemoteDescription(payload.sdp).then(function () { return a.pc.createAnswer(); }).then(function (ans) { return a.pc.setLocalDescription(ans); }).then(function () { return gathered(a.pc); })
         .then(function () { if (attempt !== a) return; a.answer = a.pc.localDescription; answer(a); })
         .catch(function () { if (attempt === a) { on.status('That attempt failed to start. Still waiting under the same code.'); drop(a); } });
     }
-    function open() {
+    function openBroker() {
+      if (!direct()) return;
       B = broker(PREFIX + code, {
-        open: function () { on.code(code); if (!attempt && !got) on.status('Waiting for someone to join with the code.'); },
-        taken: function () { B.close(); if (++tries < 4) { code = newCode(); open(); } else on.error('Could not get a code from the broker. Try again in a moment.'); },
-        expire: function () {}, dropped: function () { if (!got) on.status('The broker hung up. Reconnecting under the same code…'); },
-        error: function (words) { if (!got) on.error(words); },
+        open: function () { brokerDead = false; show(); },
+        taken: function () { B.close(); if (++tries < 4) { code = newCode(); shown = false; openBroker(); openRelays(); } else { brokerDead = true; brokerWords = 'Could not get a code from the broker. Try again in a moment.'; settle(); } },
+        expire: function () {}, dropped: function () { if (!got && !shown) on.status('The broker hung up. Reconnecting under the same code…'); },
+        error: function (words) { brokerDead = true; brokerWords = words; settle(); },
         signal: function (type, src, payload) {
           if (type !== 'OFFER' || got || closed) return;
           if (test.dropOffers > 0) { test.dropOffers--; return; }
@@ -150,50 +168,117 @@
         }
       });
     }
-    open();
-    return { code: function () { return code; }, done: function () { if (B) B.close(); }, close: function () { closed = true; if (B) B.close(); drop(attempt); if (got) got.wire.close(); } };
+    // with the broker gone: the relays will do if any is up, and if none is either there is nothing to wait under
+    function settle() { if (got || closed) return; if (H && H.any()) show(); else if (!H || H.dead) on.error(brokerWords || 'Nothing could be reached to wait under. Check your connection.'); }
+    function openRelays() {
+      if (!RELAY) return;
+      if (H) H.close();
+      var hub = H = RELAY.hub(code, 'h', {
+        open: function () { if (brokerDead) show(); },
+        none: function () { hub.dead = true; if (brokerDead && hub === H) settle(); },
+        message: function (i, who, kind, rest) {
+          if (closed || hub !== H) return;
+          if (got) { if (got.who === who && got.index === i) got.wire.take(kind, rest); else if (kind === '?') hub.say(i, who, who, 'x', ''); return; }
+          if (kind === '?') { hub.say(i, who, who, '!', ''); if (!attempt) on.status('Someone is joining…'); return; }
+          if (kind !== 'f') return;
+          // a guest's first firm message by this way: it has chosen the relay
+          var w = RELAY.wire(function (k, r) { return hub.say(i, who, who, k, r); }, { where: hub.where(i), over: function () { hub.close(); } });
+          got = { wire: w, who: who, index: i }; hub.keep(i); drop(attempt);
+          on.wire(w); w.take(kind, rest);
+        },
+        lost: function (i) { if (got && got.index === i && got.who) got.wire.lost(); }
+      });
+    }
+    openBroker(); openRelays();
+    return { code: function () { return code; }, done: function () { if (B) B.close(); }, close: function () { closed = true; if (B) B.close(); drop(attempt); if (got) got.wire.close(); if (H) H.close(); } };
   }
 
-  /* Guest: offer to whoever waits under the code, and go on offering until answered. on: wire(wire), status(text), error(text) */
+  /* Guest: look for whoever waits under the code both ways, and choose. on: wire(wire), status(text), error(text) */
   function join(rawCode, on) {
-    if (!supported()) { on.error('This browser cannot make the direct connection the game needs (no WebRTC).'); return { close: function () {} }; }
-    var code = tidy(rawCode), closed = false;
+    if (!supported()) { on.error('This browser cannot make the connection the game needs.'); return { close: function () {} }; }
+    var code = tidy(rawCode);
     if (code.length !== 6) { on.error('A code is six letters and numbers.'); return { close: function () {} }; }
-    var pc = new RTCPeerConnection(ICE), wire = makeWire(pc), dst = PREFIX + code, B = null, answered = false, offer = null, sends = 0, again = null, cid = 'dc_' + token().slice(0, 12), theirs = '';
-    wire.adopt(pc.createDataChannel('firm', { ordered: true }));
-    wire.adopt(pc.createDataChannel('loose', { ordered: false, maxRetransmits: 0 }));
-    var giveUp = setTimeout(function () { if (wire.opened || closed) return; fail(answered ? blocked('guest ' + offered(offer) + ', host ' + theirs) : 'Nobody answered under that code. Check it with whoever sent it, and that their page is still open.'); }, PATIENCE);
-    function stop() { closed = true; clearTimeout(giveUp); clearInterval(again); if (B) B.close(); if (!wire.opened) try { pc.close(); } catch (e) { /* */ } }
-    function fail(words) { if (closed) return; on.error(words); stop(); }
-    function sendOffer() {
-      if (answered || closed || !offer) return;
-      var sent = B.send('OFFER', dst, { sdp: offer, type: 'data', connectionId: cid, metadata: { game: 'undercroft' }, label: cid, reliable: true, serialization: 'json', browser: 'chrome' });
-      if (sent) { sends++; on.status(sends > 1 ? 'Looking for the game… (asking again, ' + sends + ')' : 'Looking for the game…'); }
+    var closed = false, decided = null, began = Date.now(), timers = [];
+    var pc = null, wire = null, B = null, answered = 0, offer = null, sends = 0, again = null, cid = 'dc_' + token().slice(0, 12), theirs = '', directOut = !direct(), dst = PREFIX + code;
+    var H = null, me = RELAY ? RELAY.name(8) : '', ready = -1, relayOut = !RELAY, relayWire = null;
+
+    function stop() { closed = true; timers.forEach(clearInterval); clearInterval(again); if (B) B.close(); if (decided !== 'direct' && pc) try { pc.close(); } catch (e) { /* */ } if (decided !== 'relay' && H) H.close(); }
+    function fail(words) { if (closed || decided) return; on.error(words); stop(); }
+    function note() { return 'guest ' + offered(offer) + ', host ' + (theirs || 'unheard'); }
+    // the one decision: the direct way if it has opened, the relay if the direct way has had its chance
+    function consider() {
+      if (closed || decided) return;
+      var t = Date.now();
+      if (wire && wire.opened) {
+        decided = 'direct'; timers.forEach(clearInterval); clearInterval(again); if (B) B.close(); if (H) { H.close(); H = null; }
+        wire.send('!direct'); on.wire(wire); return;
+      }
+      var hadItsChance = directOut || (answered ? t - answered > SOON : t - began > LATE);
+      if (hadItsChance && ready >= 0) {
+        decided = 'relay'; timers.forEach(clearInterval); clearInterval(again); if (B) B.close(); if (pc) { if (wire) wire.onclose = null; try { pc.close(); } catch (e) { /* */ } }
+        var i = ready, hub = H;
+        hub.keep(i);
+        relayWire = RELAY.wire(function (k, r) { return hub.say(i, 'h', me, k, r); }, { where: hub.where(i), over: function () { hub.close(); } });
+        on.status('No direct route between your networks. Going round by a relay…');
+        on.wire(relayWire); return;
+      }
+      if (directOut && relayOut) { fail(noWay(note())); return; }
+      if (t - began > PATIENCE) fail(answered || ready >= 0 ? noWay(note()) : 'Nobody answered under that code. Check it with whoever sent it, and that their page is still open.');
     }
-    wire.onopen = function () { clearTimeout(giveUp); clearInterval(again); if (B) B.close(); on.wire(wire); };
-    pc.addEventListener('iceconnectionstatechange', function () {
-      if (wire.opened || closed) return;
-      if (pc.iceConnectionState === 'checking' && answered) on.status('Found. Trying the routes between you…');
-      if (pc.iceConnectionState === 'failed') fail(blocked('guest ' + offered(offer) + ', host ' + theirs));
-    });
-    on.status('Getting ready…');
-    pc.createOffer().then(function (o) { return pc.setLocalDescription(o); }).then(function () { return gathered(pc); }).then(function () {
-      if (closed) return;
-      offer = pc.localDescription;
-      B = broker(PREFIX + 'g-' + token().slice(0, 12), {
-        open: function () { sendOffer(); if (!again) again = setInterval(sendOffer, AGAIN); },
-        taken: function () { fail('Try again.'); },
-        expire: function () { /* the broker gave up holding one offer; the next is already on its way */ },
-        dropped: function () { if (!answered) on.status('The broker hung up. Reconnecting…'); },
-        error: function (words) { if (!wire.opened) fail(words); },
-        signal: function (type, src, payload) {
-          if (type !== 'ANSWER' || answered || payload.connectionId !== cid) return;
-          answered = true; clearInterval(again); theirs = offered(payload.sdp); on.status('Found. Connecting…');
-          pc.setRemoteDescription(payload.sdp).catch(function () { fail('The connection could not be completed.'); });
-        }
+
+    /* the direct way */
+    function sendOffer() {
+      if (answered || closed || decided || !offer) return;
+      var sent = B.send('OFFER', dst, { sdp: offer, type: 'data', connectionId: cid, metadata: { game: 'undercroft' }, label: cid, reliable: true, serialization: 'json', browser: 'chrome' });
+      if (sent) { sends++; if (ready < 0) on.status(sends > 1 ? 'Looking for the game… (asking again, ' + sends + ')' : 'Looking for the game…'); }
+    }
+    if (direct()) {
+      pc = new RTCPeerConnection(ice()); wire = makeWire(pc);
+      wire.adopt(pc.createDataChannel('firm', { ordered: true }));
+      wire.adopt(pc.createDataChannel('loose', { ordered: false, maxRetransmits: 0 }));
+      wire.onopen = consider;
+      pc.addEventListener('iceconnectionstatechange', function () {
+        if (closed || decided || wire.opened) return;
+        if (pc.iceConnectionState === 'checking' && answered) on.status('Found. Trying the direct route…');
+        if (pc.iceConnectionState === 'failed') { directOut = true; consider(); }
       });
-    }).catch(function () { fail('The connection could not be started.'); });
-    return { close: function () { stop(); if (wire.opened) wire.close(); } };
+      pc.createOffer().then(function (o) { return pc.setLocalDescription(o); }).then(function () { return gathered(pc); }).then(function () {
+        if (closed || decided) return;
+        offer = pc.localDescription;
+        B = broker(PREFIX + 'g-' + token().slice(0, 12), {
+          open: function () { sendOffer(); if (!again) again = setInterval(sendOffer, AGAIN); },
+          taken: function () { directOut = true; consider(); },
+          expire: function () { /* the broker gave up holding one offer; the next is already on its way */ },
+          dropped: function () { if (!answered && ready < 0) on.status('The broker hung up. Reconnecting…'); },
+          error: function () { if (!answered) { directOut = true; consider(); } },
+          signal: function (type, src, payload) {
+            if (type !== 'ANSWER' || answered || decided || payload.connectionId !== cid) return;
+            answered = Date.now(); clearInterval(again); theirs = offered(payload.sdp); on.status('Found. Connecting…');
+            pc.setRemoteDescription(payload.sdp).catch(function () { directOut = true; consider(); });
+          }
+        });
+      }).catch(function () { directOut = true; consider(); });
+    }
+
+    /* the long way round */
+    if (RELAY) {
+      H = RELAY.hub(code, me, {
+        open: function (i) { if (!decided && !closed) H.say(i, 'h', me, '?', ''); },
+        none: function () { relayOut = true; consider(); },
+        message: function (i, who, kind, rest) {
+          if (closed || who !== me) return;
+          if (decided === 'relay') { if (i === ready && relayWire) relayWire.take(kind, rest); return; }
+          if (decided) return;
+          if (kind === '!' && ready < 0) { ready = i; if (!answered) on.status('Found. Trying the direct route first…'); consider(); }
+          else if (kind === 'x') fail('That game already has two in it.');
+        },
+        lost: function (i) { if (decided === 'relay' && i === ready && relayWire) relayWire.lost(); }
+      });
+      timers.push(setInterval(function () { if (decided || closed || ready >= 0) return; for (var i = 0; i < H.count(); i++) if (H.up(i)) H.say(i, 'h', me, '?', ''); }, ASK));
+    }
+    on.status('Getting ready…');
+    timers.push(setInterval(consider, 400));
+    return { close: function () { var w = decided === 'direct' ? wire : relayWire; stop(); if (w) w.close(); } };
   }
 
   window.UndercroftWire = { supported: supported, host: host, join: join, tidy: tidy, test: test };

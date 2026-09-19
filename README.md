@@ -44,16 +44,29 @@ How it works, because it decides how new things must be written:
   a wire that delays, jitters, reorders and drops. Run it after adding
   anything. When it fails, `Gallery.inspect('undercroft').hashed()` lists every
   value in the hash and `.traced([...])` lists who drew on the stream that step.
-- The connection (`js/game/wire.js`) is WebRTC, browser to browser. Only the
-  handshake behind the code uses a third party (the PeerJS project's free
-  public broker, and public STUN servers); neither sees the game. The broker
-  is strict: it hangs up on anything not shaped like PeerJS's own messages,
-  and on the empty candidate Firefox and Safari send, so `wire.js` sends two
+- There are two ways from one browser to the other, and both are tried at
+  once under the same code (`js/game/wire.js`). The direct way is WebRTC,
+  browser to browser; only its handshake uses a third party (the PeerJS
+  project's free public broker, and public STUN servers). That broker is
+  strict: it hangs up on anything not shaped like PeerJS's own messages, and
+  on the empty candidate Firefox and Safari send, so `wire.js` sends two
   messages in all (an offer and an answer with the candidates inside),
-  repeats them until they land, and reconnects if dropped. There is no relay,
-  so two networks that both refuse direct connections cannot be joined, and
-  the page says so; to add one, put a TURN server in `ICE` in `wire.js` (or
-  set `window.UndercroftICE` before it loads). A transport is four functions
+  repeats them until they land, and reconnects if dropped.
+- Many pairs of networks will not let a direct connection open at all (phone
+  carriers, campuses, some home routers). For them there is the long way
+  round (`js/game/relay.js`): the same messages passed along by a public MQTT
+  broker over a WebSocket, spoken by hand, no account. The guest decides:
+  direct if it opens within five seconds of the answer, otherwise the first
+  broker through which the host answered. It costs about a sixth of a second
+  of delay on the buttons. The brokers are other people's free services and
+  promise nothing; the list is at the top of `relay.js` with how each was
+  measured (one popular broker passes only a third of the messages at game
+  rate and is left out for it). Anybody who knew the code could listen to the
+  buttons. A TURN server of your own, if you have one, goes in `ICE` in
+  `wire.js` (or `window.UndercroftICE`) and makes the direct way work
+  everywhere instead. Networks that block unusual ports (8081, 8884) as well
+  as direct connections still cannot be joined, and the page says so.
+  A transport is four functions
   (`send`, `onmessage`, `onclose`, `close`); another can be put in its place
   without touching the game.
 
@@ -141,7 +154,8 @@ js/game/boss-orrery.js    room 36  the Orrery: a core and three moons on rings; 
 js/game/boss-herald.js    room 36  the Storm Herald: rhythm bolts, the live rail, blink, the waltzing balls, the turning pylons
 js/game/boss-lightless.js room 36  the Lightless: your double, then the mask and hands, then the dark and three braziers
 js/game/net.js            room 36  two machines, one game: lockstep over any transport (buttons only, hashes, resync, leaving)
-js/game/wire.js           room 36  a WebRTC line between two browsers and the six-character code that finds it
+js/game/relay.js          room 36  the long way round: MQTT by hand to a public broker, for networks that refuse direct connections
+js/game/wire.js           room 36  a line between two browsers, direct (WebRTC) or relayed, and the six-character code that finds it
 js/game/samples.js        room 36  written by tools/make-sounds.js: the recorded effects sound.js may load
 js/game/sound.js          room 36  plays the recordings (with the synthesised effect under each as a fallback) and the synthesised floor music
 audio/undercroft/         room 36  about sixty short mp3 effects made by ElevenLabs from the prompts in tools/sounds.js
