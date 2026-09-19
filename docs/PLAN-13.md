@@ -113,6 +113,11 @@ delay chosen 10 steps, 58 to 61 steps a second.
   The buttons are readable by anybody who knows the code. Nothing else
   crosses.
 - Built without a plan gate: this is the unfinished half of plan 12.
-- Not merged by me: PR #3 waits for the user (merging was refused to the
-  agent this time). The live site has the fix only after it is merged; the
-  live check (two tabs on the Pages URL with `test.noDirect`) is still owed.
+- Merged as PR #3 (`9118af4`) when the user said "make it live".
+
+### On the live site, after the merge
+
+Two tabs on `https://brianbuildsai.github.io/look-no-hands/rooms/undercroft.html`
+with `test.noDirect`: joined by relay in 6.2 s, started, 600 steps, hashes
+equal at steps 200 and 400, round trip 245 ms, delay 10, no resync, console
+clean.
