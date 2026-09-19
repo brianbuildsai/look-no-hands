@@ -83,7 +83,7 @@
   function throwCogs(e, ctx) {
     var v = e.vars, hero = ctx.hero, base = Math.atan2(hero.y - 12 - e.y, hero.x - e.x), n = e.phase ? 5 : 3, k;
     for (k = 0; k < n; k++) { var a = base + (k - (n - 1) / 2) * 0.3; v.cogs.push({ x: e.x, y: e.y, ox: e.x, oy: e.y, vx: Math.cos(a) * 3.4, vy: Math.sin(a) * 3.4, state: 'out', t: 0, hp: 1, flash: 0 }); }
-    ctx.sfx('clink'); ctx.shake(2);
+    ctx.sfx('cogthrow'); ctx.shake(2);
   }
   function sweepBoxes(e) {
     var v = e.vars, A = e.arena, d = dialAt(A), L = v.loose, out = [], len;
@@ -99,12 +99,12 @@
       name: name, windup: 64, active: both ? 116 : 40, recover: 50, cooldown: 40, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
       start: function (e, ctx) { e.vars.side = ctx.hero.x > mid(e.arena) ? 1 : -1; },
       telling: function (e, ctx, t, w) { var v = e.vars; if (t === 1) { tellHalf(e, ctx, v.side, w); ctx.sfx('select'); } v.loose = { a: v.side > 0 ? 0.3 : Math.PI - 0.3, len: 60 + 150 * clamp(t / (w - 10), 0, 1), hot: false }; if (t % 16 === 0) ctx.sfx('select'); },
-      fire: function (e, ctx) { ctx.sfx('swingheavy'); ctx.shake(3); },
+      fire: function (e, ctx) { ctx.sfx('handsweep'); ctx.shake(3); },
       during: function (e, ctx, t) {
         var v = e.vars;
         if (t <= 40) sweep(e, ctx, v.side, t, 40);
         else if (t <= 76) { if (t === 41) { tellHalf(e, ctx, -v.side, 36); e.hitHero = false; } v.loose = { a: -v.side > 0 ? 0.3 : Math.PI - 0.3, len: 210, hot: false }; }
-        else { if (t === 77) ctx.sfx('swingheavy'); sweep(e, ctx, -v.side, t - 76, 40); }
+        else { if (t === 77) ctx.sfx('handsweep'); sweep(e, ctx, -v.side, t - 76, 40); }
       },
       box: function (e) { return sweepBoxes(e); },
       resting: function (e, ctx, t) { var v = e.vars; if (v.loose) { v.loose.hot = false; v.loose.len = Math.max(27, v.loose.len - 8); if (v.loose.len <= 27) v.loose = null; } },
@@ -126,7 +126,7 @@
           ctx.telegraph(v.markX - 8, A.ceilY, 16, A.groundY - A.ceilY, 30, '#efd27a'); ctx.telegraphCrack(v.markX, A.groundY, 14, 30, '#ff8c42');
           ctx.sfx('bell'); ctx.shake(2); ctx.number(dialAt(A).x, dialAt(A).y - 46, String(n + 1), '#efd27a');
         }
-        if (at === 30) ctx.projectile({ x: v.markX, y: A.ceilY + 12, top: A.ceilY + 4, vx: 0, vy: 5, gravity: 0.35, life: 120, colour: '#c9a44c', size: 12, damage: 1, element: 'gear', cause: 'weight', draw: drawWeight, land: function (p) { ctx.shake(4); ctx.sfx('boom'); chips(ctx, p.x, A.groundY - 2, 14, 2.6); } });
+        if (at === 30) ctx.projectile({ x: v.markX, y: A.ceilY + 12, top: A.ceilY + 4, vx: 0, vy: 5, gravity: 0.35, life: 120, colour: '#c9a44c', size: 12, damage: 1, element: 'gear', cause: 'weight', draw: drawWeight, land: function (p) { ctx.shake(4); ctx.sfx('weightfall'); chips(ctx, p.x, A.groundY - 2, 14, 2.6); } });
       },
       // struck: it hangs low and still with its case open
       resting: function (e, ctx, t) { var v = e.vars; v.mode = t < 126 ? 'low' : 'swing'; v.open = t > 8 && t < 126; if (t === 9) { ctx.sfx('door'); ctx.number(e.x, e.y - 24, 'OPEN', '#ffdc9a'); } if (v.open && t % 10 === 0) ctx.particle({ x: e.x + (ctx.random() - 0.5) * 10, y: e.y, vx: (ctx.random() - 0.5) * 0.6, vy: -0.6, life: 20, max: 20, colour: '#ff8c42', size: 1, gravity: -0.01 }); },
@@ -174,7 +174,7 @@
     var th = v.amp * Math.sin(v.phi);
     e.x = v.pivotX + Math.sin(th) * v.len; e.y = py + Math.cos(th) * v.len;
     // the clock keeps time: the minute hand steps once a second
-    if (e.clock % 60 === 0) { v.minute += 6.2832 / 60 * 5; if (e.state !== 'wake' && !e.attack) ctx.sfx('select'); }
+    if (e.clock % 60 === 0) { v.minute += 6.2832 / 60 * 5; if (e.state !== 'wake' && !e.attack) ctx.sfx('tick'); }
     ctx.light(e.x, e.y, 60, 0.85); ctx.light(dialAt(A).x, dialAt(A).y, 50, 0.6);
     if (v.open) ctx.glow(e.x, e.y, 16, '#ff8c42', 0.4);
     // the cogs

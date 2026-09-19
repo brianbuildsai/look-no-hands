@@ -56,7 +56,7 @@
     attacks: [{ name: 'harpoon', range: [40, 150], above: 22, below: 22, windup: 46, active: 56, recover: 36, cooldown: 120, grounded: true, moves: true,
       start: function (e, ctx) { e.vars.len = lineTo(e, ctx, 168); e.vars.stuck = false; },
       telling: function (e, ctx, t, w) { if (t === 1) ctx.telegraph(e.dir > 0 ? e.x + 10 : e.x - 10 - e.vars.len, e.y - 18, e.vars.len, 6, w, '#5fd4c4'); e.vx = 0; },
-      fire: function (e, ctx) { ctx.sfx('shot'); ctx.spark(e.x + e.dir * 18, e.y - 15, '#d6fff8', 8, 1.6, 10, 0); e.vars.tipX = e.x + e.dir * 14; e.vars.anchorX = e.x + e.dir * (e.vars.len + 4); },
+      fire: function (e, ctx) { ctx.sfx('harpoon'); ctx.spark(e.x + e.dir * 18, e.y - 15, '#d6fff8', 8, 1.6, 10, 0); e.vars.tipX = e.x + e.dir * 14; e.vars.anchorX = e.x + e.dir * (e.vars.len + 4); },
       box: function (e, t, ctx) {
         var v = e.vars, out = [];
         if (!v.stuck) {
@@ -160,7 +160,7 @@
     // run down, it is soft
     boxes: function (e, w, h) { var soft = e.attack && e.attack.phase === 'recover'; return [{ x0: e.x - w / 2, x1: e.x + w / 2, y0: e.y - h, y1: e.y, mult: soft ? 1.5 : 1 }]; },
     attacks: [{ name: 'spin', range: [0, 66], windup: 34, active: 84, recover: 110, cooldown: 30, grounded: true, steady: true, moves: true, anims: { attack: 'spin' },
-      telling: function (e, ctx, t) { e.vx = 0; if (t % 6 === 0) ctx.spark(e.x - e.dir * 9, e.y - 22, '#efd27a', 2, 1, 10, 0); if (t % 8 === 0) ctx.sfx('select'); },
+      telling: function (e, ctx, t) { e.vx = 0; if (t % 6 === 0) ctx.spark(e.x - e.dir * 9, e.y - 22, '#efd27a', 2, 1, 10, 0); if (t % 8 === 0) ctx.sfx('tick'); },
       box: function (e) { return [{ x0: e.x - 25 * e.size, x1: e.x + 25 * e.size, y0: e.y - 17 * e.size, y1: e.y - 8 * e.size }]; },
       during: function (e, ctx, t) {
         if (t % 28 === 1) { e.dir = ctx.hero.x > e.x ? 1 : -1; e.vx = e.dir * 1.5; e.hitHero = false; ctx.sfx('swing'); }
@@ -171,7 +171,7 @@
       resting: function (e, ctx, t) {
         e.vx = 0;
         if (t < 66) { e.anim = 'slump'; e.frame = 0; if (t === 1) { ctx.number(e.x, e.y - e.h - 14, 'RUN DOWN', '#efd27a'); ctx.spark(e.x, e.y - 20, '#8f8d88', 6, 1, 20, -0.02); } }
-        else { e.anim = 'rewind'; e.frame = (t >> 2) % 2; if (t % 8 === 0) { ctx.sfx('select'); ctx.spark(e.x - e.dir * 9, e.y - 20, '#efd27a', 2, 1, 10, 0); } }
+        else { e.anim = 'rewind'; e.frame = (t >> 2) % 2; if (t % 8 === 0) { ctx.sfx('tick'); ctx.spark(e.x - e.dir * 9, e.y - 20, '#efd27a', 2, 1, 10, 0); } }
       } }] };
 
   /* The Governor: two brass balls flying round a spindle. When it spins up they rise; it lets a cog go, which
@@ -217,7 +217,7 @@
       telling: function (e, ctx, t) { if (t % 4 === 0) ctx.spark(e.x + (ctx.random() < 0.5 ? -14 : 14), e.y - 2, '#efd27a', 1, 0.8, 8, 0); if (t % 10 === 0) ctx.sfx('select'); },
       fire: function (e, ctx) {
         ctx.projectile({ x: e.x, y: e.y + 10, vx: e.dir * 1.2, vy: 0.5, gravity: 0.2, life: 330, colour: '#c9a44c', size: 9, damage: 1, element: 'gear', cause: 'cog', phase: 'fall', dir: e.dir, steer: steerCog, draw: drawCog });
-        ctx.sfx('clink');
+        ctx.sfx('cogthrow');
       } }] };
 
   BY_ELEMENT.gear = ['winder', 'governor'];
@@ -264,7 +264,7 @@
       return [{ x0: e.x - w / 2, x1: e.x + w / 2, y0: e.y - h, y1: e.y, mult: 1, onHit: function (c, ctx, damage, fromX, missile) {
         var fromFront = (fromX - c.x) * c.dir > 0;
         if (!fromFront || !guarding(c)) { var soft = c.attack && c.attack.phase === 'recover'; return ctx.wound(c, soft ? Math.round(damage * 1.5) : damage, fromX); }
-        c.vars.glint = 8; ctx.spark(c.x + c.dir * 10, c.y - 16, '#ffffff', 6, 1.8, 10, 0.03); ctx.sfx('clink');
+        c.vars.glint = 8; ctx.spark(c.x + c.dir * 10, c.y - 16, '#ffffff', 6, 1.8, 10, 0.03); ctx.sfx('mirror');
         if (missile) { ctx.projectile({ x: c.x + c.dir * 14, y: c.y - 15, vx: c.dir * 3.6, vy: 0, life: 80, colour: '#ffe8f4', size: 5, damage: 1, element: 'glass', shard: true, cause: 'reflection' }); return true; }
         if (!(c.vars.told > 0)) { ctx.number(c.x, c.y - c.h - 14, 'MIRRORED', '#ffe8f4'); c.vars.told = 240; }
         return false;

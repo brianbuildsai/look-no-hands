@@ -101,7 +101,7 @@
   FIRE.geyser = function (T) {
     var h = T.hero, near = T.nearest(h.x + h.dir * 40, h.y - 12, 70, h.dir), x = near ? near.x : h.x + h.dir * 44;
     add({ kind: 'geyser', x: x, y: groundAt(T, x, near ? near.y : h.y), max: 44 });
-    T.sfx('gust');
+    T.sfx('geyser');
   };
   STEP.geyser = function (s, T) {
     var k, list = T.creatures();
@@ -168,7 +168,7 @@
   FIRE.singularity = function (T) {
     var h = T.hero, w = T.weapon();
     add({ kind: 'hole', x: h.x + h.dir * w.reach * T.mods().reach * 0.85, y: h.y - 16, max: 60 });
-    T.sfx('eclipse');
+    T.sfx('singularity');
   };
   STEP.hole = function (s, T) {
     var list = T.creatures(), k;
@@ -241,7 +241,7 @@
       bolts.push({ at: 16 + k * 8, target: c, again: !!c && k >= list.length, x: c ? c.x : h.x + h.dir * (30 + k * 26), y: c ? c.y : h.y, path: null, fork: null, life: 0 });
     }
     add({ kind: 'tempest', bolts: bolts, max: 16 + 6 * 8 + 24, lit: 0 });
-    T.sfx('roarherald'); T.flash('#8fa3ff', 4);
+    T.sfx('tempest'); T.flash('#8fa3ff', 4);
   };
   STEP.tempest = function (s, T) {
     if (s.lit > 0) s.lit--;
@@ -314,7 +314,7 @@
     while (Math.abs(to - from) > 8 && !safeFloor(T, to, h.y)) to -= d * 4;
     h.x = to; h.vx = 0; h.vy = 0; h.invuln = Math.max(h.invuln, 44);
     add({ kind: 'nightfall', x0: from, x1: to, y: h.y - 13, dir: d, max: 46, damage: T.weapon().damage[2] + T.mods().damage, marks: [] });
-    T.sfx('eclipse');
+    T.sfx('nightfall');
   };
   STEP.nightfall = function (s, T) {
     var list = T.creatures(), k;
@@ -322,7 +322,7 @@
       var box = { x0: Math.min(s.x0, s.x1) - 8, x1: Math.max(s.x0, s.x1) + 8, y0: s.y - 16, y1: s.y + 14 };
       for (k = 0; k < list.length; k++) { var c = list[k]; if (c.dying) continue; var bs = T.boxesOf(c); for (var j = 0; j < bs.length; j++) if (bs[j].x0 < box.x1 && bs[j].x1 > box.x0 && bs[j].y0 < box.y1 && bs[j].y1 > box.y0) { s.marks.push({ x: Math.max(box.x0, Math.min(box.x1, c.x)), y: (bs[j].y0 + bs[j].y1) / 2, a: -0.9 + T.random() * 0.5 }); break; } }
       T.strike(box, s.damage, 2, null);
-      T.flash('#ffffff', 7); T.shake(7); T.sfx('shatter');
+      T.flash('#ffffff', 7); T.shake(7); T.sfx('nightcut');
       for (k = 0; k < 24; k++) bit(T, s.x0 + (s.x1 - s.x0) * T.random(), s.y + (T.random() - 0.5) * 6, (T.random() - 0.5) * 2, -0.5 - T.random() * 1.5, 26, T.random() < 0.5 ? '#ffffff' : '#ffd24d', 1, 0.03);
     }
     return s.t < s.max;
@@ -356,11 +356,11 @@
     sand = 480;
     add({ kind: 'timestop', holds: true, max: 150 });
     T.ring({ x: h.x, y: h.y - 12, r: 6, grow: 7, life: 22, max: 22, colour: '#fff3b0' });
-    T.flash('#ffd24d', 6); T.shake(3); T.sfx('bell');
+    T.flash('#ffd24d', 6); T.shake(3); T.sfx('timestop');
   };
   STEP.timestop = function (s, T) {
     var h = T.hero;
-    if (s.t % 30 === 0) T.sfx('select');
+    if (s.t % 30 === 0) T.sfx('tick');
     if (s.t % 3 === 0) bit(T, h.x + (T.random() - 0.5) * 200, h.y - 10 - T.random() * 90, 0, 0, 30, T.random() < 0.5 ? '#ffd24d' : '#fff3b0', 1, 0);
     if (s.t === s.max - 1) { T.flash('#ffffff', 5); T.sfx('crack'); T.ring({ x: h.x, y: h.y - 12, r: 150, grow: -7, life: 20, max: 20, colour: '#fff3b0' }); }
     return s.t < s.max && h.alive;
@@ -408,7 +408,7 @@
     if (all.length < 2) return;
     all.forEach(function (s) { s.max = Math.max(s.max, s.t + 130); });
     add({ kind: 'figure', pts: all, max: 104, seen: [], name: FIGURES[Math.floor(T.random() * FIGURES.length)] });
-    T.sfx('perk');
+    T.sfx('starfigure');
   };
   STEP.figure = function (s, T) {
     var k, j, pts = s.pts;
@@ -442,7 +442,7 @@
   FIRE.breach = function (T) {
     var h = T.hero, d = h.dir, gy = groundAt(T, h.x + d * 20, h.y);
     add({ kind: 'whale', xs: h.x - d * 6, y0: gy, dir: d, max: 78, seen: [], x: h.x, y: gy + 40, a: 0, trail: [] });
-    T.sfx('roarwyrm'); T.shake(5);
+    T.sfx('whale'); T.shake(5);
   };
   function whaleAt(s, u) { return { x: s.xs + s.dir * 190 * u, y: s.y0 + 34 - Math.sin(u * Math.PI) * 132 }; }
   STEP.whale = function (s, T) {

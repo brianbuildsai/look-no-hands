@@ -1,6 +1,6 @@
 /* weapons.js: what the Warden can carry in her right hand.
 
-   Eleven weapons in five rarities. A weapon is a piece of text art drawn
+   Twenty-six weapons in five rarities, of which she carries two. A weapon is a piece of text art drawn
    pointing up, with the pixel of its grip marked; pixels.js turns it to lie
    flat or aslant and puts the grip in her hand in every frame, so each
    weapon gives the Warden a full set of frames of its own. A weapon also

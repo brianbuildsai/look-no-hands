@@ -565,7 +565,7 @@
     var GD = window.Guardians;
     if (!GD) { env.fail('The undercroft\u2019s guardians did not load. The other rooms still run.'); return null; }
     var stepLit = { lights: [], glows: [] };
-    var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless', bellkeeper: 'roar', regulator: 'roargolem', reflected: 'roarlightless' };
+    var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless', bellkeeper: 'roarbell', regulator: 'roarclock', reflected: 'roarglass' };
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null;
     var ctx = {
       hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
@@ -961,7 +961,7 @@
     function changeHands() {
       var other = 1 - handIn;
       if (!hands[other]) { number(hero.x, hero.y - 32, 'ONE WEAPON', '#8f8d88'); sfx('select'); return false; }
-      handIn = other; equip(hands[other]); swapT = 12; sfx('swingquick');
+      handIn = other; equip(hands[other]); swapT = 12; sfx('swap');
       var col = rarityOf(weapon).colour; spark(hero.x + hero.dir * 6, hero.y - 14, col, 8, 1.4, 14, 0);
       return true;
     }

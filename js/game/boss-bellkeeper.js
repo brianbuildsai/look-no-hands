@@ -104,7 +104,7 @@
   function toll(e, ctx, high) {
     var A = e.arena;
     for (var s = -1; s <= 1; s += 2) ctx.projectile({ x: e.x + s * 28, y: A.groundY - (high ? 36 : 7), vx: s * 2.5, vy: 0, gravity: 0, life: 220, colour: '#efd27a', size: high ? 18 : 14, damage: 1, element: 'tide', cause: 'toll', wave: true, draw: drawRing(high) });
-    ctx.sfx('bell'); ctx.shake(3); e.vars.rung = 10;
+    ctx.sfx('toll'); ctx.shake(3); e.vars.rung = 10;
     ctx.spark(e.x, e.y - 20, '#fff3b0', 14, 2.4, 16, 0);
   }
   function tellToll(e, ctx, high, life) { var A = e.arena; ctx.telegraph(A.left, A.groundY - (high ? 45 : 14), A.right - A.left, high ? 18 : 14, life, high ? '#ff9ab5' : '#efd27a'); }
@@ -150,7 +150,7 @@
         if ((t - 1) % 8 !== 0 || v.blown >= n || v.bubbles.length >= 9) return;
         var k = v.blown++;
         v.bubbles.push({ x: e.x + e.dir * 32, y: e.y - 24, vx: e.dir * (1.6 + (k % 3) * 0.5), vy: -0.9 - (k % 2) * 0.6, age: 0, life: 460, r: 6 + (k % 3), spiked: !!e.phase && k % 2 === 1 });
-        ctx.sfx('spit');
+        ctx.sfx('bubble');
       }
     },
 
@@ -161,7 +161,7 @@
       telling: function (e, ctx, t, w) {
         var A = e.arena, s = e.vars.surge; e.vx = 0;
         if (t === 8) shutIn(e, ctx);
-        if (t === 1) { ctx.telegraph(A.left, A.groundY - 22, A.right - A.left, 22, w, '#5fd4c4'); ctx.sfx('gust'); }
+        if (t === 1) { ctx.telegraph(A.left, A.groundY - 22, A.right - A.left, 22, w, '#5fd4c4'); ctx.sfx('surge'); }
         // the water draws back toward the wall it will come from
         if (t % 2 === 0) ctx.particle({ x: A.left + ctx.random() * (A.right - A.left), y: A.groundY - 1, vx: -s.dir * (1.5 + ctx.random() * 2), vy: -0.2, life: 16, max: 16, colour: ctx.random() < 0.3 ? '#ffffff' : '#5fd4c4', size: 1, gravity: 0 });
         if (t % 12 === 0) ctx.shake(1);

@@ -157,7 +157,7 @@
     e.hp = Math.min(e.hp, e.maxHp - Math.round(total * e.maxHp * 0.5 / 9) - (total >= 9 ? 1 : 0)); e.flash = 4;
     ctx.number(p.x, A.groundY - PANE_H - 10, p.cracks >= 3 ? 'BROKEN' : p.cracks + ' OF 3', '#ffe8f4');
     if (p.cracks >= 3) {
-      p.broken = true; ctx.sfx('shatter'); ctx.shake(7); ctx.flash('#ffe8f4', 6); splinter(ctx, p.x, A.groundY - 34, 60, 3.6);
+      p.broken = true; ctx.sfx('glassbreak'); ctx.shake(7); ctx.flash('#ffe8f4', 6); splinter(ctx, p.x, A.groundY - 34, 60, 3.6);
       if (e.attack && e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; e.cooldown = 50; v.exposed = false; v.reach = 0;
       if (standing(v).length) chooseTrue(e, ctx);
     }
@@ -177,7 +177,7 @@
         if (s.t < 0) continue;
         var want = Math.atan2(hero.y - 12 - s.y, hero.x - s.x); if (s.t < 30) { var d = want - s.a; while (d > Math.PI) d -= 6.2832; while (d < -Math.PI) d += 6.2832; s.a += clamp(d, -0.12, 0.12); }
         ctx.telegraphLine(s.x, s.y, s.x + Math.cos(s.a) * 220, s.y + Math.sin(s.a) * 220, 2, s.t < 30 ? '#c46a98' : '#ff9ecb');
-        if (s.t >= 44) { s.state = 'fly'; ctx.sfx('swingquick'); }
+        if (s.t >= 44) { s.state = 'fly'; ctx.sfx('shardfly'); }
         continue;
       }
       s.x += Math.cos(s.a) * 5.2; s.y += Math.sin(s.a) * 5.2;
@@ -208,7 +208,7 @@
         var n = v.panes.indexOf(p);
         return { x0: p.x - PANE_W / 2, x1: p.x + PANE_W / 2, y0: A.groundY - PANE_H, y1: A.groundY, mult: 1, onHit: function (g, ctx, damage) {
           if (n === v.trueAt && v.exposed) return crack(g, ctx, p, damage);
-          p.flash = 4; ctx.sfx('clink'); ctx.spark(p.x, A.groundY - 30, '#ffffff', 5, 1.6, 10, 0.03);
+          p.flash = 4; ctx.sfx('mirror'); ctx.spark(p.x, A.groundY - 30, '#ffffff', 5, 1.6, 10, 0.03);
           if (!(v.told > 0)) { ctx.number(p.x, A.groundY - PANE_H - 10, n === v.trueAt ? 'NOT YET' : 'ONLY GLASS', '#c4c1ba'); v.told = 90; }
           return false;
         } };

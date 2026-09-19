@@ -1,6 +1,7 @@
 /* actors.js: what lives in the undercroft, and how it behaves.
 
-   Ten creatures, two to an element. Each is struck in its hurt boxes and
+   Ten creatures, two to an element (six more, for the newer floors, are in
+   actors-deep.js). Each is struck in its hurt boxes and
    strikes only with the boxes of its attacks; touching one is harmless, so
    every wound is one that could have been read. An attack is a wind-up that
    tells, a few active steps, and a recovery in which the creature is open.

@@ -65,15 +65,20 @@ js/corpus.js          every wall text, written by make-rooms.js for room 35 to r
 js/rooms/undercroft.js    room 36  the game's engine: fixed step, tiles, camera, HUD, the run, persistence
 js/game/pixels.js         room 36  the sprite compiler (text art to canvases), part-based rigs, the Warden's frames per weapon
 js/game/classes.js        room 36  the four who go down: skins for the shared skeleton, numbers, what a dash is
-js/game/weapons.js        room 36  thirteen weapons in five rarities: movesets, grips, finishers
-js/game/world.js          room 36  five elements, levels of any height, the flood fill, six guardians' halls (and the old corridor grammar)
+js/game/weapons.js        room 36  twenty-six weapons in five rarities: movesets, grips, what each says it does
+js/game/arms.js           room 36  what the newer weapons do at the end of their strokes: effects with lives of their own, the world held still
+js/game/world.js          room 36  eight elements, levels of any height, the flood fill, nine guardians' halls (and the old corridor grammar)
 js/game/explore.js        room 36  stages of chambers: the maze walk, doorways, ladders, furniture, the portal; the sanctuary hall
 js/game/actors.js         room 36  ten creatures as rigs: hurt boxes, attack boxes, the wind-up/active/recover clock
+js/game/actors-deep.js    room 36  six more for the newer floors: Diver, Angler, Winder, Governor, Reflection, Prism
 js/game/relics.js         room 36  four powers, twenty-eight items in four rarities
 js/game/guardians.js      room 36  what the guardians share: registry, rig, turned pieces, attack clock, phases, soft boxes
 js/game/boss-golem.js     room 36  the Kiln Golem: slam and wave, coals, furnace breath, leap, the vent on its back
 js/game/boss-wyrm.js      room 36  the Rime Wyrm: eleven pieces on a rope; breach, beach, icicle rain, gust, coil and nova, lash
 js/game/boss-thornmother.js room 36  the Thornmother: rooted; lashes low and high, walking roots, pods and brambles, pollen, a flower that opens
+js/game/boss-bellkeeper.js room 36  the Bellkeeper: a crab in a bell; claw, bubbles, tolls low and high, the surge; ring it thrice from outside
+js/game/boss-regulator.js room 36  the Regulator: a pendulum under a dial; cogs that come back, a loose hand, the hour struck in weights
+js/game/boss-reflected.js room 36  the Reflected: three mirrors and the true one's glint; then out of the glass, fans of shards and a cut with an echo
 js/game/boss-orrery.js    room 36  the Orrery: a core and three moons on rings; lit orbits, a flung moon, the pull, the eclipse
 js/game/boss-herald.js    room 36  the Storm Herald: rhythm bolts, the live rail, blink, the waltzing balls, the turning pylons
 js/game/boss-lightless.js room 36  the Lightless: your double, then the mask and hands, then the dark and three braziers
@@ -134,9 +139,10 @@ Gallery.inspect('undercroft').generate(seed, floor, section)  // a floor: column
 Gallery.inspect('undercroft').begin(seed, 'kite'); .pick(who); .classes(); .choose(index)  // who goes down
 Gallery.inspect('undercroft').portal(); .perks(); .reward()  // where the portal is and the chamber grid; what is offered (a sanctuary's perks or a guardian's rewards)
 Sound.recorded()  // rooms/undercroft.html: how many recorded effects are listed and loaded
-Gallery.inspect('undercroft').stage(n)  // any of the twenty-one stages of the way down; .arena(floor) goes straight to a guardian (1 to 4)
+Gallery.inspect('undercroft').stage(n)  // any of the thirty-three stages of the way down; .arena(floor) goes straight to a guardian (1 to 9)
 Gallery.inspect('undercroft').guardian(); .command('slam'); .slay()  // watch it (attack, phase, hurt-box targets), make it begin an attack by name, end it
 Gallery.inspect('undercroft').boxes(true)  // draw every hurt box, attack box and strike over the game
+Gallery.inspect('undercroft').hands(); .swap(); .wield('lastlight'); .arms('whale')  // the two hands; change them; take a weapon as if found; count arms.js effects alive
 Gallery.inspect('undercroft').summon('hound', 40, true); .equip('scythe'); .setPower('frostlance'); .take('aeolian'); .offer(3); .drop('weapon', 'dawnbreaker')
 Gallery.inspect('undercroft').sheet(true, 3, 'idle,slamUp', 'golem')  // sprite frames large on the stage ('warden', 'creatures', 'golem', 'golem:2', 'herald'); sheet(false) resumes
 ```
