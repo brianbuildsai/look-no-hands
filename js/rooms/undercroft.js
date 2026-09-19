@@ -51,8 +51,15 @@
       return flipped[key] || (flipped[key] = P.flipH(img));
     }
 
-    var seed = 36, rng = seed;
-    function random() { rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296; }
+    /* Two streams of chance. Everything the simulation decides draws on `rng`, which is seeded when a run begins, so
+       that two machines given the same seed and the same buttons play the same game. Anything asked for while the
+       picture is being drawn comes from `fuzz` instead, which is nobody's business: a machine that draws twice as
+       often must not get a different game. The switch is made by render() itself, so drawing code cannot get it wrong. */
+    var seed = 36, rng = seed, fuzz = 0x9e3779b9, drawing = false;
+    function random() {
+      if (drawing) { fuzz = (fuzz * 1664525 + 1013904223) >>> 0; return fuzz / 4294967296; }
+      rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296;
+    }
 
     var view = { x: 0, y: 0, w: W, h: H, scale: 1 };
     var state = 'title', tick = 0, accumulator = 0, cost = 0, sheetMode = false;
@@ -1202,7 +1209,7 @@
         bell = { life: 50, max: 50, m: 2 + Math.floor(random() * 4), n: 1 + Math.floor(random() * 3) };
         if (bell.m === bell.n) bell.m++;
         sfx('bell'); shake(3); flash = { colour: '#ffb347', life: 6 };
-        for (var k = 0; k < creatures.length; k++) { var c = creatures[k]; if (!c.dying && c.x > cam.x - 20 && c.x < cam.x + W + 20) { AC.hurt(c, 3, hero.x, ctx); if (c.boss) c.hp -= 0; number(c.x, c.y - c.h - 8, 3, '#ffb347'); } }
+        for (var k = 0; k < creatures.length; k++) { var c = creatures[k]; if (!c.dying && Math.abs(c.x - hero.x) < W / 2 + 20 && Math.abs(c.y - hero.y) < H) { AC.hurt(c, 3, hero.x, ctx); if (c.boss) c.hp -= 0; number(c.x, c.y - c.h - 8, 3, '#ffb347'); } }
       }
     }
     // Reiter's snowflake: a six-fold flake where the dash began, and frost on what is near
@@ -1872,6 +1879,7 @@
     }
     function render() {
       if (sheetMode) return;
+      drawing = true;
       var sx = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0, sy = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0;
       cam.x += sx; cam.y += sy;
       drawBackdrop();
@@ -1906,6 +1914,7 @@
       pen.drawImage(frame, view.x, view.y, view.w, view.h);
       drawZones();
       cam.x -= sx; cam.y -= sy;
+      drawing = false;
     }
 
     /* ---- the run: its seed, its clock, its end, and what is kept between runs ---- */
@@ -2079,13 +2088,28 @@
 
     function pickClass(who) { if (CL.CLASSES[who]) { classId = who; klass = CL.CLASSES[who]; } return classId; }
     function begin() {
-      state = 'run';
+      state = 'run'; tick = 0; freeze = 0;
+      rng = (Math.imul(run.seed | 0, 2654435761) ^ 0x5bd1e995) >>> 0;
       run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
       held = []; casts = 0; shieldUp = 0; won = false; visited = {}; rewarded = {}; applyRelics();
       hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null; if (AR) AR.clear(true);
       loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
+
+    var hashF = new Float64Array(1), hashU = new Uint32Array(hashF.buffer);
+    function checksum() {
+      var h = 2166136261 >>> 0, k;
+      function mix(v) { hashF[0] = +v || 0; h = Math.imul(h ^ hashU[0], 16777619); h = Math.imul(h ^ hashU[1], 16777619); }
+      mix(tick); mix(rng); mix(run.stage); mix(flames); mix(freeze); mix(transition); mix(kills); mix(state === 'run' ? 1 : state === 'paused' ? 2 : state === 'ceremony' ? 3 : state === 'summary' ? 4 : 0);
+      mix(hero.x); mix(hero.y); mix(hero.vx); mix(hero.vy); mix(hero.hp); mix(hero.energy); mix(hero.invuln); mix(hero.alive ? 1 : 0); mix(hero.act ? hero.act.ticks : -1);
+      for (k = 0; k < creatures.length; k++) { var e = creatures[k]; mix(e.x); mix(e.y); mix(e.hp); mix(e.dying); mix(e.attack ? e.attack.t : -1); mix(e.cooldown); }
+      for (k = 0; k < projectiles.length; k++) { mix(projectiles[k].x); mix(projectiles[k].y); }
+      for (k = 0; k < pickups.length; k++) { mix(pickups[k].x); mix(pickups[k].y); }
+      mix(creatures.length); mix(projectiles.length); mix(pickups.length); mix(hazards.length); mix(held.length); mix(AR ? AR.count() : 0);
+      return h >>> 0;
+    }
+    var manual = false;   // a harness is stepping the game itself: the frame loop only draws
 
     function step() {
       poll();
@@ -2151,8 +2175,7 @@
       },
       frame: function (time, dt) {
         var t0 = performance.now();
-        accumulator = Math.min(accumulator + Math.min(dt, 0.1), 0.25);
-        while (accumulator >= STEP) { step(); accumulator -= STEP; }
+        if (!manual) { accumulator = Math.min(accumulator + Math.min(dt, 0.1), 0.25); while (accumulator >= STEP) { step(); accumulator -= STEP; } }
         render();
         cost = cost * 0.9 + (performance.now() - t0) * 0.1;
         if (tick % 30 === 0) env.live('cost', cost.toFixed(1));
@@ -2165,6 +2188,17 @@
       state: function () {
         return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, weapon: weaponId, fx: { flock: flock.length, droplets: droplets.length, pillars: pillars.length, spikes: spikes.length, crescents: crescents.length }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status, anim: e.anim, frame: e.frame, attack: e.attack ? e.attack.def.name + ':' + e.attack.phase : null, boxes: e.boxes ? e.boxes.length : 0 }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },
+      // for the lockstep harness: take the stepping away from the frame loop; step once with exactly these buttons held; hash the state
+      manual: function (on) { manual = on !== false; accumulator = 0; return manual; },
+      advance: function (names, draw) {
+        var list = String(names || '').split(/[\s,]+/).filter(Boolean), want = {}, k;
+        for (k = 0; k < list.length; k++) want[list[k]] = true;
+        for (k in keysDown) if (keysDown[k] && !want[k]) keysDown[k] = false;
+        for (k in want) { if (!keysDown[k]) queued[k] = true; keysDown[k] = true; }
+        step(); if (draw) render();
+        return checksum();
+      },
+      checksum: function () { return checksum(); },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
         var list = String(names).split(/[\s,]+/).filter(Boolean), k;

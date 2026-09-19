@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockstep harness: two copies of the undercroft, one set of buttons</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px; background: #0b0b12; color: #e9e6df; font: 14px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 0 0 12px; color: #8f8d88; max-width: 70ch; }
+  .harness__row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .harness__button { background: #1c1a24; color: #e9e6df; border: 1px solid #4a4560; border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  .harness__button:hover { border-color: #ffb347; }
+  .harness__frames { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .harness__frame { width: 100%; height: 340px; border: 1px solid #2b2836; background: #000; }
+  .harness__log { white-space: pre-wrap; font: 12px/1.5 ui-monospace, Consolas, monospace; background: #100e16; border: 1px solid #2b2836; padding: 8px; margin-top: 12px; max-height: 50vh; overflow: auto; }
+  .harness__log--bad { border-color: #ff4f7b; }
+</style>
+</head>
+<body>
+<h1>Lockstep harness</h1>
+<p>Two copies of room 36 are given the same seed and the same buttons, frame by frame, and their state is hashed after every step. The left copy is drawn every frame and the right one only now and then, so that anything drawing does to the game shows up as a difference. With a session (<code>net</code>) the two are joined by a wire that delays, reorders and drops. Serve the site over http to use this (frames from disk cannot be reached).</p>
+<div class="harness__row">
+  <button class="harness__button" type="button" data-run="quick">Quick (3 scenes)</button>
+  <button class="harness__button" type="button" data-run="all">Everything</button>
+</div>
+<div class="harness__frames">
+  <iframe class="harness__frame" data-copy="a" src="../rooms/undercroft.html" title="Copy A"></iframe>
+  <iframe class="harness__frame" data-copy="b" src="../rooms/undercroft.html" title="Copy B"></iframe>
+</div>
+<div class="harness__log" data-log>waiting for both copies…</div>
+<script>
+(function () {
+  'use strict';
+  var logEl = document.querySelector('[data-log]'), frames = { a: document.querySelector('[data-copy="a"]'), b: document.querySelector('[data-copy="b"]') };
+  var state = window.__lockstep = { ready: false, running: false, done: false, results: [], failed: 0 };
+  function log(line) { logEl.textContent += '\n' + line; logEl.scrollTop = logEl.scrollHeight; }
+  function api(which) { var w = frames[which].contentWindow; return w && w.Gallery && w.Gallery.inspect ? w.Gallery.inspect('undercroft') : null; }
+  function whenReady(then) { var n = 0, t = setInterval(function () { var a = null, b = null; try { a = api('a'); b = api('b'); } catch (e) { /* not yet */ } if (a && b && a.advance && b.advance) { clearInterval(t); state.ready = true; logEl.textContent = 'both copies are up'; then(); } else if (++n > 200) { clearInterval(t); logEl.textContent = 'the copies did not come up (is this served over http?)'; } }, 100); }
+
+  // a player who presses things: directions held for a while, the rest in bursts; its own little generator, so every run is the same run
+  function masher(seed) {
+    var s = seed >>> 0, dir = '', until = 0;
+    function r() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+    return function (f) {
+      var keys = [];
+      if (f >= until) { var p = r(); dir = p < 0.4 ? 'right' : p < 0.7 ? 'left' : ''; until = f + 10 + Math.floor(r() * 50); }
+      if (dir) keys.push(dir);
+      if (r() < 0.22) keys.push('attack');
+      if (r() < 0.08) keys.push('jump'); else if (f % 9 < 4 && r() < 0.5) keys.push('jump');
+      if (r() < 0.03) keys.push('dash');
+      if (r() < 0.02) keys.push('cast');
+      if (r() < 0.01) keys.push('swap');
+      if (r() < 0.04) keys.push('up');
+      if (r() < 0.02) keys.push('down');
+      return keys.join(' ');
+    };
+  }
+
+  var CLASSES = ['warden', 'smith', 'lamplighter', 'kite'];
+  var ARMS = ['thunderhead', 'lastlight', 'pendulum', 'constellation', 'leviathan', 'dawnbreaker', 'quicksilver', 'murmuration', 'umbralflail', 'bellmaul', 'mainspring', 'trident', 'glasssabre', 'disc', 'pike', 'scythe', 'thornwhip', 'frostglaive'];
+  function scenes(which) {
+    var list = [], k;
+    if (which === 'quick') return [{ name: 'stage 0', stage: 0 }, { name: 'guardian 4', arena: 4 }, { name: 'guardian 7', arena: 7 }];
+    [0, 1, 4, 8, 12, 16, 20, 24, 28].forEach(function (n) { list.push({ name: 'stage ' + n, stage: n }); });
+    for (k = 1; k <= 9; k++) list.push({ name: 'guardian ' + k, arena: k });
+    return list;
+  }
+
+  function runScene(scene, index, frameCount, done) {
+    var A = api('a'), B = api('b'), who = CLASSES[index % 4], arm = ARMS[index % ARMS.length], press = masher(1000 + index * 77), f = 0;
+    [A, B].forEach(function (c) { c.manual(true); c.begin(3600 + index, who); if (scene.arena) c.arena(scene.arena); else c.stage(scene.stage); c.wield(arm); });
+    function chunk() {
+      var end = Math.min(frameCount, f + 240);
+      for (; f < end; f++) {
+        var keys = press(f);
+        if (f % 400 === 399) { A.hurt(-3); B.hurt(-3); }
+        var a = A.advance(keys, true), b = B.advance(keys, f % 7 === 0);
+        if (a !== b) { done({ scene: scene.name, who: who, arm: arm, ok: false, frame: f, a: A.state(), b: B.state() }); return; }
+      }
+      if (f >= frameCount) done({ scene: scene.name, who: who, arm: arm, ok: true, frames: f, hash: A.checksum() }); else setTimeout(chunk, 0);
+    }
+    chunk();
+  }
+
+  function run(which, frameCount) {
+    if (!state.ready || state.running) return;
+    state.running = true; state.done = false; state.results = []; state.failed = 0; logEl.classList.remove('harness__log--bad'); logEl.textContent = 'running ' + which + '…';
+    var list = scenes(which), k = 0;
+    (function next() {
+      if (k >= list.length) { state.running = false; state.done = true; log(state.failed ? state.failed + ' scene(s) came apart' : 'all ' + list.length + ' scenes stayed together'); return; }
+      runScene(list[k], k, frameCount || 1200, function (res) {
+        state.results.push(res);
+        if (!res.ok) { state.failed++; logEl.classList.add('harness__log--bad'); log('APART  ' + res.scene + ' (' + res.who + ', ' + res.arm + ') at frame ' + res.frame + '\n  a: ' + JSON.stringify(res.a.hero) + ' creatures ' + res.a.creatures.length + '\n  b: ' + JSON.stringify(res.b.hero) + ' creatures ' + res.b.creatures.length); }
+        else log('same   ' + res.scene + ' (' + res.who + ', ' + res.arm + ') ' + res.frames + ' frames, hash ' + res.hash);
+        k++; setTimeout(next, 0);
+      });
+    })();
+  }
+  window.__lockstep.run = run;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-run]'), function (b) { b.addEventListener('click', function () { run(b.getAttribute('data-run')); }); });
+  whenReady(function () { if (/[?&]auto=(\w+)/.test(location.search)) run(RegExp.$1); });
+})();
+</script>
+</body>
+</html>
