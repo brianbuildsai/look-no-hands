@@ -11,9 +11,10 @@ The source is at <https://github.com/brianbuildsai/look-no-hands> and the site i
 
 ## Two players (room 36)
 
-Open the Undercroft, choose who you go down as, press **Host a game**, and send
-the six-character code (or the link with it in) to someone. They open the same
-page, enter the code, press **Join**; you press **Start together**.
+Open the Undercroft and choose **Host a game** on its main screen (or in the
+controls beside it), pick who you go down as, and send the six-character code
+(or the link with it in) to someone. They open the same page, choose **Join a
+game**, type the code and press Enter; you press Enter to start together.
 
 How it works, because it decides how new things must be written:
 
@@ -45,9 +46,14 @@ How it works, because it decides how new things must be written:
   value in the hash and `.traced([...])` lists who drew on the stream that step.
 - The connection (`js/game/wire.js`) is WebRTC, browser to browser. Only the
   handshake behind the code uses a third party (the PeerJS project's free
-  public broker, and Google's STUN servers); neither sees the game. There is
-  no relay, so two networks that both refuse direct connections cannot be
-  joined, and the page says so. A transport is four functions
+  public broker, and public STUN servers); neither sees the game. The broker
+  is strict: it hangs up on anything not shaped like PeerJS's own messages,
+  and on the empty candidate Firefox and Safari send, so `wire.js` sends two
+  messages in all (an offer and an answer with the candidates inside),
+  repeats them until they land, and reconnects if dropped. There is no relay,
+  so two networks that both refuse direct connections cannot be joined, and
+  the page says so; to add one, put a TURN server in `ICE` in `wire.js` (or
+  set `window.UndercroftICE` before it loads). A transport is four functions
   (`send`, `onmessage`, `onclose`, `close`); another can be put in its place
   without touching the game.
 

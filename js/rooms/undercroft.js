@@ -152,11 +152,12 @@
     }
     canvas.addEventListener('pointerdown', function (e) {
       try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
-      if (e.pointerType === 'mouse') { if (state === 'title' || state === 'choose') queued.start = true; return; }
+      if (e.pointerType === 'mouse') { if (state === 'title') { var mp = framePoint(e); titlePointer((mp.x - view.x) / view.scale, (mp.y - view.y) / view.scale); } else if (state === 'choose') queued.start = true; return; }
       if (!touchy) { touchy = true; layoutZones(); }
       e.preventDefault();
       var p = framePoint(e), name = zoneAt(p.x, p.y);
-      if ((state === 'title' || state === 'choose') && !name) { queued.start = true; return; }
+      if (state === 'title' && !name) { titlePointer((p.x - view.x) / view.scale, (p.y - view.y) / view.scale); return; }
+      if (state === 'choose' && !name) { queued.start = true; return; }
       if (state === 'summary' && !name) { queued.start = true; return; }
       if (name) { touches[e.pointerId] = name; if (!keysDown[name]) queued[name] = true; keysDown[name] = true; }
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
@@ -1913,6 +1914,8 @@
     }
     function drawHud() {
       var k;
+      if (state === 'title') { drawTitle(); return; }
+      if (state === 'choose') { drawChoose(); return; }
       for (k = 0; k < hero.maxHp; k++) {
         fpen.fillStyle = k < hero.hp ? '#ff4f7b' : '#3a3936';
         fpen.fillRect(4 + k * 9, 4, 7, 6); fpen.fillRect(5 + k * 9, 10, 5, 1); fpen.fillRect(6 + k * 9, 11, 3, 1); fpen.fillRect(7 + k * 9, 12, 1, 1);
@@ -2098,7 +2101,7 @@
     // the title: the seed, the best, and the starting power to choose among what is unlocked
     /* ---- who goes down: four on plinths, the chosen one showing what is theirs ---- */
 
-    var choose = { index: 0, t: 0 };
+    var choose = { index: 0, t: 0, then: 'solo' };
     function enterChoose() { state = 'choose'; choose.index = Math.max(0, CL.ORDER.indexOf(kept.klass || classId)); choose.t = 0; sfx('select'); }
     function stepChoose() {
       var n = CL.ORDER.length;
@@ -2106,7 +2109,11 @@
       if (hit('left')) { choose.index = (choose.index + n - 1) % n; choose.t = 0; sfx('select'); }
       if (hit('right')) { choose.index = (choose.index + 1) % n; choose.t = 0; sfx('select'); }
       if (hit('dash') || hit('pause')) { state = 'title'; return; }
-      if (choose.t > 8 && (hit('start') || hit('jump') || hit('attack') || hit('up'))) { sfx('confirm'); pickClass(CL.ORDER[choose.index]); kept.klass = classId; save(); var c = chosenSeed(); run.seed = c.seed; begin(); }
+      if (choose.t > 8 && (hit('start') || hit('jump') || hit('attack') || hit('up'))) {
+        sfx('confirm'); pickClass(CL.ORDER[choose.index]); kept.klass = classId; save();
+        if (choose.then !== 'solo' && lobbyUI) { state = 'title'; lobbyUI.setWho(classId); if (choose.then === 'host') lobbyUI.host(); else lobbyUI.joinMode(); }
+        else { var c = chosenSeed(); run.seed = c.seed; begin(); }
+      }
     }
     // what the chosen one does while you look: stands, runs, strikes, dashes, and whatever else is theirs
     function showcase(K, F, t) {
@@ -2121,7 +2128,7 @@
       var n = CL.ORDER.length, gap = 84, x0 = W / 2 - gap * (n - 1) / 2, k, j;
       fpen.fillStyle = '#07060b'; fpen.fillRect(0, 0, W, H);
       for (var sk = 0; sk < 40; sk++) { fpen.fillStyle = sk % 3 ? '#2b2836' : '#4a4560'; fpen.fillRect((sk * 97 + (tick >> 3)) % W, (sk * 53) % 84 + 24, 1, 1); }
-      text('WHO GOES DOWN', W / 2, 12, '#e9e6df', 2, 'center');
+      text(choose.then === 'host' ? 'WHO DO YOU HOST AS' : choose.then === 'join' ? 'WHO DO YOU JOIN AS' : 'WHO GOES DOWN', W / 2, 12, '#e9e6df', 2, 'center');
       for (k = 0; k < n; k++) {
         var K = CL.CLASSES[CL.ORDER[k]], chosen = k === choose.index, x = Math.round(x0 + k * gap), base = 92;
         var F = P.hero.build(K.id, K.weapon, WP.views(K.weapon)), img = chosen ? showcase(K, F, choose.t) : F.idle[Math.floor(tick / 14) % F.idle.length];
@@ -2145,36 +2152,121 @@
       hx += C.energy * 6 + 10;
       text(wp.name.toUpperCase(), hx, y, WP.RARITY[wp.rarity].colour, 1, 'left'); y += 11;
       for (j = 0; j < C.traits.length; j++) { text(C.traits[j].toUpperCase(), W / 2, y, '#8f8d88', 1, 'center'); y += 8; }
-      text('LEFT AND RIGHT TO CHOOSE   JUMP OR ATTACK TO GO DOWN   DASH TO GO BACK', W / 2, H - 9, '#5c5a56', 1, 'center');
+      text('LEFT AND RIGHT TO CHOOSE   ENTER, JUMP OR ATTACK TO ' + (choose.then === 'solo' ? 'GO DOWN' : 'GO ON') + '   ESC OR DASH TO GO BACK', W / 2, H - 9, '#5c5a56', 1, 'center');
     }
 
-    function stepTitle() {
-      var options = kept.unlocked;
-      if (hit('left')) { startPower = (startPower + options.length - 1) % options.length; sfx('select'); }
-      if (hit('right')) { startPower = (startPower + 1) % options.length; sfx('select'); }
-      power = options[Math.min(startPower, options.length - 1)];
-      if (hit('start') || hit('jump') || hit('attack')) enterChoose();
+    /* ---- the main screen ----
+       A menu, not a sentence: go down alone, host a game, join one, and which power you begin with. The four who
+       can go stand on a ledge beside it, the one who went last lit. Hosting and joining happen here too: the panel
+       shows what the lobby (the plain controls in the page, which do the work) has to say. */
+    var menu = { index: 0, t: 0 }, lobbyUI = null;
+    var MENU = [{ id: 'solo', label: 'GO DOWN ALONE' }, { id: 'host', label: 'HOST A GAME' }, { id: 'join', label: 'JOIN A GAME' }, { id: 'power', label: 'POWER' }];
+    function menuItems() { return lobbyUI ? MENU : [MENU[0], MENU[3]]; }
+    function menuRow(k) { return touchy ? { x: 36, y: 62 + k * 23, w: 158, h: 21 } : { x: 40, y: 70 + k * 17, w: 150, h: 15 }; }   // taller lines for a thumb
+    function lobbyView() { return lobbyUI ? lobbyUI.view : null; }
+    function cyclePower(by) { var options = kept.unlocked; startPower = (Math.min(startPower, options.length - 1) + by + options.length) % options.length; sfx('select'); }
+    function chooseMenu(id) {
+      if (id === 'power') { cyclePower(1); return; }
+      choose.then = id; enterChoose();
     }
-    function drawTitle() {
-      fpen.fillStyle = 'rgba(0,0,0,0.6)'; fpen.fillRect(0, 0, W, H);
-      text('UNDERCROFT', W / 2, 44, '#e9e6df', 3, 'center');
-      text('GO DOWN', W / 2, 74, '#ffb347', 1, 'center');
-      var c = chosenSeed();
-      text((c.daily ? 'TODAY’S SEED ' : 'SEED ') + c.seed + (kept.best ? '   BEST: FLOOR ' + kept.best : '') + (kept.wins ? '   WON ' + kept.wins : ''), W / 2, 90, '#8f8d88', 1, 'center');
-      // the powers unlocked, the chosen one lit
-      var options = kept.unlocked, n = options.length, x0 = W / 2 - (n * 70) / 2 + 35, k;
-      for (k = 0; k < n; k++) {
-        var pw = RL.POWERS[options[k]], chosen = k === Math.min(startPower, n - 1), x = x0 + k * 70;
-        fpen.fillStyle = pw.colour; fpen.fillRect(x - 3, 106, 6, 6);
-        text(pw.name, x, 116, chosen ? '#ffdc9a' : '#8f8d88', 1, 'center');
-        if (chosen) { fpen.fillStyle = '#ffdc9a'; fpen.fillRect(x - 12, 125, 24, 1); }
+    function stepTitle() {
+      var items = menuItems(), n = items.length, v = lobbyView();
+      menu.t++;
+      power = kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)];
+      if (v && v.role) {
+        // the panel: Esc or Dash closes it; Enter starts when someone has joined, or goes to the code box
+        if (hit('pause') || hit('dash')) { lobbyUI.leave(); sfx('select'); return; }
+        if (hit('start') || hit('jump') || hit('attack')) { if (v.role === 'host' && v.canStart) lobbyUI.start(); else if (v.role === 'guest' && !v.connected && !v.busy) lobbyUI.focusCode(); }
+        return;
       }
-      if (n > 1) text('LEFT AND RIGHT TO CHOOSE A POWER', W / 2, 134, '#8f8d88', 1, 'center');
-      else text('MORE POWERS UNLOCK AS YOU GO DEEPER', W / 2, 134, '#8f8d88', 1, 'center');
-      text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
-      text('C OR L DASH   V OR I CAST   E OR UP TAKES   Q CHANGES WEAPON', W / 2, 170, '#8f8d88', 1, 'center');
-      text('ENTER TO CHOOSE WHO GOES', W / 2, 180, '#8f8d88', 1, 'center');
-      if (NET && window.UndercroftWire) text('OR GO DOWN TOGETHER: HOST OR JOIN, ON THIS PAGE', W / 2, 194, '#9fd8ff', 1, 'center');
+      if (hit('up')) { menu.index = (menu.index + n - 1) % n; sfx('select'); }
+      if (hit('down')) { menu.index = (menu.index + 1) % n; sfx('select'); }
+      if (hit('left')) cyclePower(-1);
+      if (hit('right')) cyclePower(1);
+      if (hit('start') || hit('jump') || hit('attack')) chooseMenu(items[Math.min(menu.index, n - 1)].id);
+    }
+    // a click or a tap on the main screen: on a line of the menu it chooses that line
+    function titlePointer(fx, fy) {
+      var items = menuItems(), v = lobbyView(), k;
+      if (v && v.role) { queued.start = true; return; }
+      for (k = 0; k < items.length; k++) { var r = menuRow(k); if (fx >= r.x - 4 && fx < r.x + r.w + 4 && fy >= r.y - 1 && fy < r.y + r.h + 1) { menu.index = k; queued.start = true; return; } }
+    }
+    function keycap(label, x, y) {
+      var w = textWidth(label, 1) + 6;
+      fpen.fillStyle = '#1c1a24'; fpen.fillRect(x, y, w, 9); fpen.fillStyle = '#4a4560'; fpen.fillRect(x, y, w, 1); fpen.fillRect(x, y, 1, 9); fpen.fillRect(x + w - 1, y, 1, 9); fpen.fillStyle = '#2b2836'; fpen.fillRect(x, y + 8, w, 1);
+      text(label, x + 3, y + 2, '#e9e6df', 1, 'left');
+      return w;
+    }
+    function legend(pairs, y) {
+      var total = 0, k; for (k = 0; k < pairs.length; k++) total += textWidth(pairs[k][0], 1) + 6 + 3 + textWidth(pairs[k][1], 1) + 9;
+      var x = Math.round(W / 2 - (total - 9) / 2);
+      for (k = 0; k < pairs.length; k++) { x += keycap(pairs[k][0], x, y) + 3; text(pairs[k][1], x, y + 2, '#8f8d88', 1, 'left'); x += textWidth(pairs[k][1], 1) + 9; }
+    }
+    function plainWords(s) { return String(s || '').toUpperCase().replace(/…/g, '...').replace(/\[/g, '(').replace(/\]/g, ')').replace(/[^A-Z0-9 .,:!?'()%+\/-]/g, ''); }
+    function drawTitle() {
+      var k, v = lobbyView(), items = menuItems();
+      // the room behind, put out: darker toward the edges, a lantern's warmth behind the name
+      fpen.fillStyle = 'rgba(4,4,8,0.72)'; fpen.fillRect(0, 0, W, H);
+      var warm = fpen.createRadialGradient(W / 2, 30, 4, W / 2, 30, 150); warm.addColorStop(0, 'rgba(255,179,71,' + (0.20 + 0.03 * Math.sin(tick * 0.07)).toFixed(3) + ')'); warm.addColorStop(1, 'rgba(255,179,71,0)');
+      fpen.fillStyle = warm; fpen.fillRect(0, 0, W, 130);
+      text('UNDERCROFT', W / 2 + 1, 17, '#0b0b12', 3, 'center'); text('UNDERCROFT', W / 2, 16, '#e9e6df', 3, 'center');
+      text('A DESCENT FOR ONE OR TWO', W / 2, 38, '#c9a44c', 1, 'center');
+      fpen.fillStyle = '#4a4560'; fpen.fillRect(W / 2 - 84, 50, 72, 1); fpen.fillRect(W / 2 + 12, 50, 72, 1);
+      // a small flame where the rule breaks
+      var fl = (tick >> 3) % 2; fpen.fillStyle = '#ffb347'; fpen.fillRect(W / 2 - 2, 47 + fl, 4, 5 - fl); fpen.fillRect(W / 2 - 1, 45 + fl, 2, 2); fpen.fillStyle = '#ffdc9a'; fpen.fillRect(W / 2 - 1, 49, 2, 2);
+
+      // the four who can go, on their ledge; the one who went last is lit
+      var ids = CL.ORDER, base = 126, x0 = 232, gap = 36, mineId = CL.CLASSES[kept.klass] ? kept.klass : 'warden';
+      fpen.fillStyle = '#1c1a24'; fpen.fillRect(x0 - 22, base, gap * 3 + 44, 4); fpen.fillStyle = '#2b2836'; fpen.fillRect(x0 - 18, base + 4, gap * 3 + 36, 5); fpen.fillStyle = '#4a4560'; fpen.fillRect(x0 - 22, base, gap * 3 + 44, 1);
+      for (k = 0; k < ids.length; k++) {
+        var K = CL.CLASSES[ids[k]], lit = ids[k] === mineId, hx = x0 + k * gap, F = P.hero.build(K.id, K.weapon, WP.views(K.weapon)), img = F.idle[Math.floor((tick + k * 9) / 14) % F.idle.length];
+        if (lit) { var lg = fpen.createRadialGradient(hx, base - 14, 2, hx, base - 14, 34); lg.addColorStop(0, K.colour); lg.addColorStop(1, 'rgba(0,0,0,0)'); fpen.globalAlpha = 0.26 + 0.05 * Math.sin(tick * 0.08); fpen.fillStyle = lg; fpen.fillRect(hx - 34, base - 48, 68, 60); }
+        fpen.globalAlpha = lit ? 1 : 0.42; fpen.drawImage(img, hx - P.hero.anchor.x, base - P.hero.anchor.y); fpen.globalAlpha = 1;
+        if (lit) { fpen.fillStyle = K.colour; fpen.fillRect(hx - 10, base + 12, 20, 1); }
+      }
+      text(CL.CLASSES[mineId].name.toUpperCase(), x0 + gap * 1.5, base + 17, CL.CLASSES[mineId].colour, 1, 'center');
+      text('YOU CHOOSE WHO WHEN YOU GO', x0 + gap * 1.5, base + 26, '#5c5a56', 1, 'center');
+
+      if (v && v.role) drawLobbyPanel(v);
+      else {
+        for (k = 0; k < items.length; k++) {
+          var r = menuRow(k), on = k === Math.min(menu.index, items.length - 1), it = items[k];
+          if (on) { fpen.fillStyle = 'rgba(255,179,71,0.13)'; fpen.fillRect(r.x, r.y, r.w, r.h); fpen.fillStyle = '#ffb347'; fpen.fillRect(r.x, r.y, 2, r.h); var nudge = Math.round(Math.sin(menu.t * 0.15)); var my = r.y + Math.round(r.h / 2) - 3; fpen.fillRect(r.x + 7 + nudge, my, 1, 5); fpen.fillRect(r.x + 8 + nudge, my + 1, 1, 3); fpen.fillRect(r.x + 9 + nudge, my + 2, 1, 1); }
+          if (it.id === 'power') {
+            var pw = RL.POWERS[kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)]];
+            var py = r.y + Math.round((r.h - 5) / 2);
+            text('POWER', r.x + 16, py, on ? '#ffdc9a' : '#8f8d88', 1, 'left');
+            fpen.fillStyle = pw.colour; fpen.fillRect(r.x + 46, py, 5, 5);
+            text(pw.name.toUpperCase(), r.x + 55, py, pw.colour, 1, 'left');
+            if (kept.unlocked.length > 1) { fpen.fillStyle = on ? '#ffdc9a' : '#5c5a56'; var ax = r.x + r.w - 16; fpen.fillRect(ax, py + 2, 1, 1); fpen.fillRect(ax + 1, py + 1, 1, 3); fpen.fillRect(ax + 2, py, 1, 5); fpen.fillRect(ax + 10, py + 2, 1, 1); fpen.fillRect(ax + 9, py + 1, 1, 3); fpen.fillRect(ax + 8, py, 1, 5); }
+          } else text(it.label, r.x + 16, r.y + Math.round((r.h - 10) / 2), on ? '#ffdc9a' : '#c4c1ba', 2, 'left');
+        }
+        var hint = items[Math.min(menu.index, items.length - 1)].id;
+        if (!touchy) text(hint === 'solo' ? 'A RUN OF YOUR OWN, FROM ' + (chosenSeed().daily ? "TODAY'S SEED" : 'YOUR SEED') : hint === 'host' ? 'YOU GET A CODE TO SEND TO SOMEONE' : hint === 'join' ? 'SOMEONE SENT YOU A CODE' : kept.unlocked.length > 1 ? 'LEFT AND RIGHT CHANGE IT' : 'MORE UNLOCK AS YOU GO DEEPER', 40, 70 + items.length * 17 + 4, '#5c5a56', 1, 'left');
+      }
+
+      // what you have done here, and the keys
+      var c = chosenSeed();
+      text((c.daily ? "TODAY'S SEED " : 'SEED ') + c.seed + (kept.best ? '    BEST: FLOOR ' + kept.best : '') + (kept.wins ? '    WON ' + kept.wins : '') + (kept.runs ? '    RUNS ' + kept.runs : ''), W / 2, 162, '#8f8d88', 1, 'center');
+      if (touchy) text(v && v.role ? 'TAP TO GO ON' : 'TAP A LINE TO CHOOSE IT', W / 2, 184, '#8f8d88', 1, 'center');
+      else {
+        legend([['ARROWS', 'MOVE'], ['X', 'JUMP'], ['Z', 'ATTACK'], ['C', 'DASH'], ['V', 'CAST']], 174);
+        legend([['E', 'TAKE'], ['Q', 'OTHER WEAPON'], ['P', 'PAUSE'], ['ENTER', 'CHOOSE']], 187);
+      }
+      text('WASD, K, J, L AND I WORK TOO', W / 2, 204, '#3a3936', 1, 'center');
+    }
+    // hosting or joining, on the main screen: the code large, what the lobby says, and what Enter and Esc will do
+    function drawLobbyPanel(v) {
+      var x = 36, y = 66, w = 160, k;
+      fpen.fillStyle = 'rgba(8,8,14,0.86)'; fpen.fillRect(x, y, w, 88); fpen.fillStyle = v.bad ? '#ff4f7b' : '#9fd8ff'; fpen.fillRect(x, y, w, 1); fpen.fillRect(x, y, 1, 88); fpen.fillRect(x + w - 1, y, 1, 88); fpen.fillRect(x, y + 87, w, 1);
+      text(v.role === 'host' ? 'YOUR CODE. SEND IT TO SOMEONE' : 'THE CODE YOU WERE SENT', x + w / 2, y + 6, '#8f8d88', 1, 'center');
+      if (v.role === 'host') text(v.code || '......', x + w / 2, y + 17, v.code ? '#ffb347' : '#3a3936', 3, 'center');
+      else for (k = 0; k < 6; k++) { var sx = x + w / 2 - 57 + k * 19, ch = (v.code || '').charAt(k), at = (v.code || '').length === k && !v.busy && !v.connected && (tick >> 4) % 2; fpen.fillStyle = '#1c1a24'; fpen.fillRect(sx, y + 15, 16, 19); fpen.fillStyle = ch ? '#ffb347' : at ? '#9fd8ff' : '#4a4560'; fpen.fillRect(sx, y + 33, 16, 1); if (ch) text(ch, sx + 8, y + 19, '#ffdc9a', 2, 'center'); }
+      var lines = wrapLines(plainWords(v.status), 37).slice(0, 3);
+      for (k = 0; k < lines.length; k++) text(lines[k], x + w / 2, y + 40 + k * 8, v.bad ? '#ff8aa6' : '#e9e6df', 1, 'center');
+      var go = v.role === 'host' ? (v.canStart ? 'ENTER: START TOGETHER' : '') : v.connected ? '' : v.busy ? '' : touchy ? 'TYPE IT IN THE BOX ON THE PAGE, THEN JOIN' : 'TYPE THE CODE, THEN ENTER';
+      if (go && (tick >> 4) % 2 === 0) text(go, x + w / 2, y + 67, '#ffdc9a', 1, 'center');
+      text(touchy ? 'USE LEAVE, ON THE PAGE, TO CLOSE' : 'ESC: CLOSE', x + w / 2, y + 78, '#5c5a56', 1, 'center');
     }
 
     /* ---- the loop and the room's wiring ---- */
@@ -2325,7 +2417,7 @@
     var startButton = env.room.querySelector('[data-undercroft-start]');
     if (startButton) startButton.addEventListener('click', function () {
       try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
-      power = kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)]; if (state === 'choose') { queued.start = true; } else enterChoose(); env.redraw();
+      power = kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)]; if (state === 'choose') { queued.start = true; } else { choose.then = 'solo'; enterChoose(); } env.redraw();
     });
     var dailyButton = env.room.querySelector('[data-undercroft-daily]');
     if (dailyButton) dailyButton.addEventListener('click', function () { if (seedField) { seedField.value = ''; noteSeed(); } });
@@ -2351,28 +2443,30 @@
         field = find('[data-together-code]'), status = find('[data-together-status]'), invite = find('[data-together-invite]'), codeOut = find('[data-together-codeout]'), joinField = find('[data-together-joinfield]');
       if (!NET || !WIRE || !WIRE.supported()) { box.hidden = true; return; }
       var handle = null, heart = null, link = '';
+      var lv = { role: null, code: '', status: '', bad: false, canStart: false, connected: false, busy: false };
       CL.ORDER.forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = CL.CLASSES[id].name; who.appendChild(o); });
       who.value = CL.CLASSES[kept.klass] ? kept.klass : 'warden';
       function myPower() { return kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)] || 'emberwave'; }
-      function say(words, bad) { status.textContent = words || ''; status.classList.toggle('is-bad', !!bad); }
-      function busy(on) { hostBtn.disabled = on; joinBtn.disabled = on; field.disabled = on; leaveBtn.hidden = !on; if (!on) { invite.hidden = true; startBtn.disabled = true; joinField.hidden = false; joinBtn.hidden = false; hostBtn.hidden = false; } }
+      function say(words, bad) { status.textContent = words || ''; status.classList.toggle('is-bad', !!bad); lv.status = words || ''; lv.bad = !!bad; }
+      function busy(on) { lv.busy = on; if (!on) { lv.role = null; lv.code = ''; lv.canStart = false; lv.connected = false; } hostBtn.disabled = on; joinBtn.disabled = on; field.disabled = on; leaveBtn.hidden = !on; if (!on) { invite.hidden = true; startBtn.disabled = true; joinField.hidden = false; joinBtn.hidden = false; hostBtn.hidden = false; } }
       function stop(words, bad) { if (heart) { clearInterval(heart); heart = null; } if (handle) { handle.close(); handle = null; } busy(false); say(words, bad); }
       function opened(wire, asHost) {
         var sess = openSession(wire, {
           onchange: function (S) {
-            if (S.role === 'host' && S.state === 'lobby' && S.guest) { startBtn.disabled = false; say((CL.CLASSES[S.guest.who] ? CL.CLASSES[S.guest.who].name : 'Someone') + ' has joined you. Start when you are both ready.'); }
+            if (S.role === 'host' && S.state === 'lobby' && S.guest) { lv.canStart = true; startBtn.disabled = false; say((CL.CLASSES[S.guest.who] ? CL.CLASSES[S.guest.who].name : 'Someone') + ' has joined you. Start when you are both ready.'); }
             if (S.state === 'run' && !box.started) { box.started = true; if (handle && handle.done) handle.done(); say('Together. P or Esc pauses for both of you.' + (S.rtt ? ' About ' + Math.round(S.rtt) + ' ms apart.' : '')); try { env.stage.focus({ preventScroll: true }); } catch (e) { /* not fatal */ } }
           },
           onover: function (reason) { box.started = false; stop(reason === 'the run is over' ? 'That run is over. Host or join again for another.' : reason === 'you left' ? 'You left. The game goes on alone.' : reason === 'they left' || reason === 'the connection closed' ? 'The other of you has gone. You play on alone.' : reason, reason !== 'the run is over' && reason !== 'you left'); }
         });
         if (!sess) { stop('The game could not open a session.', true); return; }
+        lv.connected = true;
         if (asHost) { sess.host(); say('Someone is connecting\u2026'); } else { sess.join(who.value, myPower()); say('Connected. Waiting for the host to start.'); }
         heart = setInterval(function () { if (session) session.beat(); }, 1000); sess.beat();
       }
       hostBtn.addEventListener('click', function () {
-        busy(true); joinField.hidden = true; joinBtn.hidden = true; say('Asking for a code\u2026');
+        busy(true); lv.role = 'host'; joinField.hidden = true; joinBtn.hidden = true; say('Asking for a code\u2026');
         handle = WIRE.host({
-          code: function (code) { link = location.origin + location.pathname + '?join=' + code; codeOut.textContent = code; invite.hidden = false; },
+          code: function (code) { lv.code = code; link = location.origin + location.pathname + '?join=' + code; codeOut.textContent = code; invite.hidden = false; },
           status: function (words) { say(words); }, error: function (words) { stop(words, true); },
           wire: function (wire) { opened(wire, true); }
         });
@@ -2380,10 +2474,24 @@
       joinBtn.addEventListener('click', function () {
         var code = WIRE.tidy(field.value); field.value = code;
         if (code.length !== 6) { say('A code is six letters and numbers.', true); field.focus(); return; }
-        busy(true); hostBtn.hidden = true; say('Reaching the broker\u2026');
+        busy(true); lv.role = 'guest'; lv.code = code; hostBtn.hidden = true; say('Reaching the broker\u2026');
         handle = WIRE.join(code, { status: function (words) { say(words); }, error: function (words) { stop(words, true); }, wire: function (wire) { opened(wire, false); } });
       });
-      field.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); joinBtn.click(); } });
+      field.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); joinBtn.click(); try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ } }
+        if (e.key === 'Escape') { e.preventDefault(); if (!lv.busy) { lv.role = null; say(''); } try { env.stage.focus({ preventScroll: true }); } catch (err2) { /* not fatal */ } }
+      });
+      field.addEventListener('input', function () { lv.code = WIRE.tidy(field.value); });
+      // what the main screen may ask of the lobby
+      lobbyUI = {
+        view: lv,
+        setWho: function (id) { if (who.value !== id) { who.value = id; who.dispatchEvent(new Event('change')); } },
+        host: function () { if (!lv.busy) hostBtn.click(); },
+        joinMode: function () { if (lv.busy) return; lv.role = 'guest'; lv.code = WIRE.tidy(field.value); say('Type the code you were sent.'); lobbyUI.focusCode(); },
+        focusCode: function () { try { field.focus({ preventScroll: true }); field.select(); } catch (err) { field.focus(); } },
+        start: function () { startBtn.click(); },
+        leave: function () { if (lv.busy) leaveBtn.click(); else { lv.role = null; say(''); } }
+      };
       startBtn.addEventListener('click', function () {
         if (!session || !session.start({ seed: chosenSeed().seed, who: who.value, power: myPower() })) say('Nobody has joined yet.', true);
       });
@@ -2396,7 +2504,7 @@
       // a tab put away stops drawing, and the other machine would wait for it: say pause first
       document.addEventListener('visibilitychange', function () { if (document.hidden && session && session.active() && state === 'run') queued.pause = true; });
       var asked = /[?&]join=([A-Za-z0-9]{4,8})/.exec(location.search);
-      if (asked) { field.value = WIRE.tidy(asked[1]); say('You were sent a code. Choose who you go down as, then Join.'); }
+      if (asked) { field.value = WIRE.tidy(asked[1]); lv.code = field.value; menu.index = 2; say('You were sent a code. Choose who you go down as, then Join.'); }
     })();
 
     cur = { index: 0 }; store(); players = [cur];
