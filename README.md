@@ -4,6 +4,11 @@ An exhibition of live, interactive works. No build step, no dependencies, no
 images, no media files. Everything on screen is computed in the visitor's
 browser.
 
+## Where it lives
+
+The source is at <https://github.com/brian77-git/look-no-hands> and the site itself is served from `main` by GitHub Pages at
+<https://brian77-git.github.io/look-no-hands/>. There is no build: what is in the repository is what is served (`.nojekyll` tells Pages to leave it alone).
+
 ## Running it
 
 Double-click `index.html`. It works from disk.
