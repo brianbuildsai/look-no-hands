@@ -375,7 +375,20 @@
     L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 20 * TILE, row: g };
     return L;
   }
-  var HALLS = { bellkeeper: ['tide', sunkenBelfry], orrery: ['void', darkObservatory], thornmother: ['bloom', overgrownCistern], golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
+  // The Escapement: the back of the clock. A bare hall under a rail, the dial in the far wall, a ledge either side
+  function theEscapement(element, floor) {
+    var L = new Level(34, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 34; x++) { L.column(x, g); for (k = 0; k < 3; k++) L.set(x, k, STONE); }
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(32, k, STONE); L.set(33, k, STONE); }
+    for (x = 6; x < 9; x++) { L.set(x, g - 2, LEDGE); L.set(33 - x, g - 2, LEDGE); }
+    L.spawn = { x: 4 * TILE + 8, y: g * TILE };
+    L.door = { x: 30 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 4, y: g - 5 }, { x: 12, y: g - 6 }, { x: 21, y: g - 6 }, { x: 29, y: g - 5 });
+    L.boss = true; L.locked = true; L.title = 'The Escapement';
+    L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 17 * TILE, row: g };
+    return L;
+  }
+  var HALLS = { regulator: ['gear', theEscapement], bellkeeper: ['tide', sunkenBelfry], orrery: ['void', darkObservatory], thornmother: ['bloom', overgrownCistern], golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
   function arena(seed, floor, kind) {
     var hall = HALLS[kind] || HALLS[['golem', 'wyrm', 'herald', 'lightless'][Math.max(0, Math.min(3, floor - 1))]];
     if (hall) return hall[1](byName(hall[0]), floor);
