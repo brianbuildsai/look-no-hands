@@ -817,6 +817,7 @@ module.exports = {
       scripts: ['game/pixels.js', 'game/classes.js', 'game/weapons.js', 'game/arms.js', 'game/world.js', 'game/explore.js', 'game/actors.js', 'game/actors-deep.js', 'game/relics.js', 'game/guardians.js', 'game/boss-golem.js', 'game/boss-wyrm.js', 'game/boss-thornmother.js', 'game/boss-bellkeeper.js', 'game/boss-herald.js', 'game/boss-regulator.js', 'game/boss-reflected.js', 'game/boss-orrery.js', 'game/boss-lightless.js', 'game/net.js', 'game/wire.js', 'game/samples.js', 'game/sound.js'],
       stageAttributes: 'tabindex="0"',
       controlsFirst: true,
+      hideText: true,   // the game's own main screen says what needs saying; the text below is kept for the docent, who reads every label
       title: 'Undercroft',
       line: 'Choose who goes down. The stages draw themselves, a portal is hidden in each, eight guardians wait below and a ninth under them, and nothing comes back up except what you learned.',
       description: 'A rogue-like platformer for one or two, the last room: four characters to choose from, stages of chambers to explore for a hidden portal, a sanctuary with three perks between each, sixteen creatures, twenty-six weapons of which you carry two, and twenty-eight items in four rarities that say exactly what they do, eight floors each with an element, a guardian and a hall of its own, and a last one under them. Pixel art compiled from text; music synthesised; sound effects recorded, the one thing in the building that is loaded, and only if you ask for sound.',
