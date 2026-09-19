@@ -1952,6 +1952,7 @@
     document.addEventListener('visibilitychange', function () { if (document.hidden && SND && SND.isOn()) SND.stop(); else if (!document.hidden && SND && SND.isOn() && state === 'run') SND.music(element.name); });
     window.addEventListener('pagehide', function () { if (SND) SND.stop(); });
     var LESSONS = {
+      reflected: 'The true mirror carries your lantern.',
       regulator: 'The other half of the hall is safe.', weight: 'It strikes the hour. Count, and do not stand on the mark.',
       bellkeeper: 'A bell can be rung from outside.', toll: 'Low rings are jumped. High rings are stood under.', diver: 'The harpoon goes where the line was drawn.', angler: 'When the lure goes out, move.', winder: 'It runs down. Wait for it.', governor: 'What it throws comes back.', cog: 'What it throws comes back.', reflection: 'Its back is not a mirror.', prism: 'One beam becomes three at the mark.',
       cogs: 'The works do not stop for you.', shards: 'Glass remembers being sharp.', spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',

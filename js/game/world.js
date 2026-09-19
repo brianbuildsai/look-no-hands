@@ -388,7 +388,20 @@
     L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 17 * TILE, row: g };
     return L;
   }
-  var HALLS = { regulator: ['gear', theEscapement], bellkeeper: ['tide', sunkenBelfry], orrery: ['void', darkObservatory], thornmother: ['bloom', overgrownCistern], golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
+  // The Hall of Glass: a long bare hall for three mirrors to stand in, a ledge at either end
+  function hallOfGlass(element, floor) {
+    var L = new Level(34, element, floor, 3), g = 11, x, k;
+    for (x = 0; x < 34; x++) { L.column(x, g); for (k = 0; k < 3; k++) L.set(x, k, STONE); }
+    for (k = 0; k < ROWS; k++) { L.set(0, k, STONE); L.set(1, k, STONE); L.set(32, k, STONE); L.set(33, k, STONE); }
+    for (x = 3; x < 6; x++) { L.set(x, g - 3, LEDGE); L.set(33 - x, g - 3, LEDGE); }
+    L.spawn = { x: 4 * TILE + 8, y: g * TILE };
+    L.door = { x: 30 * TILE + 8, y: g * TILE };
+    L.lights.push({ x: 4, y: g - 5 }, { x: 13, y: g - 6 }, { x: 20, y: g - 6 }, { x: 29, y: g - 5 });
+    L.boss = true; L.locked = true; L.title = 'The Hall of Glass';
+    L.arena = { left: 2 * TILE, right: 32 * TILE, groundY: g * TILE, ceilY: 3 * TILE, bossX: 17 * TILE, row: g };
+    return L;
+  }
+  var HALLS = { reflected: ['glass', hallOfGlass], regulator: ['gear', theEscapement], bellkeeper: ['tide', sunkenBelfry], orrery: ['void', darkObservatory], thornmother: ['bloom', overgrownCistern], golem: ['ember', greatKiln], wyrm: ['frost', frozenCistern], herald: ['storm', galleryOfRails], lightless: ['void', theVault] };
   function arena(seed, floor, kind) {
     var hall = HALLS[kind] || HALLS[['golem', 'wyrm', 'herald', 'lightless'][Math.max(0, Math.min(3, floor - 1))]];
     if (hall) return hall[1](byName(hall[0]), floor);
