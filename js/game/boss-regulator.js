@@ -188,7 +188,7 @@
         if (c.t >= 60) { var dx = c.ox - c.x, dy = c.oy - c.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)); c.vx = dx / len * 4.4; c.vy = dy / len * 4.4; c.state = 'back'; c.t = 0; c.left = len; }
       } else { c.x += c.vx; c.y += c.vy; c.left -= 4.4; if (c.left <= 0) { v.cogs.splice(k, 1); continue; } }
       if (c.hp <= 0) { chips(ctx, c.x, c.y, 10, 2); v.cogs.splice(k, 1); continue; }
-      if (hero.alive && c.state !== 'stuck' && Math.abs(hero.x - c.x) < 9 && Math.abs(hero.y - 11 - c.y) < 13) { if (ctx.hurtHero(c.x, 1, e)) ctx.afflict('gear'); }
+      if (c.state !== 'stuck') ctx.touch({ x0: c.x - 5, x1: c.x + 5, y0: c.y - 4, y1: c.y + 4 }, 1, 'gear', e, c.x);
     }
   }
   function onPhase(e, ctx) { var v = e.vars; v.loose = null; v.open = false; v.mode = 'swing'; chips(ctx, e.x, e.y, 50, 3.4); ctx.flash('#efd27a', 8); }

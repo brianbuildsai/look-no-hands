@@ -181,13 +181,13 @@
         continue;
       }
       s.x += Math.cos(s.a) * 5.2; s.y += Math.sin(s.a) * 5.2;
-      if (hero.alive && Math.abs(hero.x - s.x) < 8 && Math.abs(hero.y - 11 - s.y) < 12) { if (ctx.hurtHero(s.x, 1, e)) ctx.afflict('glass'); s.dead = true; }
+      if (ctx.touch({ x0: s.x - 4, x1: s.x + 4, y0: s.y - 3, y1: s.y + 3 }, 1, 'glass', e, s.x)) s.dead = true;
       if (s.dead || s.t > 200 || ctx.tileAt(Math.floor(s.x / 16), Math.floor(s.y / 16)) === 1) { splinter(ctx, s.x, s.y, 6, 1.8); v.shards.splice(k, 1); }
     }
     for (k = v.echoes.length - 1; k >= 0; k--) {
       var o = v.echoes[k]; o.t++;
       if (o.t === o.at - 20) ctx.telegraph(o.dir > 0 ? o.x : o.x - 176, o.y - 26, 176, 14, 20, '#ffe8f4');
-      if (o.t >= o.at) { o.x += o.dir * 8 * Math.max(0.2, 1 - (o.t - o.at) / 26); if (!o.hit && hero.alive && Math.abs(hero.x - (o.x + o.dir * 12)) < 18 && hero.y > o.y - 34 && hero.y - 20 < o.y) { if (ctx.hurtHero(o.x, 1, e)) ctx.afflict('glass'); o.hit = true; } }
+      if (o.t >= o.at) { o.x += o.dir * 8 * Math.max(0.2, 1 - (o.t - o.at) / 26); if (!o.hit && ctx.touch({ x0: o.x + o.dir * 12 - 14, x1: o.x + o.dir * 12 + 14, y0: o.y - 30, y1: o.y }, 1, 'glass', e, o.x)) o.hit = true; }
       if (o.t > o.at + 22) { splinter(ctx, o.x, o.y - 20, 14, 2); v.echoes.splice(k, 1); }
     }
   }

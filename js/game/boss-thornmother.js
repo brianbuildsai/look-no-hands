@@ -193,7 +193,7 @@
     // brambles wound what stands in them, can be cut down, and below half they fruit
     for (k = v.brambles.length - 1; k >= 0; k--) {
       var b = v.brambles[k]; b.age++; if (b.flash > 0) b.flash--;
-      if (b.age > 20 && hero.alive && Math.abs(hero.x - b.x) < 11 && hero.y > A.groundY - 12 && hero.y < A.groundY + 2) { if (ctx.hurtHero(b.x, 1, e)) ctx.afflict('bloom'); }
+      if (b.age > 20) ctx.touch({ x0: b.x - 7, x1: b.x + 7, y0: A.groundY - 11, y1: A.groundY + 1 }, 1, 'bloom', e, b.x);
       if (b.fruit && b.age >= b.fruit && ctx.count() < 6) { ctx.summon('puff', b.x, A.groundY - 30); burst(ctx, b.x, A.groundY - 8, 12, 2, true); b.hp = 0; }
       if (b.hp <= 0 || b.age > b.life) { burst(ctx, b.x, A.groundY - 6, 10, 1.8, true); v.brambles.splice(k, 1); }
     }

@@ -547,7 +547,7 @@
     // everyone to the stage's beginning, side by side; whoever was down is up again
     function spawnAll() {
       var was = cur;
-      players.forEach(function (Q) { if (Q.gone) return; use(Q); spawnHero(); hero.x += Q.index * 14; Q.took = false; });
+      players.forEach(function (Q) { if (Q.gone) return; use(Q); var wasDown = !hero.alive; spawnHero(); if (wasDown && company() > 1) { hero.hp = Math.max(1, Math.ceil(hero.maxHp / 2)); number(hero.x, hero.y - 34, 'UP AGAIN', '#ffdc9a'); } hero.x += Q.index * 14; Q.took = false; });
       use(players[me] && !players[me].gone ? players[me] : was); stepCamera(true); use(was);
     }
     // spikes and the element's hazard, where the body touches them
@@ -607,6 +607,21 @@
       light: function (x, y, r, str) { stepLit.lights.push({ x: x, y: y, r: r, s: str || 1 }); },
       hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage, e ? e.kind : ''); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
+      // a box that wounds whoever stands in it (every hero is tried); true if anybody was in it, hurt or not
+      touch: function (box, damage, elementName, e, fromX) {
+        var was = cur, any = false;
+        for (var k = 0; k < players.length; k++) {
+          var Q = players[k]; if (Q.gone || !Q.hero.alive) continue;
+          use(Q);
+          if (!overlaps(heroHurtBox(), box)) continue;
+          any = true;
+          if (hurtHero(fromX === undefined ? (box.x0 + box.x1) / 2 : fromX, damage || 1, e ? e.kind : '', null)) { if (elementName) afflict(elementName); if (mods.thorns && e) wound(e, mods.thorns, hero.x, null); }
+        }
+        use(was);
+        return any;
+      },
+      // everybody who is up, for what needs to look at all of them (read, do not keep)
+      heroes: function () { return players.filter(function (Q) { return !Q.gone && Q.hero.alive; }).map(function (Q) { return Q.hero; }); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (Math.abs(p.x - hero.x) < W) sfx('shot'); },
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
       hazard: function (h) { hazards.push(h); },
@@ -619,7 +634,7 @@
       crescent: function (x, y, dir, r, colour, life) { crescents.push({ x: x, y: y, dir: dir, r: r, colour: colour, life: life, max: life }); },
       shake: shake,
       count: function () { return creatures.length; },
-      summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
+      summon: function (kind, x, y) { var e = sterner(AC.make(kind, x, y + 36, false, run.floor, random)); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
       weaponId: function () { return weaponId; }, powerName: function () { return power; }, classId: function () { return classId; },
       blackout: function (on) { blackout = !!on; },
       glow: function (x, y, r, colour, alpha) { stepLit.glows.push({ x: x, y: y, r: r, colour: colour, alpha: alpha }); },
@@ -636,6 +651,7 @@
         if (t === 1 && hero.x + hero.w / 2 > tx * TILE && hero.x - hero.w / 2 < (tx + 1) * TILE && hero.y > ty * TILE && hero.y - hero.h < (ty + 1) * TILE) { hero.y = ty * TILE - 0.001; hero.vy = 0; }
       }
     };
+    function sterner(e) { if (company() > 1 && e && !e.sterner) { e.sterner = true; e.hp = e.maxHp = Math.round(e.maxHp * (e.boss ? 1.6 : 1.5)); } return e; }
     function placeCreatures() {
       creatures = []; projectiles = []; zaps = [];
       var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
@@ -643,6 +659,7 @@
       boss = null; hazards = []; telegraphs = []; blackout = false; stepLit.lights.length = 0; stepLit.glows.length = 0;
       placeChests(); placePerks();
       if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd, guardianFor(STAGES[run.stage])); creatures.push(boss); }
+      creatures.forEach(sterner);
     }
     function stepHazards() {
       var k, h;
@@ -760,6 +777,7 @@
       for (k = zaps.length - 1; k >= 0; k--) if (--zaps[k].life <= 0) zaps.splice(k, 1);
     }
     // who a creature goes for: whoever is nearer, and it does not change its mind for a few pixels
+    function company() { var n = 0; for (var k = 0; k < players.length; k++) if (!players[k].gone) n++; return n; }
     function firstPlayer() { for (var k = 0; k < players.length; k++) if (!players[k].gone) return players[k]; return players[0]; }
     function nearestPlayer(x, y, keep) {
       var best = null, bd = 1e9;
@@ -1449,7 +1467,8 @@
       var mid = Math.max(A.left + 70, Math.min(A.right - 70, cx));
       level.plinths = pool.map(function (q, n) { return { x: mid + (n - (pool.length - 1) / 2) * 46, y: A.groundY }; });
       perks = pool.map(function (q, n) { rewarded[q.id] = true; return { relic: q, x: level.plinths[n].x, y: level.plinths[n].y, phase: n * 2.1, gone: 0, rise: 40 }; });
-      banner = { t: 0, text: 'It leaves three things', sub: 'ONE MAY BE TAKEN, AND THE DOOR WILL OPEN', colour: element.glow };
+      players.forEach(function (Q) { Q.took = false; });
+      banner = { t: 0, text: 'It leaves three things', sub: company() > 1 ? 'ONE EACH, AND THE DOOR WILL OPEN' : 'ONE MAY BE TAKEN, AND THE DOOR WILL OPEN', colour: element.glow };
     }
     function placePerks() {
       perks = []; nearPerk = null;
@@ -1471,16 +1490,18 @@
         if (p.rise > 0 && cur === firstPlayer()) p.rise--;
         var r = rarity(p.relic.rarity), by = p.y - 30 + Math.sin(tick * 0.05 + p.phase) * 3;
         if (tick % (r.rank >= 4 ? 2 : 4) === 0 && cur === firstPlayer()) { var a = random() * 6.2832; particles.push({ x: p.x + Math.cos(a) * 12, y: by + Math.sin(a) * 12, vx: -Math.cos(a) * 0.3, vy: -0.35 - random() * 0.3, life: 26, max: 26, colour: random() < 0.3 ? '#ffffff' : r.colour, size: 1, gravity: -0.004 }); }
-        if (!level.taken && hero.alive && Math.abs(hero.x - p.x) < 13 && Math.abs(hero.y - p.y) < 30 && (!nearPerk || Math.abs(hero.x - p.x) < Math.abs(hero.x - nearPerk.x))) nearPerk = p;
+        if (!level.taken && !cur.took && hero.alive && Math.abs(hero.x - p.x) < 13 && Math.abs(hero.y - p.y) < 30 && (!nearPerk || Math.abs(hero.x - p.x) < Math.abs(hero.x - nearPerk.x))) nearPerk = p;
       }
       if (nearPerk && hit('up')) {
-        var took = nearPerk; level.taken = true; visited[run.stage] = true; perks.splice(perks.indexOf(took), 1);
-        perks.forEach(function (q) { q.gone = 1; spark(q.x, q.y - 30, '#5c5a56', 14, 1.4, 24, 0.02); });
+        var took = nearPerk; cur.took = true; perks.splice(perks.indexOf(took), 1);
+        // one each: what is left stays until everybody who is up has chosen
+        var waiting = players.some(function (Q) { return !Q.gone && Q.hero.alive && !Q.took; }) && perks.some(function (q) { return !q.gone; });
+        if (!waiting) { level.taken = true; visited[run.stage] = true; perks.forEach(function (q) { q.gone = 1; spark(q.x, q.y - 30, '#5c5a56', 14, 1.4, 24, 0.02); }); }
         if (took.relic.kind === 'power') { power = took.relic.id; number(hero.x, hero.y - 34, RL.POWERS[power].name.toUpperCase(), RL.POWERS[power].colour); spark(hero.x, hero.y - 14, RL.POWERS[power].colour, 40, 2.4, 36, -0.01); flash = { colour: RL.POWERS[power].colour, life: 8 }; sfx('cast' + RL.POWERS[power].element); }
         else takePickup({ kind: took.relic.kind === 'weapon' ? 'weapon' : 'relic', id: took.relic.id, rarity: took.relic.rarity });
-        if (level.boss) { level.locked = false; sfx('door'); }
+        if (level.boss && !waiting) { level.locked = false; sfx('door'); }
         rings.push({ x: took.x, y: took.y - 30, r: 4, grow: 3, life: 16, max: 16, colour: rarity(took.relic.rarity).colour });
-        banner = { t: 0, text: took.relic.name, sub: level.boss ? 'THE DOOR IS OPEN' : 'THE WAY ON IS OPEN', colour: rarity(took.relic.rarity).colour };
+        banner = { t: 0, text: took.relic.name, sub: waiting ? 'ONE IS LEFT FOR THE OTHER OF YOU' : level.boss ? 'THE DOOR IS OPEN' : 'THE WAY ON IS OPEN', colour: rarity(took.relic.rarity).colour };
         sfx('perk'); nearPerk = null;
       }
     }
@@ -1511,7 +1532,7 @@
     // when nothing is near enough to read, a word about what is on offer
     function drawPerkLabel() {
       if ((!level.sanctuary && !perks.length) || state !== 'run') return;
-      if (!nearPerk && !level.taken && perks.length && !perks[0].gone && !banner) text('THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
+      if (!nearPerk && !level.taken && perks.length && !perks[0].gone && !banner) text(cur && cur.took ? 'YOU HAVE CHOSEN. THE OTHER OF YOU HAS NOT' : company() > 1 ? 'THREE ARE OFFERED. ONE EACH MAY BE TAKEN' : 'THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
     }
     // a line of the small type broken at spaces, two lines at most
     function wrapText(s, x, y, width) {
@@ -1907,6 +1928,15 @@
       text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
       if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 24, 8, 2); }
       if (state === 'run' || state === 'paused') drawHands();
+      if (state === 'run' || state === 'paused') for (k = 0; k < players.length; k++) {
+        var OQ = players[k]; if (OQ === cur || OQ.gone) continue;
+        var oh = OQ.hero, ox = Math.round(oh.x - cam.x), oy = Math.round(oh.y - cam.y) - 34, inside = ox > 8 && ox < W - 8 && oy > 18 && oy < H - 8, tag = 'P' + (k + 1), oc = oh.alive ? '#9fd8ff' : '#5c5a56', pip;
+        if (!inside) { ox = Math.max(14, Math.min(W - 14, ox)); oy = Math.max(30, Math.min(H - 44, oy)); }
+        text(tag, ox, oy - 8, oc, 1, 'center');
+        for (pip = 0; pip < oh.maxHp; pip++) { fpen.fillStyle = pip < oh.hp ? '#ff4f7b' : '#3a3936'; fpen.fillRect(ox - oh.maxHp * 2 + pip * 4, oy, 3, 2); }
+        if (!inside) { var ang = Math.atan2(oh.y - 34 - cam.y - oy, oh.x - cam.x - ox); fpen.fillStyle = oc; fpen.fillRect(Math.round(ox + Math.cos(ang) * 9) - 1, Math.round(oy - 3 + Math.sin(ang) * 9) - 1, 3, 3); fpen.fillRect(Math.round(ox + Math.cos(ang) * 6), Math.round(oy - 3 + Math.sin(ang) * 6), 1, 1); }
+        if (!oh.alive) text('DOWN', ox, oy + 5, '#ff4f7b', 1, 'center');
+      }
       for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
       if (state === 'title') drawTitle();
       if (state === 'choose') drawChoose();
@@ -2042,7 +2072,8 @@
       save();
       if (SND) SND.hum('portalhum', 0);
       if (wonRun) sfx('victory');
-      summary = { who: klass.name, won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
+      var mineAtEnd = players[me] || cur; store();
+      summary = { who: mineAtEnd.klass.name, company: company(), won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: mineAtEnd.held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[mineAtEnd.lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
       state = 'summary';
     }
     function stepSummary() {
