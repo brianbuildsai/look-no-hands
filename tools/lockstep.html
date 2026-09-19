@@ -24,6 +24,8 @@
 <div class="harness__row">
   <button class="harness__button" type="button" data-run="quick">Quick (3 scenes)</button>
   <button class="harness__button" type="button" data-run="all">Everything</button>
+  <button class="harness__button" type="button" data-run="quick2">Quick, two players</button>
+  <button class="harness__button" type="button" data-run="all2">Everything, two players</button>
 </div>
 <div class="harness__frames">
   <iframe class="harness__frame" data-copy="a" src="../rooms/undercroft.html" title="Copy A"></iframe>
@@ -68,26 +70,27 @@
     return list;
   }
 
-  function runScene(scene, index, frameCount, done) {
-    var A = api('a'), B = api('b'), who = CLASSES[index % 4], arm = ARMS[index % ARMS.length], press = masher(1000 + index * 77), f = 0;
-    [A, B].forEach(function (c) { c.manual(true); c.begin(3600 + index, who); if (scene.arena) c.arena(scene.arena); else c.stage(scene.stage); c.wield(arm); });
+  // `pair`: two heroes in each copy, and each copy told that a different one of them sits at its keyboard
+  function runScene(scene, index, frameCount, done, pair) {
+    var A = api('a'), B = api('b'), who = CLASSES[index % 4], other = CLASSES[(index + 3) % 4], arm = ARMS[index % ARMS.length], press = masher(1000 + index * 77), press2 = masher(5000 + index * 131), f = 0;
+    [A, B].forEach(function (c, n) { c.manual(true); c.party(pair ? [{ who: who }, { who: other }] : null, n); c.begin(3600 + index, who); if (scene.arena) c.arena(scene.arena); else c.stage(scene.stage); c.wield(arm, 0); if (pair) c.wield(ARMS[(index + 7) % ARMS.length], 1); });
     function chunk() {
       var end = Math.min(frameCount, f + 240);
       for (; f < end; f++) {
-        var keys = press(f);
-        if (f % 400 === 399) { A.hurt(-3); B.hurt(-3); }
-        var a = A.advance(keys, true), b = B.advance(keys, f % 7 === 0);
+        var keys = press(f), keys2 = press2(f);
+        if (f % 400 === 399) { A.hurt(-3, 0); B.hurt(-3, 0); if (pair) { A.hurt(-3, 1); B.hurt(-3, 1); } }
+        var a = pair ? A.together([keys, keys2], true) : A.advance(keys, true), b = pair ? B.together([keys, keys2], f % 7 === 0) : B.advance(keys, f % 7 === 0);
         if (a !== b) { done({ scene: scene.name, who: who, arm: arm, ok: false, frame: f, a: A.state(), b: B.state() }); return; }
       }
-      if (f >= frameCount) done({ scene: scene.name, who: who, arm: arm, ok: true, frames: f, hash: A.checksum() }); else setTimeout(chunk, 0);
+      if (f >= frameCount) done({ scene: scene.name, who: who, arm: arm, ok: true, frames: f, hash: A.checksum(), players: A.players ? A.players() : null }); else setTimeout(chunk, 0);
     }
     chunk();
   }
 
-  function run(which, frameCount) {
+  function run(which, frameCount, pair) {
     if (!state.ready || state.running) return;
     state.running = true; state.done = false; state.results = []; state.failed = 0; logEl.classList.remove('harness__log--bad'); logEl.textContent = 'running ' + which + '…';
-    var list = scenes(which), k = 0;
+    var list = scenes(which.replace('2', '')), k = 0; pair = pair || /2$/.test(which);
     (function next() {
       if (k >= list.length) { state.running = false; state.done = true; log(state.failed ? state.failed + ' scene(s) came apart' : 'all ' + list.length + ' scenes stayed together'); return; }
       runScene(list[k], k, frameCount || 1200, function (res) {
@@ -95,7 +98,7 @@
         if (!res.ok) { state.failed++; logEl.classList.add('harness__log--bad'); log('APART  ' + res.scene + ' (' + res.who + ', ' + res.arm + ') at frame ' + res.frame + '\n  a: ' + JSON.stringify(res.a.hero) + ' creatures ' + res.a.creatures.length + '\n  b: ' + JSON.stringify(res.b.hero) + ' creatures ' + res.b.creatures.length); }
         else log('same   ' + res.scene + ' (' + res.who + ', ' + res.arm + ') ' + res.frames + ' frames, hash ' + res.hash);
         k++; setTimeout(next, 0);
-      });
+      }, pair);
     })();
   }
   window.__lockstep.run = run;
