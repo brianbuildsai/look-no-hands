@@ -814,7 +814,7 @@ module.exports = {
       number: 36,
       slug: 'undercroft',
       ready: true,
-      scripts: ['game/pixels.js', 'game/classes.js', 'game/weapons.js', 'game/arms.js', 'game/world.js', 'game/explore.js', 'game/actors.js', 'game/actors-deep.js', 'game/relics.js', 'game/guardians.js', 'game/boss-golem.js', 'game/boss-wyrm.js', 'game/boss-thornmother.js', 'game/boss-bellkeeper.js', 'game/boss-herald.js', 'game/boss-regulator.js', 'game/boss-reflected.js', 'game/boss-orrery.js', 'game/boss-lightless.js', 'game/net.js', 'game/wire.js', 'game/samples.js', 'game/sound.js'],
+      scripts: ['game/pixels.js', 'game/classes.js', 'game/weapons.js', 'game/arms.js', 'game/world.js', 'game/explore.js', 'game/actors.js', 'game/actors-deep.js', 'game/relics.js', 'game/guardians.js', 'game/boss-golem.js', 'game/boss-wyrm.js', 'game/boss-thornmother.js', 'game/boss-bellkeeper.js', 'game/boss-herald.js', 'game/boss-regulator.js', 'game/boss-reflected.js', 'game/boss-orrery.js', 'game/boss-lightless.js', 'game/net.js', 'game/relay.js', 'game/wire.js', 'game/samples.js', 'game/sound.js'],
       stageAttributes: 'tabindex="0"',
       controlsFirst: true,
       hideText: true,   // the game's own main screen says what needs saying; the text below is kept for the docent, who reads every label

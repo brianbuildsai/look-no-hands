@@ -34,7 +34,7 @@
 
   function create(game, wire, opts) {
     opts = opts || {};
-    var S = { role: null, state: 'lobby', me: 0, other: 1, delay: 3, step: 0, rtt: 0, wobble: 0, stalled: 0, guest: null, config: null, resyncs: 0, epoch: 0, sent: 0, got: 0, reason: '' };
+    var S = { role: null, state: 'lobby', me: 0, other: 1, delay: 3, step: 0, rtt: 0, wobble: 0, stalled: 0, guest: null, config: null, resyncs: 0, epoch: 0, sent: 0, got: 0, reason: '', via: wire.via || 'direct', asked: 0 };
     var mine = {}, theirs = {}, newest = -1, sampled = -1, hashes = {}, pending = null, pingAt = 0, pingId = 0, pings = {};
     var now = opts.now || function () { return Date.now(); };
 
@@ -47,7 +47,7 @@
 
     function hello(who, power) { send({ t: 'hello', v: VERSION, who: who, power: power }); }
     function ping() { var id = ++pingId; pings[id] = now(); send({ t: 'ping', id: id }, true); }
-    function chooseDelay() { return Math.max(2, Math.min(MOST, Math.ceil((S.rtt / 2 + 2 * S.wobble + 10) / (1000 / 60)) + 1)); }
+    function chooseDelay() { return Math.max(2, Math.min(wire.most || MOST, Math.ceil((S.rtt / 2 + 2 * S.wobble + 10) / (1000 / 60)) + 1)); }
     // the host says go: the seed, who is who, and how late everybody's buttons are applied
     function start(config) {
       if (S.role !== 'host' || !S.guest) return false;
@@ -70,7 +70,7 @@
       if (S.state !== 'run') return false;
       // buttons for the step `delay` ahead are read now, and sent with the dozen before them
       while (sampled < S.step + S.delay) { sampled++; mine[sampled] = pack(game.sample()); sendInputs(); }
-      if (theirs[S.step] === undefined && S.step > newestZero()) { S.stalled++; if (S.stalled === 45) game.notice('WAITING FOR THE OTHER OF YOU'); if (S.stalled % 30 === 0) sendInputs(); return false; }
+      if (theirs[S.step] === undefined && S.step > newestZero()) { S.stalled++; if (S.stalled === 45) game.notice('WAITING FOR THE OTHER OF YOU'); if (S.stalled % 30 === 0) { sendInputs(); send({ t: 'want', e: S.epoch, f: S.step }, true); } return false; }
       if (S.stalled >= 45) game.notice(null);
       S.stalled = 0;
       var pads = [];
@@ -81,6 +81,12 @@
       if (S.step % CHECK === 0) { hashes[S.step] = game.checksum(); send({ t: 'hash', e: S.epoch, f: S.step, h: hashes[S.step] }); delete hashes[S.step - CHECK * 8]; }
       if (game.ended()) finish('the run is over');
       return true;
+    }
+    // the other side is stuck for want of a step that is no longer among the last few we send: send from there
+    function sendFrom(from) {
+      if (from > sampled || sampled - from > 60 || (from > S.zeroUntil && mine[from] === undefined)) return;
+      var list = []; for (var f = from; f <= sampled; f++) list.push(mine[f] || 0);
+      S.asked++; send({ t: 'in', e: S.epoch, f: from, m: list }, true);
     }
     function newestZero() { return S.zeroUntil; }   // steps this early have no buttons, by agreement
     function sendInputs() { var from = Math.max(0, sampled - KEEP + 1), list = []; for (var f = from; f <= sampled; f++) list.push(mine[f] || 0); send({ t: 'in', e: S.epoch, f: from, m: list }, true); }
@@ -125,6 +131,7 @@
       else if (msg.t === 'no') finish(String(msg.why || 'refused'));
       else if (msg.t === 'start' && S.role === 'guest' && S.state === 'lobby') { S.config = msg.config; S.delay = msg.config.delay; begin(msg.you); if (opts.onchange) opts.onchange(S); }
       else if (msg.t === 'in' && msg.e === S.epoch && msg.m && msg.m.length <= 64) { for (var k = 0; k < msg.m.length; k++) { var f = msg.f + k; if (f >= S.step && theirs[f] === undefined) { theirs[f] = msg.m[k] | 0; if (f > newest) newest = f; } } }
+      else if (msg.t === 'want' && msg.e === S.epoch && S.state === 'run') sendFrom(msg.f | 0);
       else if (msg.t === 'hash' && msg.e === S.epoch) { if (hashes[msg.f] !== undefined && hashes[msg.f] !== msg.h) resync('step ' + msg.f); else if (hashes[msg.f] === undefined && msg.f > S.step) (S.theirHashes || (S.theirHashes = {}))[msg.f] = msg.h; }
       else if (msg.t === 'sync' && S.role === 'guest') { applySync(msg.record, msg.from, msg.e); send({ t: 'synced', from: msg.from }); }
       else if (msg.t === 'synced' && S.role === 'host' && pending && msg.from === pending.from) applySync(pending.record, pending.from, S.epoch + 1);

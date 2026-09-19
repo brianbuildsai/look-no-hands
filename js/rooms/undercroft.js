@@ -2451,16 +2451,17 @@
       function busy(on) { lv.busy = on; if (!on) { lv.role = null; lv.code = ''; lv.canStart = false; lv.connected = false; } hostBtn.disabled = on; joinBtn.disabled = on; field.disabled = on; leaveBtn.hidden = !on; if (!on) { invite.hidden = true; startBtn.disabled = true; joinField.hidden = false; joinBtn.hidden = false; hostBtn.hidden = false; } }
       function stop(words, bad) { if (heart) { clearInterval(heart); heart = null; } if (handle) { handle.close(); handle = null; } busy(false); say(words, bad); }
       function opened(wire, asHost) {
+        var way = wire.via === 'relay' ? ' by relay' : '';   // no direct route between the two networks: a public broker passes the buttons along
         var sess = openSession(wire, {
           onchange: function (S) {
-            if (S.role === 'host' && S.state === 'lobby' && S.guest) { lv.canStart = true; startBtn.disabled = false; say((CL.CLASSES[S.guest.who] ? CL.CLASSES[S.guest.who].name : 'Someone') + ' has joined you. Start when you are both ready.'); }
-            if (S.state === 'run' && !box.started) { box.started = true; if (handle && handle.done) handle.done(); say('Together. P or Esc pauses for both of you.' + (S.rtt ? ' About ' + Math.round(S.rtt) + ' ms apart.' : '')); try { env.stage.focus({ preventScroll: true }); } catch (e) { /* not fatal */ } }
+            if (S.role === 'host' && S.state === 'lobby' && S.guest) { lv.canStart = true; startBtn.disabled = false; say((CL.CLASSES[S.guest.who] ? CL.CLASSES[S.guest.who].name : 'Someone') + ' has joined you' + way + '. Start when you are both ready.'); }
+            if (S.state === 'run' && !box.started) { box.started = true; if (handle && handle.done) handle.done(); say('Together' + way + '. P or Esc pauses for both of you.' + (S.rtt ? ' About ' + Math.round(S.rtt) + ' ms apart.' : '')); try { env.stage.focus({ preventScroll: true }); } catch (e) { /* not fatal */ } }
           },
           onover: function (reason) { box.started = false; stop(reason === 'the run is over' ? 'That run is over. Host or join again for another.' : reason === 'you left' ? 'You left. The game goes on alone.' : reason === 'they left' || reason === 'the connection closed' ? 'The other of you has gone. You play on alone.' : reason, reason !== 'the run is over' && reason !== 'you left'); }
         });
         if (!sess) { stop('The game could not open a session.', true); return; }
         lv.connected = true;
-        if (asHost) { sess.host(); say('Someone is connecting\u2026'); } else { sess.join(who.value, myPower()); say('Connected. Waiting for the host to start.'); }
+        if (asHost) { sess.host(); say('Someone is connecting\u2026'); } else { sess.join(who.value, myPower()); say('Connected' + way + '. Waiting for the host to start.'); }
         heart = setInterval(function () { if (session) session.beat(); }, 1000); sess.beat();
       }
       hostBtn.addEventListener('click', function () {
