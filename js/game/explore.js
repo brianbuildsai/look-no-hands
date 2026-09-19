@@ -16,6 +16,7 @@
    slack), the portal must be reached, and a chest that cannot be is removed. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var WD = window.World;
   if (!WD) return;
   var AIR = WD.AIR, STONE = WD.STONE, LEDGE = WD.LEDGE, SPIKES = WD.SPIKES, HAZARD = WD.HAZARD, TILE = WD.TILE;
@@ -100,7 +101,7 @@
       if (q === start) { L.spawn = { x: (X + (q.links.l ? 5 : 2)) * TILE + 8, y: g * TILE }; q.reserved.push([0, 7]); }
       if (isPortal) { a = span(q, 5); if (a < 0) a = 6; q.portalAt = a + 2; q.reserved.push([a - 1, a + 6]); L.door = { x: (X + a + 2) * TILE + 8, y: g * TILE }; }
       if (plain) return;
-      var did = 0, order = ['loft', 'terraces', 'pool', 'pillars', 'shelf', 'spikes', 'teeth'].sort(function () { return rnd() - 0.5; });
+      var did = 0, order = ST.shuffle(['loft', 'terraces', 'pool', 'pillars', 'shelf', 'spikes', 'teeth'], rnd);   // never by sorting at random: every engine sorts differently
       order.forEach(function (what) {
         if (did >= 3) return;
         if (what === 'loft') {

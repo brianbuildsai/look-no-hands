@@ -15,6 +15,7 @@
    The figure is drawn in parts; mirrors, cracks, shards and echoes are drawn live. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -45,7 +46,7 @@
   }
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function splinter(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.8, life: 16 + ctx.random() * 22, max: 38, colour: k % 3 === 0 ? '#ffffff' : k % 3 === 1 ? '#ff9ecb' : '#ffe8f4', size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.1 }); } }
+  function splinter(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s - 0.8, life: 16 + ctx.random() * 22, max: 38, colour: k % 3 === 0 ? '#ffffff' : k % 3 === 1 ? '#ff9ecb' : '#ffe8f4', size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.1 }); } }
   function standing(v) { return v.panes.filter(function (p) { return !p.broken; }); }
   function truePane(v) { return v.panes[v.trueAt]; }
   function chooseTrue(e, ctx) { var v = e.vars, left = standing(v); if (!left.length) return; var pick = left[Math.floor(ctx.random() * left.length)]; v.trueAt = v.panes.indexOf(pick); e.x = pick.x; }
@@ -72,13 +73,13 @@
       for (k = 0; k < p.cracks; k++) { var sx = x + [-4, 5, -1][k], sy = y0 + [20, 34, 48][k]; pen.beginPath(); pen.moveTo(sx, sy); pen.lineTo(sx - 9, sy - 8 - k); pen.moveTo(sx, sy); pen.lineTo(sx + 10, sy - 5); pen.moveTo(sx, sy); pen.lineTo(sx + 4, sy + 11); pen.moveTo(sx, sy); pen.lineTo(sx - 7, sy + 8); pen.stroke(); }
       if (p.flash > 0) { pen.globalAlpha = p.flash / 8; pen.fillStyle = '#ffffff'; pen.fillRect(x0, y0, PANE_W, PANE_H); pen.globalAlpha = 1; }
       // the true one carries the lantern's glint while it winds up
-      if (!v.out && n === v.trueAt && v.glint > 0) { var gt = (G.tick % 40) / 40, gx = Math.round(x0 + 4 + gt * (PANE_W - 8)), gyy = Math.round(y0 + 8 + gt * 22), r = 3 + Math.round(Math.sin(gt * Math.PI) * 3); pen.fillStyle = '#ffdc9a'; pen.fillRect(gx - r, gyy, r * 2 + 1, 1); pen.fillRect(gx, gyy - r, 1, r * 2 + 1); pen.fillStyle = '#ffffff'; pen.fillRect(gx - 1, gyy - 1, 3, 3); }
+      if (!v.out && n === v.trueAt && v.glint > 0) { var gt = (G.tick % 40) / 40, gx = Math.round(x0 + 4 + gt * (PANE_W - 8)), gyy = Math.round(y0 + 8 + gt * 22), r = 3 + Math.round(ST.sin(gt * Math.PI) * 3); pen.fillStyle = '#ffdc9a'; pen.fillRect(gx - r, gyy, r * 2 + 1, 1); pen.fillRect(gx, gyy - r, 1, r * 2 + 1); pen.fillStyle = '#ffffff'; pen.fillRect(gx - 1, gyy - 1, 3, 3); }
     });
     // the arm out of the glass
     if (v.reach > 0 && !v.out) { var tp = truePane(v), ax = Math.round(tp.x) - G.cx, len = Math.round(46 * Math.min(1, v.reach)); for (k = -1; k <= 1; k += 2) drawShard(pen, ax + k * 8, gy - 18, k > 0 ? 0 : Math.PI, len, true); }
     v.shards.forEach(function (s) { drawShard(pen, Math.round(s.x) - G.cx, Math.round(s.y) - G.cy, s.a, 9, s.state === 'fly'); });
     // a reflection left behind, waiting to make the same cut
-    v.echoes.forEach(function (o) { if (!RIG) return; var set = o.dir >= 0 ? RIG.frames : RIG.flipped, img = set[o.t < o.at ? 'windup' : 'attack'][1]; pen.globalAlpha = o.t < o.at ? 0.35 + 0.25 * Math.sin(o.t * 0.6) : 0.7; pen.drawImage(img, Math.round(o.x) - (o.dir >= 0 ? 24 : 32) - G.cx, Math.round(o.y) - 56 - G.cy); pen.globalAlpha = 1; });
+    v.echoes.forEach(function (o) { if (!RIG) return; var set = o.dir >= 0 ? RIG.frames : RIG.flipped, img = set[o.t < o.at ? 'windup' : 'attack'][1]; pen.globalAlpha = o.t < o.at ? 0.35 + 0.25 * ST.sin(o.t * 0.6) : 0.7; pen.drawImage(img, Math.round(o.x) - (o.dir >= 0 ? 24 : 32) - G.cx, Math.round(o.y) - 56 - G.cy); pen.globalAlpha = 1; });
   }
 
   /* ---- what it does ---- */
@@ -110,8 +111,8 @@
     // out of the glass: five shards in a fan along marked lines
     fan: {
       name: 'fan', windup: 40, active: 8, recover: 70, cooldown: 64, anims: { windup: 'windup', attack: 'attack' },
-      start: function (e, ctx) { e.vars.aim = Math.atan2(ctx.hero.y - 14 - (e.y - 24), ctx.hero.x - e.x); },
-      telling: function (e, ctx, t, w) { e.vx = 0; var v = e.vars; if (t < w - 14) v.aim = Math.atan2(ctx.hero.y - 14 - (e.y - 24), ctx.hero.x - e.x); for (var k = -2; k <= 2; k++) ctx.telegraphLine(e.x, e.y - 24, e.x + Math.cos(v.aim + k * 0.22) * 200, e.y - 24 + Math.sin(v.aim + k * 0.22) * 200, 2, k ? '#c46a98' : '#ff9ecb'); if (t === 1) ctx.sfx('select'); },
+      start: function (e, ctx) { e.vars.aim = ST.atan2(ctx.hero.y - 14 - (e.y - 24), ctx.hero.x - e.x); },
+      telling: function (e, ctx, t, w) { e.vx = 0; var v = e.vars; if (t < w - 14) v.aim = ST.atan2(ctx.hero.y - 14 - (e.y - 24), ctx.hero.x - e.x); for (var k = -2; k <= 2; k++) ctx.telegraphLine(e.x, e.y - 24, e.x + ST.cos(v.aim + k * 0.22) * 200, e.y - 24 + ST.sin(v.aim + k * 0.22) * 200, 2, k ? '#c46a98' : '#ff9ecb'); if (t === 1) ctx.sfx('select'); },
       fire: function (e, ctx) { var v = e.vars; for (var k = -2; k <= 2; k++) v.shards.push({ x: e.x + e.dir * 10, y: e.y - 24, a: v.aim + k * 0.22, t: 0, state: 'fly' }); ctx.sfx('icicle'); }
     },
     // a cut across the hall; and where it began, a reflection that will make the same cut
@@ -175,12 +176,12 @@
       var s = v.shards[k]; s.t++;
       if (s.state === 'hang') {
         if (s.t < 0) continue;
-        var want = Math.atan2(hero.y - 12 - s.y, hero.x - s.x); if (s.t < 30) { var d = want - s.a; while (d > Math.PI) d -= 6.2832; while (d < -Math.PI) d += 6.2832; s.a += clamp(d, -0.12, 0.12); }
-        ctx.telegraphLine(s.x, s.y, s.x + Math.cos(s.a) * 220, s.y + Math.sin(s.a) * 220, 2, s.t < 30 ? '#c46a98' : '#ff9ecb');
+        var want = ST.atan2(hero.y - 12 - s.y, hero.x - s.x); if (s.t < 30) { var d = want - s.a; while (d > Math.PI) d -= 6.2832; while (d < -Math.PI) d += 6.2832; s.a += clamp(d, -0.12, 0.12); }
+        ctx.telegraphLine(s.x, s.y, s.x + ST.cos(s.a) * 220, s.y + ST.sin(s.a) * 220, 2, s.t < 30 ? '#c46a98' : '#ff9ecb');
         if (s.t >= 44) { s.state = 'fly'; ctx.sfx('shardfly'); }
         continue;
       }
-      s.x += Math.cos(s.a) * 5.2; s.y += Math.sin(s.a) * 5.2;
+      s.x += ST.cos(s.a) * 5.2; s.y += ST.sin(s.a) * 5.2;
       if (ctx.touch({ x0: s.x - 4, x1: s.x + 4, y0: s.y - 3, y1: s.y + 3 }, 1, 'glass', e, s.x)) s.dead = true;
       if (s.dead || s.t > 200 || ctx.tileAt(Math.floor(s.x / 16), Math.floor(s.y / 16)) === 1) { splinter(ctx, s.x, s.y, 6, 1.8); v.shards.splice(k, 1); }
     }

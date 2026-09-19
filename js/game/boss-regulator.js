@@ -18,6 +18,7 @@
    The bob and its works are computed discs; the dial, rod and hands are drawn live. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -48,7 +49,7 @@
   function mid(A) { return (A.left + A.right) / 2; }
   function dialAt(A) { return { x: mid(A), y: A.groundY - 104 }; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function chips(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.6, life: 14 + ctx.random() * 16, max: 30, colour: k % 3 ? '#efd27a' : '#ffffff', size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.08 }); } }
+  function chips(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s - 0.6, life: 14 + ctx.random() * 16, max: 30, colour: k % 3 ? '#efd27a' : '#ffffff', size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.08 }); } }
 
   /* ---- behind it: the dial, its hands, the rail, the rod ---- */
 
@@ -58,8 +59,8 @@
     pen.fillStyle = '#140d04'; pen.beginPath(); pen.arc(x, y, 40, 0, 6.2832); pen.fill();
     pen.fillStyle = '#7a5a1e'; pen.beginPath(); pen.arc(x, y, 38, 0, 6.2832); pen.fill();
     pen.fillStyle = '#1f170a'; pen.beginPath(); pen.arc(x, y, 34, 0, 6.2832); pen.fill();
-    for (k = 0; k < 12; k++) { var a = k / 12 * 6.2832, big = k % 3 === 0; pen.fillStyle = big ? '#efd27a' : '#94784a'; pen.fillRect(Math.round(x + Math.cos(a) * 29) - (big ? 1 : 0), Math.round(y + Math.sin(a) * 29) - (big ? 1 : 0), big ? 3 : 1, big ? 3 : 1); }
-    function hand(angle, len, wide, colour) { pen.strokeStyle = colour; pen.lineWidth = wide; pen.beginPath(); pen.moveTo(x, y); pen.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len); pen.stroke(); }
+    for (k = 0; k < 12; k++) { var a = k / 12 * 6.2832, big = k % 3 === 0; pen.fillStyle = big ? '#efd27a' : '#94784a'; pen.fillRect(Math.round(x + ST.cos(a) * 29) - (big ? 1 : 0), Math.round(y + ST.sin(a) * 29) - (big ? 1 : 0), big ? 3 : 1, big ? 3 : 1); }
+    function hand(angle, len, wide, colour) { pen.strokeStyle = colour; pen.lineWidth = wide; pen.beginPath(); pen.moveTo(x, y); pen.lineTo(x + ST.cos(angle) * len, y + ST.sin(angle) * len); pen.stroke(); }
     hand(v.hour, 17, 3, '#c9a44c');
     if (!v.loose) hand(v.minute, 27, 2, '#efd27a');
     pen.fillStyle = '#efd27a'; pen.fillRect(x - 2, y - 2, 4, 4);
@@ -81,19 +82,19 @@
   /* ---- what it does ---- */
 
   function throwCogs(e, ctx) {
-    var v = e.vars, hero = ctx.hero, base = Math.atan2(hero.y - 12 - e.y, hero.x - e.x), n = e.phase ? 5 : 3, k;
-    for (k = 0; k < n; k++) { var a = base + (k - (n - 1) / 2) * 0.3; v.cogs.push({ x: e.x, y: e.y, ox: e.x, oy: e.y, vx: Math.cos(a) * 3.4, vy: Math.sin(a) * 3.4, state: 'out', t: 0, hp: 1, flash: 0 }); }
+    var v = e.vars, hero = ctx.hero, base = ST.atan2(hero.y - 12 - e.y, hero.x - e.x), n = e.phase ? 5 : 3, k;
+    for (k = 0; k < n; k++) { var a = base + (k - (n - 1) / 2) * 0.3; v.cogs.push({ x: e.x, y: e.y, ox: e.x, oy: e.y, vx: ST.cos(a) * 3.4, vy: ST.sin(a) * 3.4, state: 'out', t: 0, hp: 1, flash: 0 }); }
     ctx.sfx('cogthrow'); ctx.shake(2);
   }
   function sweepBoxes(e) {
     var v = e.vars, A = e.arena, d = dialAt(A), L = v.loose, out = [], len;
     if (!L || !L.hot) return out;
-    for (len = 44; len < L.len; len += 8) { var x = d.x + Math.cos(L.a) * len, y = d.y + Math.sin(L.a) * len; if (y > A.groundY + 4) break; out.push({ x0: x - 5, x1: x + 5, y0: y - 5, y1: y + 5, damage: 1, element: 'gear' }); }
+    for (len = 44; len < L.len; len += 8) { var x = d.x + ST.cos(L.a) * len, y = d.y + ST.sin(L.a) * len; if (y > A.groundY + 4) break; out.push({ x0: x - 5, x1: x + 5, y0: y - 5, y1: y + 5, damage: 1, element: 'gear' }); }
     return out;
   }
   // a hand sweeps one half of the hall: from lying out along the wall down to the vertical
   function tellHalf(e, ctx, side, life) { var A = e.arena, m = mid(A); ctx.telegraph(side > 0 ? m : A.left, A.groundY - 12, m - A.left, 12, life, '#ff8c42'); ctx.telegraphLine(dialAt(A).x, dialAt(A).y, side > 0 ? A.right : A.left, A.groundY - 30, life, '#efd27a'); ctx.telegraphLine(dialAt(A).x, dialAt(A).y, m, A.groundY, life, '#efd27a'); }
-  function sweep(e, ctx, side, t, span) { var f = clamp(t / span, 0, 1), from = side > 0 ? 0.3 : Math.PI - 0.3; e.vars.loose = { a: from + (Math.PI / 2 - from) * f, len: 210, hot: true }; if (t % 3 === 0) { var A = e.arena, d = dialAt(A), a = e.vars.loose.a, reach = (A.groundY - d.y) / Math.max(0.2, Math.sin(a)); chips(ctx, d.x + Math.cos(a) * reach, A.groundY - 2, 2, 1.8); } }
+  function sweep(e, ctx, side, t, span) { var f = clamp(t / span, 0, 1), from = side > 0 ? 0.3 : Math.PI - 0.3; e.vars.loose = { a: from + (Math.PI / 2 - from) * f, len: 210, hot: true }; if (t % 3 === 0) { var A = e.arena, d = dialAt(A), a = e.vars.loose.a, reach = (A.groundY - d.y) / Math.max(0.2, ST.sin(a)); chips(ctx, d.x + ST.cos(a) * reach, A.groundY - 2, 2, 1.8); } }
   function handsAttack(name, both) {
     return {
       name: name, windup: 64, active: both ? 116 : 40, recover: 50, cooldown: 40, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
@@ -139,7 +140,7 @@
     cogs: {
       name: 'cogs', windup: 46, active: 8, recover: 60, cooldown: 50, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
       start: function (e) { e.vars.mode = 'still'; },
-      telling: function (e, ctx, t, w) { var hero = ctx.hero, base = Math.atan2(hero.y - 12 - e.y, hero.x - e.x), n = e.phase ? 5 : 3; for (var k = 0; k < n; k++) { var a = base + (k - (n - 1) / 2) * 0.3; ctx.telegraphLine(e.x, e.y, e.x + Math.cos(a) * 240, e.y + Math.sin(a) * 240, 2, k === (n - 1) / 2 ? '#efd27a' : '#94784a'); } if (t === 1) ctx.sfx('select'); },
+      telling: function (e, ctx, t, w) { var hero = ctx.hero, base = ST.atan2(hero.y - 12 - e.y, hero.x - e.x), n = e.phase ? 5 : 3; for (var k = 0; k < n; k++) { var a = base + (k - (n - 1) / 2) * 0.3; ctx.telegraphLine(e.x, e.y, e.x + ST.cos(a) * 240, e.y + ST.sin(a) * 240, 2, k === (n - 1) / 2 ? '#efd27a' : '#94784a'); } if (t === 1) ctx.sfx('select'); },
       fire: function (e, ctx) { throwCogs(e, ctx); },
       end: function (e) { e.vars.mode = 'swing'; }
     },
@@ -171,8 +172,8 @@
     if (v.mode === 'swing' && e.stun <= 0) v.phi += speed;
     var wantPivot = v.mode === 'swing' ? clamp(hero.x, A.left + 96, A.right - 96) : v.mode === 'still' ? v.pivotX : mid(A);
     v.pivotX += clamp(wantPivot - v.pivotX, -0.5, 0.5);
-    var th = v.amp * Math.sin(v.phi);
-    e.x = v.pivotX + Math.sin(th) * v.len; e.y = py + Math.cos(th) * v.len;
+    var th = v.amp * ST.sin(v.phi);
+    e.x = v.pivotX + ST.sin(th) * v.len; e.y = py + ST.cos(th) * v.len;
     // the clock keeps time: the minute hand steps once a second
     if (e.clock % 60 === 0) { v.minute += 6.2832 / 60 * 5; if (e.state !== 'wake' && !e.attack) ctx.sfx('tick'); }
     ctx.light(e.x, e.y, 60, 0.85); ctx.light(dialAt(A).x, dialAt(A).y, 50, 0.6);

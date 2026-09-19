@@ -14,6 +14,7 @@
    floor, and is open. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -123,7 +124,7 @@
       pen.fillStyle = '#8fa3ff'; pen.beginPath(); pen.arc(x, y, r - 1, 0, 6.2832); pen.fill();
       pen.fillStyle = '#ffffff'; pen.beginPath(); pen.arc(x + (f === 1 ? 1 : f === 3 ? -1 : 0), y + (f === 0 ? -1 : f === 2 ? 1 : 0), Math.max(1, r - 3), 0, 6.2832); pen.fill();
       pen.strokeStyle = '#ffffff'; pen.lineWidth = 1; pen.beginPath();
-      for (var s = 0; s < 3; s++) { var a = G.tick * 0.3 + s * 2.1 + b.id; pen.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r); pen.lineTo(x + Math.cos(a + 0.4) * (r + 4), y + Math.sin(a + 0.4) * (r + 4)); }
+      for (var s = 0; s < 3; s++) { var a = G.tick * 0.3 + s * 2.1 + b.id; pen.moveTo(x + ST.cos(a) * r, y + ST.sin(a) * r); pen.lineTo(x + ST.cos(a + 0.4) * (r + 4), y + ST.sin(a + 0.4) * (r + 4)); }
       pen.stroke();
     });
   }
@@ -132,7 +133,7 @@
 
   var VOLT = ['#8fa3ff', '#a48cff', '#ffffff', '#3d5bff'];
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function crackle(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 8 + ctx.random() * 12, max: 20, colour: VOLT[k % 4], size: 1, gravity: 0 }); } }
+  function crackle(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s, life: 8 + ctx.random() * 12, max: 20, colour: VOLT[k % 4], size: 1, gravity: 0 }); } }
   function hover(e, tx, ty, ease) { e.x += (tx - e.x) * ease; e.y += (ty - e.y) * ease; }
   // a bolt from the top of the hall to the floor, and the box it burns
   function bolt(e, ctx, x, wide) {
@@ -266,7 +267,7 @@
     // it keeps its distance, above the reach of a standing blade
     var side = e.x < hero.x ? -1 : 1, tx = clamp(hero.x + side * 86, A.left + 24, A.right - 24);
     if (Math.abs(tx - hero.x) < 50) tx = clamp(hero.x - side * 86, A.left + 24, A.right - 24);
-    hover(e, tx, A.groundY - 46 + Math.sin(e.clock * 0.05) * 5, 0.05);
+    hover(e, tx, A.groundY - 46 + ST.sin(e.clock * 0.05) * 5, 0.05);
     e.dir = GD.towards(e, hero); e.anim = 'idle'; e.frame = Math.floor(e.clock / 10) % 4; e.state = 'idle';
     if (e.cooldown > 0 || !hero.alive) return null;
     var script = SCRIPTS[e.phase], want = script[e.script % script.length];
@@ -295,7 +296,7 @@
           if (!e.dying && !v.away && Math.abs(b.x - e.x) < 12 && Math.abs(b.y - (e.y - 26)) < 28) { e.hp -= 10; e.flash = 6; e.stun = Math.max(e.stun, 100); if (e.attack && e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; v.next = null; ctx.number(e.x, e.y - 60, 10, '#ffffff'); ctx.number(e.x, e.y - 72, 'ITS OWN LIGHTNING', '#8fa3ff'); crackle(ctx, b.x, b.y, 30, 3.2); ctx.shake(5); ctx.sfx('heavy'); ctx.flash('#8fa3ff', 6); b.life = 0; }
         } else {
           var r = Math.min(26, b.born * 1.2), a = D.a + k * Math.PI * 2 / D.n;
-          b.x = D.x + Math.cos(a) * r; b.y = D.y + Math.sin(a) * r * 0.8;
+          b.x = D.x + ST.cos(a) * r; b.y = D.y + ST.sin(a) * r * 0.8;
           if (b.born > 24 && ctx.touch({ x0: b.x - 3, x1: b.x + 3, y0: b.y - 2, y1: b.y + 3 }, 1, 'storm', e, b.x)) { b.life = 0; crackle(ctx, b.x, b.y, 16, 2.6); }
         }
         ctx.light(b.x, b.y, 26, 0.8); ctx.glow(b.x, b.y, 10, '#8fa3ff', 0.3);

@@ -17,6 +17,7 @@
    The vines are curves sampled every few pixels, drawn live. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -38,7 +39,7 @@
     var w = 48, h = 36, bx = 23.5, by = 31, petals = [], i;
     for (i = 0; i < 7; i++) { var a = -Math.PI / 2 + (i - 3) * (0.17 + open * 0.36), len = 21 - Math.abs(i - 3) * (1 - open) * 1.8, wide = 10 + open * 1; petals.push({ a: a, len: len, wide: wide, order: open > 0.5 ? -Math.abs(i - 3) : Math.abs(i - 3), i: i }); }
     petals.sort(function (p, q) { return q.order - p.order; });
-    function inPetal(p, x, y) { var dx = x - bx, dy = y - by, u = dx * Math.cos(p.a) + dy * Math.sin(p.a) - p.len / 2, v = -dx * Math.sin(p.a) + dy * Math.cos(p.a); return (u / (p.len / 2)) * (u / (p.len / 2)) + (v / (p.wide / 2)) * (v / (p.wide / 2)) <= 1 ? v : null; }
+    function inPetal(p, x, y) { var dx = x - bx, dy = y - by, u = dx * ST.cos(p.a) + dy * ST.sin(p.a) - p.len / 2, v = -dx * ST.sin(p.a) + dy * ST.cos(p.a); return (u / (p.len / 2)) * (u / (p.len / 2)) + (v / (p.wide / 2)) * (v / (p.wide / 2)) <= 1 ? v : null; }
     function top(x, y) { for (var k = petals.length - 1; k >= 0; k--) { var v = inPetal(petals[k], x, y); if (v !== null) return { p: petals[k], v: v }; } return null; }
     function heart(x, y) { var dx = x - bx, dy = y - (by - 9); return open > 0.6 && dx * dx + dy * dy <= 30; }
     return grid(w, h, function (x, y) {
@@ -61,7 +62,7 @@
 
   /* ---- the vines: curves from her roots to their tips, drawn behind her ---- */
 
-  function vineHome(e, n) { var side = n < 2 ? -1 : 1, far = n % 3 === 0; return { x: e.x + side * (far ? 58 : 34) + Math.sin(e.clock * 0.04 + n * 1.7) * 6, y: e.arena.groundY - (far ? 40 : 64) + Math.cos(e.clock * 0.05 + n) * 5 }; }
+  function vineHome(e, n) { var side = n < 2 ? -1 : 1, far = n % 3 === 0; return { x: e.x + side * (far ? 58 : 34) + ST.sin(e.clock * 0.04 + n * 1.7) * 6, y: e.arena.groundY - (far ? 40 : 64) + ST.cos(e.clock * 0.05 + n) * 5 }; }
   function drawVine(pen, cx, cy, rx, ry, tx, ty, lift, hot) {
     var mx = (rx + tx) / 2, my = Math.min(ry, ty) - lift, n = Math.max(6, Math.round((Math.abs(tx - rx) + Math.abs(ty - ry) + lift) / 3)), k, px, py;
     for (k = 0; k <= n; k++) {
@@ -90,7 +91,7 @@
 
   var GREEN = ['#9ae66e', '#c5ff9a', '#5e8a66', '#ffffff'];
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function burst(ctx, x, y, n, speed, up) { for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 16 + ctx.random() * 20, max: 36, colour: GREEN[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.06 }); } }
+  function burst(ctx, x, y, n, speed, up) { for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : ctx.random() * 6.2832, s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s, life: 16 + ctx.random() * 20, max: 36, colour: GREEN[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.06 }); } }
   function sideOf(e, hero) { return hero.x < e.x ? -1 : 1; }
   function vineOn(e, side, far) { return e.vars.vines[side < 0 ? (far ? 0 : 1) : (far ? 3 : 2)]; }
   function wallOn(e, side) { return side < 0 ? e.arena.left + 4 : e.arena.right - 4; }
@@ -155,12 +156,12 @@
     pollen: {
       name: 'pollen', windup: 52, active: 30, recover: 140, cooldown: 40, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
       start: function (e) { e.vars.puffed = 0; },
-      telling: function (e, ctx, t, w) { e.vars.openTo = 0.5; if (t === 1) { ctx.telegraphCircle(e.x, e.y - 40, 40, w, '#ffd24d'); ctx.sfx('select'); } for (var k = 0; k < 2; k++) { var a = ctx.random() * 6.2832; ctx.particle({ x: e.x + Math.cos(a) * 36, y: e.y - 40 + Math.sin(a) * 36, vx: -Math.cos(a) * 2.4, vy: -Math.sin(a) * 2.4, life: 14, max: 14, colour: '#ffd24d', size: 1, gravity: 0 }); } },
+      telling: function (e, ctx, t, w) { e.vars.openTo = 0.5; if (t === 1) { ctx.telegraphCircle(e.x, e.y - 40, 40, w, '#ffd24d'); ctx.sfx('select'); } for (var k = 0; k < 2; k++) { var a = ctx.random() * 6.2832; ctx.particle({ x: e.x + ST.cos(a) * 36, y: e.y - 40 + ST.sin(a) * 36, vx: -ST.cos(a) * 2.4, vy: -ST.sin(a) * 2.4, life: 14, max: 14, colour: '#ffd24d', size: 1, gravity: 0 }); } },
       during: function (e, ctx, t) {
         var v = e.vars; v.openTo = 0.75;
         if ((t - 1) % 9 !== 0 || v.puffed >= 3) return;
         var k = v.puffed++, s = sideOf(e, ctx.hero), a = -0.5 + k * 0.35;
-        ctx.projectile({ x: e.x, y: e.y - 40, vx: s * Math.cos(a) * 1.1, vy: Math.sin(a) * 0.8 - 0.2, gravity: 0.004, life: e.phase ? 300 : 240, colour: '#ffd24d', size: 12, damage: 1, element: 'bloom', cloud: true, seek: e.phase ? 0.014 : 0.004, cause: 'pollen' });
+        ctx.projectile({ x: e.x, y: e.y - 40, vx: s * ST.cos(a) * 1.1, vy: ST.sin(a) * 0.8 - 0.2, gravity: 0.004, life: e.phase ? 300 : 240, colour: '#ffd24d', size: 12, damage: 1, element: 'bloom', cloud: true, seek: e.phase ? 0.014 : 0.004, cause: 'pollen' });
         ctx.sfx('castbloom');
       },
       resting: function (e, ctx, t) { openFor(e, ctx, t, 140); }
@@ -185,7 +186,7 @@
     // the flower opens and shuts by degrees, and the frame follows it
     v.open += (v.openTo - v.open) * 0.12;
     if (e.state !== 'wake' && e.stun <= 0) { e.anim = 'idle'; e.frame = clamp(Math.round(v.open * 4), 0, 4); }
-    if (v.open > 0.7) { ctx.glow(e.x, e.y - 38, 14 + 3 * Math.sin(e.clock * 0.15), '#ffd24d', 0.35); }
+    if (v.open > 0.7) { ctx.glow(e.x, e.y - 38, 14 + 3 * ST.sin(e.clock * 0.15), '#ffd24d', 0.35); }
     ctx.light(e.x, e.y - 34, 70, 0.85);
     // vines at rest sway where they hang
     for (k = 0; k < 4; k++) { var vn = v.vines[k]; if (vn.busy) continue; var home = vineHome(e, k); vn.x += (home.x - vn.x) * 0.08; vn.y += (home.y - vn.y) * 0.08; vn.lift += (26 - vn.lift) * 0.1; vn.hot = false; }

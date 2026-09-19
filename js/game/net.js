@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  var KEEP = 14, CHECK = 30, MOST = 12, FIRST = 2, VERSION = 1;   // FIRST: after a beginning, this many steps have no buttons for anybody
+  var KEEP = 14, CHECK = 30, MOST = 12, FIRST = 2, VERSION = 2;   // FIRST: after a beginning, this many steps have no buttons for anybody
 
   function create(game, wire, opts) {
     opts = opts || {};
@@ -45,12 +45,12 @@
 
     /* ---- the lobby: who is here, how far away, and the word to begin ---- */
 
-    function hello(who, power) { send({ t: 'hello', v: VERSION, who: who, power: power }); }
+    function hello(who, power) { send({ t: 'hello', v: VERSION, b: opts.build || '', who: who, power: power }); }
     function ping() { var id = ++pingId; pings[id] = now(); send({ t: 'ping', id: id }, true); }
     function chooseDelay() { return Math.max(2, Math.min(wire.most || MOST, Math.ceil((S.rtt / 2 + 2 * S.wobble + 10) / (1000 / 60)) + 1)); }
     // the host says go: the seed, who is who, and how late everybody's buttons are applied
     function start(config) {
-      if (S.role !== 'host' || !S.guest) return false;
+      if (S.role !== 'host' || !S.guest || S.state !== 'lobby') return false;   // once: a second Start (a double click, Enter twice) would begin the host's game again under a guest already playing
       S.delay = opts.delay || chooseDelay();
       S.config = { seed: config.seed, roster: [{ who: config.who, power: config.power }, { who: S.guest.who, power: S.guest.power }], delay: S.delay };
       send({ t: 'start', config: S.config, you: 1 });
@@ -124,7 +124,8 @@
       if (msg.t === 'ping') send({ t: 'pong', id: msg.id }, true);
       else if (msg.t === 'pong') { if (pings[msg.id]) { var r = now() - pings[msg.id]; S.wobble = S.rtt ? S.wobble * 0.8 + Math.abs(r - S.rtt) * 0.2 : 0; S.rtt = S.rtt ? S.rtt * 0.8 + r * 0.2 : r; delete pings[msg.id]; if (S.state === 'run' && !opts.fixed) { var want = chooseDelay(); if (want > S.delay) S.delay++; else if (want < S.delay - 1) S.delay--; } if (opts.onchange) opts.onchange(S); } }
       else if (msg.t === 'hello' && S.role === 'host' && S.state === 'lobby') {
-        if (msg.v !== VERSION) { send({ t: 'no', why: 'The two of you are on different versions of the game. Reload both pages.' }); return; }
+        // the same protocol, and the same game to the letter: two builds would drift apart within a second and be put back at the head of the stage for ever
+        if (msg.v !== VERSION || (opts.build || '') !== (msg.b || '')) { var why = 'The two of you have different versions of the game (' + (opts.build || 'old') + ' and ' + (msg.b || 'old') + '). Both reload the page with Ctrl+Shift+R, then host and join again.'; send({ t: 'no', why: why }); if (opts.onrefuse) opts.onrefuse(why); return; }
         S.guest = { who: String(msg.who || 'warden'), power: String(msg.power || 'emberwave') }; send({ t: 'welcome' }); if (opts.onchange) opts.onchange(S);
       }
       else if (msg.t === 'welcome' && S.role === 'guest') { S.welcomed = true; if (opts.onchange) opts.onchange(S); }

@@ -14,6 +14,7 @@
    so the creatures know nothing of the canvas. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
 
   /* ---- the palettes ----
      One per element: p the body, q its shadow, l its light, e the eye, w its
@@ -375,8 +376,8 @@
     attacks: [{ name: 'embers', range: [30, 130], above: 30, below: 120, windup: 32, active: 6, recover: 34, cooldown: 110,
       telling: function (e, ctx, t) { if (t % 5 === 0) ctx.spark(e.x, e.y, '#ffb347', 2, 0.8, 12, -0.02); },
       fire: function (e, ctx) {
-        var a = aim(e, ctx, 2.4), base = Math.atan2(a.vy - 0.5, a.vx);
-        for (var n = -1; n <= 1; n++) ctx.projectile({ x: e.x + e.dir * 8, y: e.y, vx: Math.cos(base + n * 0.3) * 2.4, vy: Math.sin(base + n * 0.3) * 2.4, life: 150, colour: '#ffb347', size: 3, damage: 1, element: 'ember', gravity: 0.035, ember: true });
+        var a = aim(e, ctx, 2.4), base = ST.atan2(a.vy - 0.5, a.vx);
+        for (var n = -1; n <= 1; n++) ctx.projectile({ x: e.x + e.dir * 8, y: e.y, vx: ST.cos(base + n * 0.3) * 2.4, vy: ST.sin(base + n * 0.3) * 2.4, life: 150, colour: '#ffb347', size: 3, damage: 1, element: 'ember', gravity: 0.035, ember: true });
       } }] };
 
   var CRAB_BURST = { name: 'burst', range: [-2, -1], steady: true, anims: { windup: 'shut', attack: 'burst' }, windup: 50, active: 12, recover: 46, cooldown: 80,
@@ -432,7 +433,7 @@
   KINDS.puff = { element: 'bloom', flying: true, body: { w: 12, h: 12 }, hurt: { w: 15, h: 15 }, hp: 5, speed: 0.5, sight: 130, move: 'hover', stand: 30, height: 28, rig: puffRig,
     attacks: [{ name: 'burst', range: [0, 54], above: 60, below: 60, windup: 46, active: 6, recover: 80, cooldown: 140,
       telling: function (e, ctx, t, w) { if (t === 1) ctx.telegraphCircle(e.x, e.y, 46, w, '#9ae66e'); },
-      fire: function (e, ctx) { for (var n = 0; n < 10; n++) { var a = n / 10 * Math.PI * 2; ctx.projectile({ x: e.x + Math.cos(a) * 8, y: e.y + Math.sin(a) * 8, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6, life: 26, colour: '#c5ff9a', size: 4, damage: 1, element: 'bloom', gravity: 0, cloud: true }); } ctx.spark(e.x, e.y, '#c5ff9a', 16, 1.4, 20, 0); } }] };
+      fire: function (e, ctx) { for (var n = 0; n < 10; n++) { var a = n / 10 * Math.PI * 2; ctx.projectile({ x: e.x + ST.cos(a) * 8, y: e.y + ST.sin(a) * 8, vx: ST.cos(a) * 1.6, vy: ST.sin(a) * 1.6, life: 26, colour: '#c5ff9a', size: 4, damage: 1, element: 'bloom', gravity: 0, cloud: true }); } ctx.spark(e.x, e.y, '#c5ff9a', 16, 1.4, 20, 0); } }] };
 
   KINDS.shade = { element: 'void', flying: false, body: { w: 10, h: 20 }, hurt: { w: 14, h: 22 }, hp: 10, speed: 0.5, sight: 170, move: 'walk', keep: 30, rig: shadeRig,
     attacks: [{ name: 'reap', range: [0, 130], windup: 34, active: 10, recover: 44, cooldown: 130, grounded: true,
@@ -450,19 +451,19 @@
 
   KINDS.watcher = { element: 'void', flying: true, body: { w: 12, h: 12 }, hurt: { w: 16, h: 16 }, hp: 7, speed: 0.45, sight: 180, move: 'hover', stand: 74, height: 30, rig: watcherRig,
     attacks: [{ name: 'gaze', range: [40, 160], above: 80, below: 100, windup: 50, active: 44, recover: 40, cooldown: 150,
-      start: function (e, ctx) { e.vars.angle = Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x); },
+      start: function (e, ctx) { e.vars.angle = ST.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x); },
       telling: function (e, ctx, t, w) {
-        if (t < w - 16) e.vars.angle = turnToward(e.vars.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.04);
-        ctx.telegraphLine(e.x, e.y, e.x + Math.cos(e.vars.angle) * 190, e.y + Math.sin(e.vars.angle) * 190, 2, '#a48cff');
+        if (t < w - 16) e.vars.angle = turnToward(e.vars.angle, ST.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.04);
+        ctx.telegraphLine(e.x, e.y, e.x + ST.cos(e.vars.angle) * 190, e.y + ST.sin(e.vars.angle) * 190, 2, '#a48cff');
       },
       box: function (e, t, ctx) {
-        e.vars.angle = turnToward(e.vars.angle, Math.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.007);
-        var out = [], c = Math.cos(e.vars.angle), s = Math.sin(e.vars.angle), len = 8;
+        e.vars.angle = turnToward(e.vars.angle, ST.atan2(ctx.hero.y - 11 - e.y, ctx.hero.x - e.x), 0.007);
+        var out = [], c = ST.cos(e.vars.angle), s = ST.sin(e.vars.angle), len = 8;
         for (; len < 190; len += 8) { var x = e.x + c * len, y = e.y + s * len; if (ctx.tileAt(Math.floor(x / 16), Math.floor(y / 16)) === 1) break; out.push({ x0: x - 4, x1: x + 4, y0: y - 4, y1: y + 4 }); }
         e.vars.len = len;
         return out;
       },
-      during: function (e, ctx) { ctx.beam(e.x, e.y, e.x + Math.cos(e.vars.angle) * e.vars.len, e.y + Math.sin(e.vars.angle) * e.vars.len, '#a48cff'); } }] };
+      during: function (e, ctx) { ctx.beam(e.x, e.y, e.x + ST.cos(e.vars.angle) * e.vars.len, e.y + ST.sin(e.vars.angle) * e.vars.len, '#a48cff'); } }] };
 
   BY_ELEMENT.storm = ['hound', 'jelly']; BY_ELEMENT.bloom = ['toad', 'puff']; BY_ELEMENT.void = ['shade', 'watcher'];
   // until their own are written, the newer floors borrow
@@ -679,7 +680,7 @@
       if (e.hurt > 0) { e.vx *= 0.9; e.vy *= 0.9; }
       else {
         var tx = sees ? hero.x - towards(e, hero) * (K.stand === undefined ? 46 : K.stand) : e.home.x, ty = sees ? hero.y - (K.height === undefined ? 42 : K.height) : e.home.y;
-        e.vx += (tx - e.x) * 0.004 * speed + Math.sin(e.clock * 0.05) * 0.02; e.vy += (ty - e.y) * 0.004 * speed + Math.cos(e.clock * 0.07) * 0.02;
+        e.vx += (tx - e.x) * 0.004 * speed + ST.sin(e.clock * 0.05) * 0.02; e.vy += (ty - e.y) * 0.004 * speed + ST.cos(e.clock * 0.07) * 0.02;
         e.vx *= 0.93; e.vy *= 0.93;
         var cap = speed * 1.4; if (Math.abs(e.vx) > cap) e.vx = cap * (e.vx > 0 ? 1 : -1); if (Math.abs(e.vy) > cap) e.vy = cap * (e.vy > 0 ? 1 : -1);
         if (sees) e.dir = towards(e, hero); else if (Math.abs(e.vx) > 0.1) e.dir = e.vx > 0 ? 1 : -1;

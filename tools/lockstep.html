@@ -93,7 +93,15 @@
     state.running = true; state.done = false; state.results = []; state.failed = 0; logEl.classList.remove('harness__log--bad'); logEl.textContent = 'running ' + which + '…';
     var list = scenes(which.replace('2', '')), k = 0; pair = pair || /2$/.test(which);
     (function next() {
-      if (k >= list.length) { state.running = false; state.done = true; log(state.failed ? state.failed + ' scene(s) came apart' : 'all ' + list.length + ' scenes stayed together'); return; }
+      if (k >= list.length) {
+        state.running = false; state.done = true; log(state.failed ? state.failed + ' scene(s) came apart' : 'all ' + list.length + ' scenes stayed together');
+        // Two browsers must agree too, not only two copies in one. Run this page in each and compare this line; with
+        // ?report=name it is also asked of the server (which will not have it: the request shows in the server's log).
+        var print = state.results.map(function (r) { return r.ok ? r.hash : 'x'; }).join('.');
+        state.print = print; log('across browsers: ' + which + ' ' + print);
+        if (/[?&]report=(\w+)/.test(location.search)) { try { fetch('/__lockstep/' + RegExp.$1 + '/' + which + '/' + print).catch(function () {}); } catch (e) { /* only a note */ } }
+        return;
+      }
       runScene(list[k], k, frameCount || 1200, function (res) {
         state.results.push(res);
         if (!res.ok) { state.failed++; logEl.classList.add('harness__log--bad'); log('APART  ' + res.scene + ' (' + res.who + ', ' + res.arm + ') at frame ' + res.frame + '\n  a: ' + JSON.stringify(res.a.hero) + ' creatures ' + res.a.creatures.length + '\n  b: ' + JSON.stringify(res.b.hero) + ' creatures ' + res.b.creatures.length); }
@@ -174,6 +182,37 @@
   }
   window.__lockstep.net = runNets;
   Array.prototype.forEach.call(document.querySelectorAll('[data-net]'), function (b) { b.addEventListener('click', runNets); });
+  /* What no run can show from inside one browser: arithmetic that differs between engines. The game's sources are
+     read for the functions every engine computes its own way, and for shuffling by a random sort. (sound.js is not
+     part of the simulation and may use what it likes.) */
+  function readSources(then) {
+    var doc = frames.a.contentDocument, stage = doc.querySelector('.stage[data-build]');
+    var srcs = Array.prototype.map.call(doc.querySelectorAll('script[src]'), function (el) { return el.src; }).filter(function (u) { return !/\/js\/core\.js/.test(u); });
+    var bad = [], texts = [];
+    function finish() {
+      // the stamp the page carries must be what its scripts hash to now (tools/make-rooms.js writes it)
+      var h = 2166136261;
+      texts.forEach(function (text) { text = (text || '').replace(/\r/g, ''); for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } });
+      var now = ('0000000' + h.toString(16)).slice(-8), stamp = stage ? stage.getAttribute('data-build') : '';
+      if (stamp !== now) bad.push('the page is stamped ' + (stamp || 'nothing') + ' and its scripts hash to ' + now + ': run node tools/make-rooms.js');
+      then(bad);
+    }
+    // one at a time: the little server this is usually run against drops some of twenty-six at once
+    (function next(k) {
+      if (k >= srcs.length) { finish(); return; }
+      var u = srcs[k];
+      fetch(u, { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (text) {
+        texts[k] = text;
+        if (!/\/js\/(game|rooms)\//.test(u) || /\/(sound|samples|steady|net|wire|relay)\.js/.test(u)) return;
+        text.split('\n').forEach(function (line, n) {
+          if (/Math\.(sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|pow|exp|expm1|log|log2|log10|log1p|cbrt|hypot)\(|[^*]\*\*[^*]/.test(line) && !/^\s*(\/\/|\/?\*)/.test(line)) bad.push(u.replace(/^.*\/js\//, '').replace(/\?.*$/, '') + ':' + (n + 1) + ' uses arithmetic that differs between browsers (use ST. from steady.js)');
+          if (/\.sort\(function[^{]*\{[^}]*(random|rnd)\(/.test(line)) bad.push(u.replace(/^.*\/js\//, '').replace(/\?.*$/, '') + ':' + (n + 1) + ' shuffles by sorting at random (use ST.shuffle)');
+        });
+      }).catch(function () { bad.push(u + ' could not be read'); }).then(function () { next(k + 1); });
+    })(0);
+  }
+  window.__lockstep.readSources = readSources;
+  whenReady(function () { readSources(function (bad) { state.sources = bad; if (bad.length) { logEl.classList.add('harness__log--bad'); log('SOURCES\n  ' + bad.join('\n  ')); } else log('sources: nothing in the simulation that differs between browsers'); }); });
   window.__lockstep.run = run;
   Array.prototype.forEach.call(document.querySelectorAll('[data-run]'), function (b) { b.addEventListener('click', function () { run(b.getAttribute('data-run')); }); });
   whenReady(function () { if (/[?&]auto=(\w+)/.test(location.search)) run(RegExp.$1); });

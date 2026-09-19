@@ -17,6 +17,7 @@
    is drawn, in parts. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -26,7 +27,7 @@
 
   function bellRows() {
     var w = 50, h = 40, rows = [], x, y;
-    function half(y) { if (y < 3) return 4; var t = (y - 3) / (h - 4); return 7 + 15 * Math.pow(t, 0.55) + (t > 0.86 ? 3 : 0); }
+    function half(y) { if (y < 3) return 4; var t = (y - 3) / (h - 4); return 7 + 15 * ST.pow(t, 0.55) + (t > 0.86 ? 3 : 0); }
     function inside(x, y) { return y >= 0 && y < h && Math.abs(x - 24.5) <= half(y) && !(y < 3 && Math.abs(x - 24.5) < 2 && y > 0); }
     for (y = 0; y < h; y++) {
       var s = '';
@@ -73,7 +74,7 @@
   }
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function spray(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = -Math.PI * ctx.random(), s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 16 + ctx.random() * 20, max: 36, colour: k % 3 ? '#5fd4c4' : '#ffffff', size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.1 }); } }
+  function spray(ctx, x, y, n, speed) { for (var k = 0; k < n; k++) { var a = -Math.PI * ctx.random(), s = speed * (0.4 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s, life: 16 + ctx.random() * 20, max: 36, colour: k % 3 ? '#5fd4c4' : '#ffffff', size: ctx.random() < 0.3 ? 2 : 1, gravity: 0.1 }); } }
 
   /* ---- what is drawn behind it: the surge, and the bubbles ---- */
 
@@ -81,14 +82,14 @@
     var v = e.vars, A = e.arena, pen = G.pen, k;
     if (v.wave) {
       var wx = Math.round(v.wave.x) - G.cx, gy = A.groundY - G.cy, d = v.wave.dir;
-      for (k = 0; k < 44; k += 2) { var t = k / 44, hgt = Math.round(24 * Math.sin(Math.min(1, t * 1.25) * Math.PI * 0.62) + Math.sin(k * 0.6 + G.tick * 0.4) * 1.5), px = wx - d * (k - 22); pen.fillStyle = '#1f7a70'; pen.fillRect(px, gy - hgt, 2, hgt); pen.fillStyle = '#5fd4c4'; pen.fillRect(px, gy - hgt, 2, Math.max(1, Math.round(hgt * 0.35))); if (t > 0.55) { pen.fillStyle = '#ffffff'; pen.fillRect(px, gy - hgt - 1, 2, 2); } }
+      for (k = 0; k < 44; k += 2) { var t = k / 44, hgt = Math.round(24 * ST.sin(Math.min(1, t * 1.25) * Math.PI * 0.62) + ST.sin(k * 0.6 + G.tick * 0.4) * 1.5), px = wx - d * (k - 22); pen.fillStyle = '#1f7a70'; pen.fillRect(px, gy - hgt, 2, hgt); pen.fillStyle = '#5fd4c4'; pen.fillRect(px, gy - hgt, 2, Math.max(1, Math.round(hgt * 0.35))); if (t > 0.55) { pen.fillStyle = '#ffffff'; pen.fillRect(px, gy - hgt - 1, 2, 2); } }
     }
     (v.bubbles || []).forEach(function (b) {
       var x = Math.round(b.x) - G.cx, y = Math.round(b.y) - G.cy, r = b.r;
       pen.strokeStyle = b.spiked ? '#ff9ab5' : '#9ff5e6'; pen.lineWidth = 1; pen.beginPath(); pen.arc(x, y, r, 0, 6.2832); pen.stroke();
       pen.globalAlpha = 0.18; pen.fillStyle = '#5fd4c4'; pen.beginPath(); pen.arc(x, y, r, 0, 6.2832); pen.fill(); pen.globalAlpha = 1;
       pen.fillStyle = '#ffffff'; pen.fillRect(x - Math.round(r * 0.45), y - Math.round(r * 0.5), 2, 1); pen.fillRect(x - Math.round(r * 0.6), y - Math.round(r * 0.3), 1, 1);
-      if (b.spiked) { pen.fillStyle = '#ff4f7b'; for (k = 0; k < 6; k++) { var a = k / 6 * 6.2832 + b.age * 0.03; pen.fillRect(x + Math.round(Math.cos(a) * (r + 1)), y + Math.round(Math.sin(a) * (r + 1)), 1, 1); } pen.fillRect(x - 1, y - 1, 2, 2); }
+      if (b.spiked) { pen.fillStyle = '#ff4f7b'; for (k = 0; k < 6; k++) { var a = k / 6 * 6.2832 + b.age * 0.03; pen.fillRect(x + Math.round(ST.cos(a) * (r + 1)), y + Math.round(ST.sin(a) * (r + 1)), 1, 1); } pen.fillRect(x - 1, y - 1, 2, 2); }
     });
   }
 
@@ -209,12 +210,12 @@
     var v = e.vars, hero = ctx.hero, k;
     if (v.rung > 0) { v.rung--; if (e.anim === 'shut') { e.anim = 'ring'; e.frame = (v.rung >> 1) % 2; } }
     if (v.knockCd > 0) v.knockCd--;
-    if (e.stun > 0 && e.state !== 'wake') { v.shut = false; if (e.clock % 9 === 0) ctx.particle({ x: e.x + e.dir * 34 + Math.cos(e.clock * 0.2) * 9, y: e.y - 26, vx: 0, vy: 0, life: 10, max: 10, colour: '#fff3b0', size: 1, gravity: 0 }); }
+    if (e.stun > 0 && e.state !== 'wake') { v.shut = false; if (e.clock % 9 === 0) ctx.particle({ x: e.x + e.dir * 34 + ST.cos(e.clock * 0.2) * 9, y: e.y - 26, vx: 0, vy: 0, life: 10, max: 10, colour: '#fff3b0', size: 1, gravity: 0 }); }
     ctx.light(e.x, e.y - 22, 74, 0.85);
     for (k = v.bubbles.length - 1; k >= 0; k--) {
       var b = v.bubbles[k], dx = hero.x - b.x, dy = hero.y - 12 - b.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)), top = b.spiked ? 1.15 : 0.8;
       b.age++;
-      b.vx += dx / len * 0.03; b.vy += dy / len * 0.03 + Math.sin(b.age * 0.09) * 0.012; b.vx *= 0.97; b.vy *= 0.97;
+      b.vx += dx / len * 0.03; b.vy += dy / len * 0.03 + ST.sin(b.age * 0.09) * 0.012; b.vx *= 0.97; b.vy *= 0.97;
       var sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy); if (sp > top && b.age > 24) { b.vx *= top / sp; b.vy *= top / sp; }
       b.x += b.vx; b.y += b.vy;
       if (b.age > 14 && ctx.touch({ x0: b.x - b.r - 1, x1: b.x + b.r + 1, y0: b.y - b.r - 1, y1: b.y + b.r + 1 }, 1, 'tide', e, b.x)) b.pop = true;

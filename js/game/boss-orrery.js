@@ -16,6 +16,7 @@
    and the pull comes with a flung moon. */
 (function () {
   'use strict';
+  var ST = window.UndercroftSteady;   // sines that every browser agrees on (steady.js): two machines compute this game and must match to the bit
   var GD = window.Guardians;
   if (!GD) return;
 
@@ -27,7 +28,7 @@
     var A = window.Pixels.art, pal = GD.palette(PAL);
     SPR = {
       core: A(disc(15, function (dx, dy, rr) { return rr > 150 ? 'l' : rr > 120 && dx + dy < 0 ? 'w' : dx * dx * 0.6 + (dy + 4) * (dy + 4) < 30 ? 'p' : 'q'; }), pal),
-      cracked: A(disc(15, function (dx, dy, rr) { var crack = Math.abs(dx - dy * 0.4 + Math.sin(dy) * 2) < 1.1 || Math.abs(dx * 0.5 + dy - 3 + Math.sin(dx) * 2) < 1 && dx > -2; return crack ? (rr < 60 ? 'x' : 'w') : rr > 150 ? 'l' : 'q'; }), pal),
+      cracked: A(disc(15, function (dx, dy, rr) { var crack = Math.abs(dx - dy * 0.4 + ST.sin(dy) * 2) < 1.1 || Math.abs(dx * 0.5 + dy - 3 + ST.sin(dx) * 2) < 1 && dx > -2; return crack ? (rr < 60 ? 'x' : 'w') : rr > 150 ? 'l' : 'q'; }), pal),
       moon: A(disc(6, function (dx, dy, rr) { return (dx === -2 && dy === -1) || (dx === 2 && dy === 2) || (dx === 0 && dy === -3) ? 'm' : dx + dy < -2 ? 'G' : 'g'; }), pal),
       moonHot: A(disc(6, function (dx, dy, rr) { return rr < 10 ? 'x' : dx + dy < 0 ? 'w' : 'l'; }), pal)
     };
@@ -38,23 +39,23 @@
   /* ---- the rings: where a moon is, and the path it keeps ---- */
 
   var RINGS = [{ rx: 58, ry: 26, speed: 0.030 }, { rx: 100, ry: 44, speed: -0.021 }, { rx: 146, ry: 62, speed: 0.015 }];
-  function moonAt(e, m) { var R = RINGS[m.ring], sc = e.vars.spread; return { x: e.x + Math.cos(m.a) * R.rx * sc, y: e.y + Math.sin(m.a) * R.ry * sc }; }
+  function moonAt(e, m) { var R = RINGS[m.ring], sc = e.vars.spread; return { x: e.x + ST.cos(m.a) * R.rx * sc, y: e.y + ST.sin(m.a) * R.ry * sc }; }
 
   function draw(e, G) {
     var v = e.vars, A = e.arena, pen = G.pen, cx = G.cx, cy = G.cy, k, n, a, px, py, x = Math.round(e.x) - cx, y = Math.round(e.y) - cy;
     var fade = e.dying > 60 ? Math.max(0, 1 - (e.dying - 60) / 30) : e.state === 'wake' ? Math.min(1, (130 - e.wait) / 60) : 1;
     pen.globalAlpha = fade;
     // the orbits, dotted: faint at rest, bright when the moons are lit
-    for (k = 0; k < 3; k++) { var R = RINGS[k], live = v.live, dots = 40 + k * 14; pen.fillStyle = live ? '#a48cff' : '#2b2836'; for (n = 0; n < dots; n++) { a = n / dots * 6.2832 + (live ? G.tick * 0.01 * (k % 2 ? -1 : 1) : 0); px = x + Math.round(Math.cos(a) * R.rx * v.spread); py = y + Math.round(Math.sin(a) * R.ry * v.spread); if (py < A.groundY - cy && py > A.ceilY - cy) pen.fillRect(px, py, 1, 1); } }
+    for (k = 0; k < 3; k++) { var R = RINGS[k], live = v.live, dots = 40 + k * 14; pen.fillStyle = live ? '#a48cff' : '#2b2836'; for (n = 0; n < dots; n++) { a = n / dots * 6.2832 + (live ? G.tick * 0.01 * (k % 2 ? -1 : 1) : 0); px = x + Math.round(ST.cos(a) * R.rx * v.spread); py = y + Math.round(ST.sin(a) * R.ry * v.spread); if (py < A.groundY - cy && py > A.ceilY - cy) pen.fillRect(px, py, 1, 1); } }
     // the accretion: motes on a tilted ring, the far half behind the core and the near half before it
-    function motes(front) { for (n = 0; n < 30; n++) { a = n / 30 * 6.2832 + G.tick * 0.05; var s = Math.sin(a); if ((s > 0) !== front) continue; pen.fillStyle = n % 3 === 0 ? '#ffffff' : n % 3 === 1 ? '#a48cff' : '#5b3fa0'; pen.fillRect(x + Math.round(Math.cos(a) * 24), y + Math.round(s * 6 + Math.cos(a) * 3), n % 5 === 0 ? 2 : 1, 1); } }
+    function motes(front) { for (n = 0; n < 30; n++) { a = n / 30 * 6.2832 + G.tick * 0.05; var s = ST.sin(a); if ((s > 0) !== front) continue; pen.fillStyle = n % 3 === 0 ? '#ffffff' : n % 3 === 1 ? '#a48cff' : '#5b3fa0'; pen.fillRect(x + Math.round(ST.cos(a) * 24), y + Math.round(s * 6 + ST.cos(a) * 3), n % 5 === 0 ? 2 : 1, 1); } }
     motes(false);
     pen.drawImage(e.flash > 0 ? SPR.white : v.cracked > 0 ? SPR.cracked : SPR.core, x - 15, y - 15);
     if (v.cracked > 0) { pen.fillStyle = '#ffffff'; pen.fillRect(x - 1 + (G.tick >> 2) % 3, y - 2, 2, 2); }
     motes(true);
     // the moons
     v.moons.forEach(function (m) {
-      if (m.broken > 0) { if (m.broken < 120) { var p0 = moonAt(e, m); pen.fillStyle = '#4a4560'; for (n = 0; n < 5; n++) pen.fillRect(Math.round(p0.x + Math.cos(n * 1.3 + G.tick * 0.1) * (m.broken / 20)) - cx, Math.round(p0.y + Math.sin(n * 1.3 + G.tick * 0.1) * (m.broken / 20)) - cy, 1, 1); } return; }
+      if (m.broken > 0) { if (m.broken < 120) { var p0 = moonAt(e, m); pen.fillStyle = '#4a4560'; for (n = 0; n < 5; n++) pen.fillRect(Math.round(p0.x + ST.cos(n * 1.3 + G.tick * 0.1) * (m.broken / 20)) - cx, Math.round(p0.y + ST.sin(n * 1.3 + G.tick * 0.1) * (m.broken / 20)) - cy, 1, 1); } return; }
       var hot = m.hot || (v.live && !m.away), img = m.flash > 0 ? SPR.moonHot : hot ? SPR.moonHot : SPR.moon;
       pen.drawImage(img, Math.round(m.x) - 6 - cx, Math.round(m.y) - 6 - cy);
       if (m.hp < m.maxHp) { pen.fillStyle = '#0b0b12'; pen.fillRect(Math.round(m.x) - 6 - cx, Math.round(m.y) - 10 - cy, 13, 2); pen.fillStyle = '#a48cff'; pen.fillRect(Math.round(m.x) - 6 - cx, Math.round(m.y) - 10 - cy, Math.round(13 * m.hp / m.maxHp), 2); }
@@ -66,7 +67,7 @@
 
   var VOID = ['#5b3fa0', '#a48cff', '#ffffff', '#2b2836'];
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function dustOf(ctx, x, y, n, speed, up) { for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : ctx.random() * 6.2832, s = speed * (0.3 + ctx.random()); ctx.particle({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 16 + ctx.random() * 22, max: 38, colour: VOID[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: up ? 0.05 : 0 }); } }
+  function dustOf(ctx, x, y, n, speed, up) { for (var k = 0; k < n; k++) { var a = up ? -Math.PI * ctx.random() : ctx.random() * 6.2832, s = speed * (0.3 + ctx.random()); ctx.particle({ x: x, y: y, vx: ST.cos(a) * s, vy: ST.sin(a) * s, life: 16 + ctx.random() * 22, max: 38, colour: VOID[k % 4], size: ctx.random() < 0.3 ? 2 : 1, gravity: up ? 0.05 : 0 }); } }
   function home(e) { return e.arena.groundY - 74; }
   function liveBoxes(e) { var out = []; e.vars.moons.forEach(function (m) { if (m.broken > 0 || m.away) return; out.push({ x0: m.x - 5, x1: m.x + 5, y0: m.y - 5, y1: m.y + 5, damage: 1, element: 'void' }); }); return out; }
   // a moon struck: it has a life of its own, and when it breaks the shell cracks
@@ -87,7 +88,7 @@
       },
       fire: function (e, ctx) { e.vars.live = true; ctx.sfx('caststorm'); ctx.shake(2); },
       during: function (e, ctx, t) {
-        var v = e.vars, A = e.arena; e.y += (A.groundY - 58 - e.y) * 0.05; v.spin = (e.phase ? 3.1 : 2.5); v.spreadTo = 1 + 0.12 * Math.sin(t * 0.05);
+        var v = e.vars, A = e.arena; e.y += (A.groundY - 58 - e.y) * 0.05; v.spin = (e.phase ? 3.1 : 2.5); v.spreadTo = 1 + 0.12 * ST.sin(t * 0.05);
         if (e.phase && t % 5 === 0) v.moons.forEach(function (m) { if (m.broken <= 0 && m.y > A.groundY - 40) ctx.hazard({ x0: m.x - 4, x1: m.x + 4, y0: m.y - 4, y1: m.y + 4, life: 34, damage: 1, element: 'void', colour: '#5b3fa0' }); });
         if (t % 20 === 1) ctx.sfx('swing');
       },
@@ -119,14 +120,14 @@
     // it pulls everything toward it while the inner moon whirls; then it lets go, winded
     pull: {
       name: 'pull', windup: 52, active: 150, recover: 120, cooldown: 40, keepFacing: true, anims: { windup: 'idle', attack: 'idle' },
-      telling: function (e, ctx, t, w) { var A = e.arena; if (t === 1) { ctx.telegraphCircle(e.x, A.groundY - 30, 62, w, '#a48cff'); ctx.sfx('roar'); } e.y += (A.groundY - 44 - e.y) * 0.05; for (var k = 0; k < 2; k++) { var a = ctx.random() * 6.2832, r = 60 + ctx.random() * 80; ctx.particle({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.6, vx: -Math.cos(a) * r / 20, vy: -Math.sin(a) * r * 0.6 / 20, life: 18, max: 18, colour: VOID[k], size: 1, gravity: 0 }); } },
+      telling: function (e, ctx, t, w) { var A = e.arena; if (t === 1) { ctx.telegraphCircle(e.x, A.groundY - 30, 62, w, '#a48cff'); ctx.sfx('roar'); } e.y += (A.groundY - 44 - e.y) * 0.05; for (var k = 0; k < 2; k++) { var a = ctx.random() * 6.2832, r = 60 + ctx.random() * 80; ctx.particle({ x: e.x + ST.cos(a) * r, y: e.y + ST.sin(a) * r * 0.6, vx: -ST.cos(a) * r / 20, vy: -ST.sin(a) * r * 0.6 / 20, life: 18, max: 18, colour: VOID[k], size: 1, gravity: 0 }); } },
       fire: function (e, ctx) { e.vars.live = true; e.vars.flung = false; ctx.sfx('castfrost'); },
       during: function (e, ctx, t) {
         var v = e.vars, A = e.arena, hero = ctx.hero, dx = e.x - hero.x, far = Math.abs(dx);
         e.y += (A.groundY - 44 - e.y) * 0.05; v.spin = 3.4; v.spreadTo = 0.62;
         // the pull is on her place, not her speed, so running only slows it
         if (hero.alive && far > 8) hero.x = clamp(hero.x + (dx > 0 ? 1 : -1) * (hero.onGround ? 0.8 : 1.1) * Math.min(1, 220 / (far + 60)), A.left + 6, A.right - 6);
-        for (var k = 0; k < 3; k++) { var a = ctx.random() * 6.2832, r = 50 + ctx.random() * 110; ctx.particle({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.6, vx: -Math.cos(a) * r / 16, vy: -Math.sin(a) * r * 0.6 / 16, life: 14, max: 14, colour: VOID[k], size: 1, gravity: 0 }); }
+        for (var k = 0; k < 3; k++) { var a = ctx.random() * 6.2832, r = 50 + ctx.random() * 110; ctx.particle({ x: e.x + ST.cos(a) * r, y: e.y + ST.sin(a) * r * 0.6, vx: -ST.cos(a) * r / 16, vy: -ST.sin(a) * r * 0.6 / 16, life: 14, max: 14, colour: VOID[k], size: 1, gravity: 0 }); }
         if (t % 24 === 1) ctx.sfx('dash');
       },
       box: function (e) { return liveBoxes(e).slice(0, 1).concat(e.phase ? liveBoxes(e).slice(1, 2) : []); },
@@ -149,7 +150,7 @@
 
   function think(e, ctx) {
     var v = e.vars; e.state = 'idle';
-    e.y += (home(e) + Math.sin(e.clock * 0.04) * 4 - e.y) * 0.04;
+    e.y += (home(e) + ST.sin(e.clock * 0.04) * 4 - e.y) * 0.04;
     if (e.cooldown > 0 || !ctx.hero.alive) return null;
     var script = SCRIPTS[e.phase], want = script[e.script % script.length];
     if (want === 'fling' && !v.moons.some(function (m) { return m.broken <= 0; })) want = 'pull';
@@ -172,7 +173,7 @@
       if (v.live && !m.away) ctx.glow(m.x, m.y, 9, '#a48cff', 0.35);
       ctx.light(m.x, m.y, 16, 0.5);
     });
-    ctx.light(e.x, e.y, 64, 0.85); ctx.glow(e.x, e.y, 24 + 3 * Math.sin(e.clock * 0.08), '#5b3fa0', 0.3);
+    ctx.light(e.x, e.y, 64, 0.85); ctx.glow(e.x, e.y, 24 + 3 * ST.sin(e.clock * 0.08), '#5b3fa0', 0.3);
   }
   function onPhase(e, ctx) { var v = e.vars; v.live = false; v.spin = 1; v.spreadTo = 1; v.winded = false; ctx.blackout(false); if (v.shot) { v.shot.away = false; v.shot.hot = false; v.shot = null; } dustOf(ctx, e.x, e.y, 50, 3.6, false); ctx.flash('#a48cff', 8); }
   function fall(e, ctx) { var v = e.vars; ctx.blackout(false); v.live = false; v.moons.forEach(function (m) { if (m.broken <= 0) { dustOf(ctx, m.x, m.y, 16, 2.4, false); m.broken = 9999; } }); v.cracked = 9999; }
