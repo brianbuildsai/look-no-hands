@@ -78,7 +78,19 @@
       v: 'cast', V: 'cast', i: 'cast', I: 'cast', q: 'swap', Q: 'swap',
       Enter: 'start', Escape: 'pause', p: 'pause', P: 'pause'
     };
-    var keysDown = {}, queued = {}, pressed = {}, touches = {};
+    var keysDown = {}, queued = {}, touches = {};
+    /* Buttons as data. The keyboard and the touch zones fill `keysDown` and `queued` whenever they like; once a step
+       they are sampled into two small numbers, what is held and what was pressed since the last step, and the
+       simulation reads only those (`pad`). One player's pad comes from here; another's can come down a wire. */
+    var BUTTONS = ['left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'cast', 'swap', 'start', 'pause'], BIT = {};
+    BUTTONS.forEach(function (name, k) { BIT[name] = 1 << k; });
+    var pad = { held: 0, pressed: 0 };
+    function sample() {
+      var h = 0, pr = 0, k;
+      for (k = 0; k < BUTTONS.length; k++) { if (keysDown[BUTTONS[k]]) h |= 1 << k; if (queued[BUTTONS[k]]) pr |= 1 << k; }
+      queued = {};
+      return { held: h, pressed: pr };
+    }
 
     function focused() { return document.activeElement === env.stage; }
     document.addEventListener('keydown', function (e) {
@@ -166,10 +178,10 @@
 
     // once a step: what was pressed since the last one
     function poll() {
-      pressed = queued; queued = {};
+      pad = sample();
     }
-    function down(name) { return !!keysDown[name]; }
-    function hit(name) { return !!pressed[name]; }
+    function down(name) { return (pad.held & BIT[name]) !== 0; }
+    function hit(name) { return (pad.pressed & BIT[name]) !== 0; }
 
     /* ---- the world ----
        Floors come from world.js: a grid of tiles (0 air, 1 stone, 2 a ledge
