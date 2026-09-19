@@ -296,7 +296,7 @@
         } else {
           var r = Math.min(26, b.born * 1.2), a = D.a + k * Math.PI * 2 / D.n;
           b.x = D.x + Math.cos(a) * r; b.y = D.y + Math.sin(a) * r * 0.8;
-          if (hero.alive && b.born > 24 && Math.abs(b.x - hero.x) < 7 && b.y > hero.y - 23 && b.y < hero.y + 2) { if (ctx.hurtHero(b.x, 1, e)) ctx.afflict('storm'); b.life = 0; crackle(ctx, b.x, b.y, 16, 2.6); }
+          if (b.born > 24 && ctx.touch({ x0: b.x - 3, x1: b.x + 3, y0: b.y - 2, y1: b.y + 3 }, 1, 'storm', e, b.x)) { b.life = 0; crackle(ctx, b.x, b.y, 16, 2.6); }
         }
         ctx.light(b.x, b.y, 26, 0.8); ctx.glow(b.x, b.y, 10, '#8fa3ff', 0.3);
         if (b.life <= 0 || b.x < A.left - 10 || b.x > A.right + 10 || b.y < A.ceilY - 10) { crackle(ctx, b.x, b.y, 8, 1.6); v.balls.splice(k, 1); }

@@ -19,7 +19,10 @@
   var fx = [];                      // everything alive
   var FIRE = {}, STEP = {}, DRAW = {}, OVER = {};
 
-  function add(o) { o.t = 0; fx.push(o); return o; }
+  // every effect is somebody's: it is stepped and drawn with its owner loaded, so `T.hero` and `T.weapon()` are hers
+  var current = 0, per = {};
+  function mine(k) { return per[k] || (per[k] = { sand: 0, lastX: null, wakeSeen: [], wasDashing: false }); }
+  function add(o) { o.t = 0; o.owner = current; fx.push(o); return o; }
   function groundAt(T, x, y) {
     for (var yy = y - 10; yy < y + 96; yy += 4) { var tile = T.tileAt(Math.floor(x / 16), Math.floor(yy / 16)); if (tile === 1 || tile === 2) return Math.floor(yy / 16) * 16; }
     return y;
@@ -250,7 +253,7 @@
       if (b.life > 0) b.life--;
       if (s.t !== b.at) continue;
       if (b.target && !b.target.dying) { b.x = b.target.x; b.y = b.target.y; }
-      var gy = groundAt(T, b.x, b.y - 8), top = T.cam.y - 10, sx = b.x + (T.random() - 0.5) * 60;
+      var gy = groundAt(T, b.x, b.y - 8), top = gy - 236, sx = b.x + (T.random() - 0.5) * 60;
       b.path = jagged(sx, top, b.x, gy, T.random, 26);
       var mid = Math.floor(b.path.length / 4) * 2;
       b.fork = jagged(b.path[mid], b.path[mid + 1], b.path[mid] + (T.random() - 0.5) * 70, b.path[mid + 1] + 40 + T.random() * 30, T.random, 14);
@@ -286,12 +289,11 @@
     }
   };
   // the wake of a dash: it lies where she went for a moment, and bites once
-  var lastX = null, wakeSeen = [], wasDashing = false;
   function stormWake(T) {
-    var h = T.hero, dashing = !!(h.act && h.act.kind === 'dash') && T.weapon().ability === 'stormdash';
-    if (dashing && !wasDashing) wakeSeen = [];
-    if (dashing && lastX !== null && Math.abs(h.x - lastX) > 0.5) add({ kind: 'wake', x0: lastX, x1: h.x, y: h.y - 11, max: 38, seen: wakeSeen, seed: Math.floor(T.random() * 1000) });
-    wasDashing = dashing; lastX = h.x;
+    var m = mine(current), h = T.hero, dashing = !!(h.act && h.act.kind === 'dash') && T.weapon().ability === 'stormdash';
+    if (dashing && !m.wasDashing) m.wakeSeen = [];
+    if (dashing && m.lastX !== null && Math.abs(h.x - m.lastX) > 0.5) add({ kind: 'wake', x0: m.lastX, x1: h.x, y: h.y - 11, max: 38, seen: m.wakeSeen, seed: Math.floor(T.random() * 1000) });
+    m.wasDashing = dashing; m.lastX = h.x;
   }
   STEP.wake = function (s, T) {
     if (s.t % 4 === 1) T.touch({ x0: Math.min(s.x0, s.x1) - 2, x1: Math.max(s.x0, s.x1) + 2, y0: s.y - 12, y1: s.y + 10 }, 2 + T.mods().damage, 'storm', (s.x0 + s.x1) / 2, s.seen, false);
@@ -349,11 +351,10 @@
 
   /* ---- Pendulum: the last crack stops the clock. Everything hangs where it was, in sepia, but her ---- */
 
-  var sand = 0;                     // steps until the glass has run back and can be turned again
   FIRE.timestop = function (T) {
     var h = T.hero;
-    if (sand > 0) { T.number(h.x, h.y - 34, 'THE SAND IS STILL FALLING', '#c9a44c'); return; }
-    sand = 480;
+    if (mine(current).sand > 0) { T.number(h.x, h.y - 34, 'THE SAND IS STILL FALLING', '#c9a44c'); return; }
+    mine(current).sand = 480;
     add({ kind: 'timestop', holds: true, max: 150 });
     T.ring({ x: h.x, y: h.y - 12, r: 6, grow: 7, life: 22, max: 22, colour: '#fff3b0' });
     T.flash('#ffd24d', 6); T.shake(3); T.sfx('timestop');
@@ -488,6 +489,7 @@
 
   // the glass that is still running back, by the second hand's slot
   function sandGauge(T) {
+    var sand = mine(T.owner()).sand;
     if (sand <= 0 || T.weapon().finisher !== 'timestop') return;
     var g = T.pen, f = 1 - sand / 480;
     g.fillStyle = '#3a3936'; g.fillRect(34, T.H - 27, 18, 2); g.fillStyle = '#ffd24d'; g.fillRect(34, T.H - 27, Math.round(18 * f), 2);
@@ -498,10 +500,10 @@
 
   /* ---- the way in ---- */
 
-  function fire(name, T) { if (!FIRE[name]) return false; FIRE[name](T); return true; }
+  function fire(name, T) { if (!FIRE[name]) return false; current = T.owner(); FIRE[name](T); return true; }
   // a stroke of a shape the engine does not draw itself; and what a weapon adds to every stroke
   function swing(sw, n, T) {
-    var w = T.weapon();
+    var w = T.weapon(); current = T.owner();
     if (sw.shape === 'throw') {
       if (sw.finisher) { throwDisc(T, n, true, -0.3); throwDisc(T, n, true, 0); throwDisc(T, n, true, 0.3); } else throwDisc(T, n, false, 0);
       return true;
@@ -511,16 +513,15 @@
     return false;
   }
   function step(T) {
-    stormWake(T);
-    if (sand > 0) sand--;
-    for (var k = fx.length - 1; k >= 0; k--) { var s = fx[k]; s.t++; if (!STEP[s.kind] || !STEP[s.kind](s, T)) fx.splice(fx.indexOf(s), 1); }
+    T.owners().forEach(function (o) { T.use(o); current = o; stormWake(T); if (mine(o).sand > 0) mine(o).sand--; });
+    for (var k = fx.length - 1; k >= 0; k--) { var s = fx[k]; T.use(s.owner); current = s.owner; s.t++; if (!STEP[s.kind] || !STEP[s.kind](s, T)) fx.splice(fx.indexOf(s), 1); }
     // whatever a toll has stopped sees stars
     var list = T.creatures();
     for (var j = 0; j < list.length; j++) { var c = list[j]; if (!c.dying && c.status.stun > 0 && T.tick() % 5 === 0) { var a = T.tick() * 0.2; bit(T, c.x + Math.cos(a) * 7, c.y - c.h - 5 + Math.sin(a) * 2, 0, 0, 10, '#efd27a', 1, 0); } }
   }
-  function draw(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (DRAW[fx[k].kind]) DRAW[fx[k].kind](fx[k], T, T.pen, cx, cy); }
-  function over(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (OVER[fx[k].kind]) OVER[fx[k].kind](fx[k], T, T.pen, cx, cy); sandGauge(T); }
-  function clear(wholly) { fx.length = 0; lastX = null; wasDashing = false; if (wholly) sand = 0; }
+  function draw(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (DRAW[fx[k].kind]) { T.use(fx[k].owner); DRAW[fx[k].kind](fx[k], T, T.pen, cx, cy); } }
+  function over(T) { var cx = Math.round(T.cam.x), cy = Math.round(T.cam.y); for (var k = 0; k < fx.length; k++) if (OVER[fx[k].kind]) { T.use(fx[k].owner); OVER[fx[k].kind](fx[k], T, T.pen, cx, cy); } T.use(T.me()); sandGauge(T); }
+  function clear(wholly) { fx.length = 0; Object.keys(per).forEach(function (k) { per[k].lastX = null; per[k].wasDashing = false; if (wholly) per[k].sand = 0; }); }
   function count(kind) { var n = 0; for (var k = 0; k < fx.length; k++) if (!kind || fx[k].kind === kind) n++; return n; }
 
   window.Arms = { stopped: stopped, fire: fire, swing: swing, step: step, draw: draw, over: over, clear: clear, count: count, FIRE: FIRE, STEP: STEP, DRAW: DRAW, OVER: OVER, add: add, shot: shot, bit: bit, groundAt: groundAt };

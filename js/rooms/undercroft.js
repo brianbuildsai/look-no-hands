@@ -51,8 +51,17 @@
       return flipped[key] || (flipped[key] = P.flipH(img));
     }
 
-    var seed = 36, rng = seed;
-    function random() { rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296; }
+    /* Two streams of chance. Everything the simulation decides draws on `rng`, which is seeded when a run begins, so
+       that two machines given the same seed and the same buttons play the same game. Anything asked for while the
+       picture is being drawn comes from `fuzz` instead, which is nobody's business: a machine that draws twice as
+       often must not get a different game. The switch is made by render() itself, so drawing code cannot get it wrong. */
+    var seed = 36, rng = seed, fuzz = 0x9e3779b9, drawing = false;
+    function random() {
+      if (drawing) { fuzz = (fuzz * 1664525 + 1013904223) >>> 0; return fuzz / 4294967296; }
+      if (rngTrace) rngTrace.push(String((new Error()).stack).split('\n').slice(2, 5).map(function (l) { return l.trim().replace(/^at /, '').replace(/ ?[(]?https?:.*[/]/, ' ').replace(/[)]$/, ''); }).join(' < '));
+      rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296;
+    }
+    var rngTrace = null;   // a harness may ask who drew on the simulation's stream during a step
 
     var view = { x: 0, y: 0, w: W, h: H, scale: 1 };
     var state = 'title', tick = 0, accumulator = 0, cost = 0, sheetMode = false;
@@ -71,7 +80,19 @@
       v: 'cast', V: 'cast', i: 'cast', I: 'cast', q: 'swap', Q: 'swap',
       Enter: 'start', Escape: 'pause', p: 'pause', P: 'pause'
     };
-    var keysDown = {}, queued = {}, pressed = {}, touches = {};
+    var keysDown = {}, queued = {}, touches = {};
+    /* Buttons as data. The keyboard and the touch zones fill `keysDown` and `queued` whenever they like; once a step
+       they are sampled into two small numbers, what is held and what was pressed since the last step, and the
+       simulation reads only those (`pad`). One player's pad comes from here; another's can come down a wire. */
+    var BUTTONS = ['left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'cast', 'swap', 'start', 'pause'], BIT = {};
+    BUTTONS.forEach(function (name, k) { BIT[name] = 1 << k; });
+    var pad = { held: 0, pressed: 0 };
+    function sample() {
+      var h = 0, pr = 0, k;
+      for (k = 0; k < BUTTONS.length; k++) { if (keysDown[BUTTONS[k]]) h |= 1 << k; if (queued[BUTTONS[k]]) pr |= 1 << k; }
+      queued = {};
+      return { held: h, pressed: pr };
+    }
 
     function focused() { return document.activeElement === env.stage; }
     document.addEventListener('keydown', function (e) {
@@ -159,10 +180,10 @@
 
     // once a step: what was pressed since the last one
     function poll() {
-      pressed = queued; queued = {};
+      pad = sample(); if (cur) cur.pad = pad;
     }
-    function down(name) { return !!keysDown[name]; }
-    function hit(name) { return !!pressed[name]; }
+    function down(name) { return (pad.held & BIT[name]) !== 0; }
+    function hit(name) { return (pad.pressed & BIT[name]) !== 0; }
 
     /* ---- the world ----
        Floors come from world.js: a grid of tiles (0 air, 1 stone, 2 a ledge
@@ -262,13 +283,16 @@
 
     var DASH_FRAMES = 12, DASH_SPEED = 4.2, DASH_COOLDOWN = 22, airJumped = 0;
 
-    var hero = {
-      x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
-      onGround: false, coyote: 0, buffer: 0, drop: 0, jumping: false,
-      anim: 'idle', frame: 0, clock: 0, landed: 0,
-      hp: 6, maxHp: 6, energy: 3, maxEnergy: 3,
-      act: null, combo: 0, queued: false, dashCd: 0, airDash: true, invuln: 0, flash: 0, alive: true, deadFor: 0, hits: 0
-    };
+    function freshHero() {
+      return {
+        x: 40, y: 0, vx: 0, vy: 0, w: 10, h: 22, dir: 1,
+        onGround: false, coyote: 0, buffer: 0, drop: 0, jumping: false,
+        anim: 'idle', frame: 0, clock: 0, landed: 0,
+        hp: 6, maxHp: 6, energy: 3, maxEnergy: 3,
+        act: null, combo: 0, queued: false, dashCd: 0, airDash: true, invuln: 0, flash: 0, alive: true, deadFor: 0, hits: 0
+      };
+    }
+    var hero = freshHero();
 
     function spawnHero() {
       hero.x = level.spawn.x; hero.y = level.spawn.y; hero.vx = 0; hero.vy = 0; hero.dir = 1;
@@ -499,24 +523,33 @@
       if (hero.landed > 0) hero.landed--;
       if (hero.alive) touchHazards();
       if (shieldUp > 0) shieldUp--;
-      if (level.fountain && !level.fountain.used && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { level.fountain.used = true; hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; afflictions.soak = 0; afflictions.jam = 0; afflictions.cut = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('font'); }
+      if (level.fountain && !(level.fountain.drank && level.fountain.drank[cur.index]) && Math.abs(hero.x - level.fountain.x) < 12 && Math.abs(hero.y - level.fountain.y) < 8 && hero.hp < hero.maxHp) { (level.fountain.drank || (level.fountain.drank = {}))[cur.index] = true; level.fountain.used = players.every(function (Q) { return Q.gone || level.fountain.drank[Q.index]; }); hero.hp = hero.maxHp; afflictions.burn = 0; afflictions.poison = 0; afflictions.chill = 0; afflictions.soak = 0; afflictions.jam = 0; afflictions.cut = 0; spark(hero.x, hero.y - 14, '#ffdc9a', 30, 1.8, 40, -0.02); number(hero.x, hero.y - 34, 'WHOLE', '#ffdc9a'); sfx('font'); }
       if (hero.y > level.rows * TILE + 40) { hero.hp = 0; hero.alive = false; hero.act = { kind: 'death', ticks: 80 }; hero.deadFor = 80; lastHurtBy = 'fall'; }
       if (!level.portal && hero.alive && hero.onGround && !level.locked && Math.abs(hero.x - level.door.x) < 7 && Math.abs(hero.y - level.door.y) < 4 && transition === 0) { transition = 1; sfx('door'); }
       stepPortal(); stepPerks();
-      if (hero.act && hero.act.kind === 'death' && hero.deadFor > 110) {
-        if (flames > 1) {
-          flames--;
-          while (run.stage > 0 && STAGES[run.stage - 1].floor === STAGES[run.stage].floor) run.stage--;
-          loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
-          particles.length = 0; afterimages.length = 0; numbers.length = 0; hero.invuln = 120;
-          sfx('flamelost');
-          banner = { t: 0, text: flames === 1 ? 'The last flame' : 'A flame goes out', sub: 'YOU RISE AT THE HEAD OF THE FLOOR', colour: '#ffb347' };
-        } else endRun(false);
-      }
       if (!hero.act) animateHero();
       if (tick % 3 === 0 && hero.alive) ember(hero.x - hero.dir * 8, hero.y - 8);
     }
 
+    // when everyone who is playing has fallen: a flame is spent and the floor begins again, or the run is over
+    function stepFallen() {
+      var all = players.filter(function (Q) { return !Q.gone; });
+      if (!all.length || !all.every(function (Q) { return Q.hero.act && Q.hero.act.kind === 'death' && Q.hero.deadFor > 110; })) return;
+      if (flames > 1) {
+        flames--;
+        while (run.stage > 0 && STAGES[run.stage - 1].floor === STAGES[run.stage].floor) run.stage--;
+        loadSection(); placeCreatures(); spawnAll();
+        particles.length = 0; afterimages.length = 0; numbers.length = 0; players.forEach(function (Q) { Q.hero.invuln = 120; });
+        sfx('flamelost');
+        banner = { t: 0, text: flames === 1 ? 'The last flame' : 'A flame goes out', sub: players.length > 1 ? 'YOU RISE TOGETHER AT THE HEAD OF THE FLOOR' : 'YOU RISE AT THE HEAD OF THE FLOOR', colour: '#ffb347' };
+      } else endRun(false);
+    }
+    // everyone to the stage's beginning, side by side; whoever was down is up again
+    function spawnAll() {
+      var was = cur;
+      players.forEach(function (Q) { if (Q.gone) return; use(Q); var wasDown = !hero.alive; spawnHero(); if (wasDown && company() > 1) { hero.hp = Math.max(1, Math.ceil(hero.maxHp / 2)); number(hero.x, hero.y - 34, 'UP AGAIN', '#ffdc9a'); } hero.x += Q.index * 14; Q.took = false; });
+      use(players[me] && !players[me].gone ? players[me] : was); stepCamera(true); use(was);
+    }
     // spikes and the element's hazard, where the body touches them
     var onIce = false, slick = false;
     function touchHazards() {
@@ -568,12 +601,27 @@
     var ROARS = { golem: 'roargolem', wyrm: 'roarwyrm', herald: 'roarherald', thornmother: 'roarthorn', orrery: 'roarorrery', lightless: 'roarlightless', bellkeeper: 'roarbell', regulator: 'roarclock', reflected: 'roarglass' };
     var creatures = [], projectiles = [], zaps = [], kills = 0, actorSprites = AC.build(), guardianSprites = GD.build(), hazards = [], telegraphs = [], won = false, boss = null;
     var ctx = {
-      hero: hero, tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
+      tileAt: tileAt, moveBody: moveBody, spark: spark, random: random,
       particle: function (q) { particles.push(q); },
       // what a guardian lights while it is stepped is held until it is stepped again, however many pictures are drawn between
       light: function (x, y, r, str) { stepLit.lights.push({ x: x, y: y, r: r, s: str || 1 }); },
       hurtHero: function (fromX, damage, e) { var took = hurtHero(fromX, damage, e ? e.kind : ''); if (took && mods.thorns && e) wound(e, mods.thorns, hero.x, null); return took; },
       afflict: function (elementName) { afflict(elementName); },
+      // a box that wounds whoever stands in it (every hero is tried); true if anybody was in it, hurt or not
+      touch: function (box, damage, elementName, e, fromX) {
+        var was = cur, any = false;
+        for (var k = 0; k < players.length; k++) {
+          var Q = players[k]; if (Q.gone || !Q.hero.alive) continue;
+          use(Q);
+          if (!overlaps(heroHurtBox(), box)) continue;
+          any = true;
+          if (hurtHero(fromX === undefined ? (box.x0 + box.x1) / 2 : fromX, damage || 1, e ? e.kind : '', null)) { if (elementName) afflict(elementName); if (mods.thorns && e) wound(e, mods.thorns, hero.x, null); }
+        }
+        use(was);
+        return any;
+      },
+      // everybody who is up, for what needs to look at all of them (read, do not keep)
+      heroes: function () { return players.filter(function (Q) { return !Q.gone && Q.hero.alive; }).map(function (Q) { return Q.hero; }); },
       projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (Math.abs(p.x - hero.x) < W) sfx('shot'); },
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
       hazard: function (h) { hazards.push(h); },
@@ -586,7 +634,7 @@
       crescent: function (x, y, dir, r, colour, life) { crescents.push({ x: x, y: y, dir: dir, r: r, colour: colour, life: life, max: life }); },
       shake: shake,
       count: function () { return creatures.length; },
-      summon: function (kind, x, y) { var e = AC.make(kind, x, y + 36, false, run.floor, random); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
+      summon: function (kind, x, y) { var e = sterner(AC.make(kind, x, y + 36, false, run.floor, random)); e.x = x; e.y = y; e.seen = true; creatures.push(e); spark(x, y, '#8fa3ff', 10, 1.5, 18, 0); },
       weaponId: function () { return weaponId; }, powerName: function () { return power; }, classId: function () { return classId; },
       blackout: function (on) { blackout = !!on; },
       glow: function (x, y, r, colour, alpha) { stepLit.glows.push({ x: x, y: y, r: r, colour: colour, alpha: alpha }); },
@@ -603,6 +651,7 @@
         if (t === 1 && hero.x + hero.w / 2 > tx * TILE && hero.x - hero.w / 2 < (tx + 1) * TILE && hero.y > ty * TILE && hero.y - hero.h < (ty + 1) * TILE) { hero.y = ty * TILE - 0.001; hero.vy = 0; }
       }
     };
+    function sterner(e) { if (company() > 1 && e && !e.sterner) { e.sterner = true; e.hp = e.maxHp = Math.round(e.maxHp * (e.boss ? 1.6 : 1.5)); } return e; }
     function placeCreatures() {
       creatures = []; projectiles = []; zaps = [];
       var rnd = WD.makeRandom(run.seed * 31 + run.floor * 7 + run.section);
@@ -610,12 +659,13 @@
       boss = null; hazards = []; telegraphs = []; blackout = false; stepLit.lights.length = 0; stepLit.glows.length = 0;
       placeChests(); placePerks();
       if (level.boss) { boss = GD.spawn(run.floor, level.arena, rnd, guardianFor(STAGES[run.stage])); creatures.push(boss); }
+      creatures.forEach(sterner);
     }
     function stepHazards() {
       var k, h;
       for (k = hazards.length - 1; k >= 0; k--) {
         h = hazards[k];
-        if (hero.alive && overlaps(heroHurtBox(), h)) { if (hurtHero((h.x0 + h.x1) / 2, h.damage, boss ? boss.kind : h.element)) afflict(h.element); }
+        for (var hq = 0; hq < players.length; hq++) { if (players[hq].gone || !players[hq].hero.alive) continue; use(players[hq]); if (overlaps(heroHurtBox(), h)) { if (hurtHero((h.x0 + h.x1) / 2, h.damage, boss ? boss.kind : h.element)) afflict(h.element); } }
         if (h.life % (h.fire ? 5 : 3) === 0) particles.push({ x: h.x0 + random() * (h.x1 - h.x0), y: h.y0 + random() * (h.y1 - h.y0), vx: 0, vy: -0.4 - random() * 0.6, life: 14, max: 14, colour: h.colour, size: random() < 0.4 ? 2 : 1, gravity: 0 });
         if (--h.life <= 0) hazards.splice(k, 1);
       }
@@ -624,7 +674,7 @@
       if (boss && !boss.dying && SND) SND.tension(0.4 + 0.6 * (1 - boss.hp / boss.maxHp));
       if (boss && boss.dying === 60) {
         kills++; sfx('boom'); if (SND) SND.tension(0);
-        hero.hp = hero.maxHp;
+        players.forEach(function (Q) { if (Q.hero.alive) Q.hero.hp = Q.hero.maxHp; });
         spark(boss.x, boss.y - boss.h / 2, '#ffffff', 60, 3, 50, 0.02); spark(boss.x, boss.y - boss.h / 2, element.glow, 40, 2.4, 60, -0.01); shake(6);
         if (run.stage >= STAGES.length - 1) { level.locked = false; banner = { t: 0, text: 'The way up is open', sub: 'THERE IS NOTHING LEFT BELOW YOU', colour: '#ffdc9a' }; }   // the last of them: nothing to choose, only the door
         else offerRewards(boss.x);
@@ -681,38 +731,62 @@
       var k, e;
       for (k = creatures.length - 1; k >= 0; k--) {
         e = creatures[k];
-        if ((Math.abs(e.x - hero.x) > W * 1.2 || Math.abs(e.y - hero.y) > H * 0.9) && !e.seen) continue;   // asleep until she is near
+        var aim = targetFor(e);
+        if ((Math.abs(e.x - aim.hero.x) > W * 1.2 || Math.abs(e.y - aim.hero.y) > H * 0.9) && !e.seen) continue;   // asleep until somebody is near
+        use(aim);
         if (e.boss) GD.step(e, ctx); else AC.step(e, ctx);
-        if (e.boxes && e.boxes.length && hero.alive && !e.hitHero) {
-          var hb = heroHurtBox();
-          for (var bi = 0; bi < e.boxes.length; bi++) {
-            if (!overlaps(hb, e.boxes[bi])) continue;
-            if (hurtHero(e.x, e.boxes[bi].damage || 1, e.kind, e)) { e.hitHero = true; afflict(e.boxes[bi].element || e.element); if (mods.thorns) wound(e, mods.thorns, hero.x, null); }
-            break;
+        // `hitHero` is the creature's own word for "this blow has landed"; with company it is kept for each hero apart
+        if (!e.hitHero) e.hitWho = 0;
+        if (e.boxes && e.boxes.length) {
+          for (var pk = 0; pk < players.length; pk++) {
+            var Q = players[pk];
+            if (Q.gone || !Q.hero.alive || (e.hitWho & (1 << pk))) continue;
+            use(Q);
+            var hb = heroHurtBox();
+            for (var bi = 0; bi < e.boxes.length; bi++) {
+              if (!overlaps(hb, e.boxes[bi])) continue;
+              if (hurtHero(e.x, e.boxes[bi].damage || 1, e.kind, e)) { e.hitWho |= 1 << pk; e.hitHero = true; afflict(e.boxes[bi].element || e.element); if (mods.thorns) wound(e, mods.thorns, hero.x, null); }
+              break;
+            }
           }
         }
-        if (e.dying === 2 && !e.boss) { kills++; if (klass.dash === 'blink') { hero.airDash = true; hero.dashCd = 0; } if (e.elder) dropPickup(rollLoot(random, true), e.x, e.y - 10); else if (random() < 0.14) dropPickup({ kind: 'heart', id: 'heart' }, e.x, e.y - 8); if (weapon.ability === 'reap') { reaped++; if (reaped % 3 === 0 && hero.hp < hero.maxHp) { hero.hp++; number(hero.x, hero.y - 34, '+1', '#ff3b4e'); } } spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
+        if (e.dying === 2 && !e.boss) { kills++; players.forEach(function (Q) { if (Q.klass.dash === 'blink') { Q.hero.airDash = true; Q.hero.dashCd = 0; } }); if (e.elder) dropPickup(rollLoot(random, true), e.x, e.y - 10); else if (random() < 0.14) dropPickup({ kind: 'heart', id: 'heart' }, e.x, e.y - 8); if (weapon.ability === 'reap') { reaped++; if (reaped % 3 === 0 && hero.hp < hero.maxHp) { hero.hp++; number(hero.x, hero.y - 34, '+1', '#ff3b4e'); } } spark(e.x, e.y - e.h / 2, WD.ELEMENTS.filter(function (el) { return el.name === e.element; })[0].glow, 18, 2, 30, 0.02); spark(e.x, e.y - e.h / 2, '#ffffff', 6, 1.2, 12, 0); hitstop(4); shake(2); if (e.elder) number(e.x, e.y - e.h - 8, 'ELDER', '#e9e6df'); if (hero.energy < hero.maxEnergy && kills % 3 === 0) { hero.energy++; number(hero.x, hero.y - 32, '+', '#ffb347'); } }
         if (e.dying > (e.boss ? 90 : 22)) creatures.splice(k, 1);
         if (e.y > level.rows * TILE + 40) creatures.splice(k, 1);
       }
       for (k = projectiles.length - 1; k >= 0; k--) {
         var p = projectiles[k];
         if (p.steer) p.steer(p, ctx);
-        if (p.seek) { var dx = hero.x - p.x, dy = hero.y - 11 - p.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)); p.vx += dx / len * p.seek; p.vy += dy / len * p.seek; }
+        if (p.seek) { var sk = nearestPlayer(p.x, p.y).hero, dx = sk.x - p.x, dy = sk.y - 11 - p.y, len = Math.max(1, Math.sqrt(dx * dx + dy * dy)); p.vx += dx / len * p.seek; p.vy += dy / len * p.seek; }
         p.x += p.vx; p.y += p.vy; p.vy += p.gravity || 0;
         if (tick % 2 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 8, max: 8, colour: p.colour, size: 1, gravity: 0 });
         var gone = --p.life <= 0 || (!p.wave && tileAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)) === 1) || (p.wave && tileAt(Math.floor((p.x + p.vx * 3) / TILE), Math.floor(p.y / TILE)) === 1);
         var struckStone = gone && p.life > 0;
         var pbox = { x0: p.x - p.size / 2, x1: p.x + p.size / 2, y0: p.y - p.size / 2, y1: p.y + p.size / 2 };
-        if (p.from === 'enemy' && hero.alive && overlaps(heroHurtBox(), pbox)) {
+        if (p.from === 'enemy') for (var hk = 0; hk < players.length; hk++) {
+          var HQ = players[hk]; if (HQ.gone || !HQ.hero.alive) continue;
+          use(HQ);
+          if (!overlaps(heroHurtBox(), pbox)) continue;
           if (hurtHero(p.x, p.damage, p.cause ? p.cause : p.wave ? 'wave' : p.seek ? 'beam' : p.cloud ? 'spore' : 'shard')) afflict(p.element);
-          gone = true;
+          gone = true; break;
         }
+        if (p.from === 'hero') use(players[p.owner || 0]);
         if (p.from === 'hero' && touchCreatures(pbox, p.damage, p.element, p.x - p.vx * 4, p.struck || (p.struck = []), !p.pierce) && !p.pierce) gone = true;
         if (gone) { if (p.land && struckStone) p.land(p); spark(p.x, p.y, p.colour, 5, 1, 12, 0); projectiles.splice(k, 1); }
       }
       for (k = zaps.length - 1; k >= 0; k--) if (--zaps[k].life <= 0) zaps.splice(k, 1);
     }
+    // who a creature goes for: whoever is nearer, and it does not change its mind for a few pixels
+    function company() { var n = 0; for (var k = 0; k < players.length; k++) if (!players[k].gone) n++; return n; }
+    function firstPlayer() { for (var k = 0; k < players.length; k++) if (!players[k].gone) return players[k]; return players[0]; }
+    function nearestPlayer(x, y, keep) {
+      var best = null, bd = 1e9;
+      for (var k = 0; k < players.length; k++) { var Q = players[k]; if (Q.gone || !Q.hero.alive) continue; var dx = Q.hero.x - x, dy = Q.hero.y - y, d = Math.sqrt(dx * dx + dy * dy) - (Q === keep ? 32 : 0); if (d < bd) { bd = d; best = Q; } }
+      return best || firstPlayer();
+    }
+    function targetFor(e) { var Q = nearestPlayer(e.x, e.y, e.aimed); e.aimed = Q; return Q; }
+    // whatever a hero has just let fly is hers: it is she who is credited when it lands
+    function claim(index) { for (var k = projectiles.length - 1; k >= 0 && projectiles[k].owner === undefined; k--) if (projectiles[k].from === 'hero') projectiles[k].owner = index; else projectiles[k].owner = -1; }
     // something thrown touches whatever it has not touched before; returns how many it touched
     function touchCreatures(pbox, damage, elementName, fromX, seen, one) {
       var n = 0;
@@ -1058,19 +1132,24 @@
 
     // what arms.js is given to work with
     function kit() {
-      return armsKit || (armsKit = { hero: hero, cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
+      return armsKit || (armsKit = liveHero({ cam: cam, pen: fpen, W: W, H: H, ctx: ctx, tileAt: tileAt, strike: strike, touch: touchCreatures, wound: wound, boxesOf: boxesOf, nearest: nearestCreature, swingBox: swingBox,
         creatures: function () { return creatures; }, projectiles: function () { return projectiles; }, mods: function () { return mods; }, weapon: function () { return weapon; }, tick: function () { return tick; }, random: random,
-        spark: spark, particle: function (p) { particles.push(p); }, projectile: function (p) { projectiles.push(p); }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
+        spark: spark, particle: function (p) { particles.push(p); }, projectile: function (p) { p.owner = cur ? cur.index : 0; projectiles.push(p); },
+        owner: function () { return cur ? cur.index : 0; }, use: function (k) { if (players[k] && !players[k].gone) use(players[k]); }, owners: function () { return players.filter(function (Q) { return !Q.gone; }).map(function (Q) { return Q.index; }); }, me: function () { return me; }, ring: function (o) { rings.push(o); }, crescent: function (o) { crescents.push(o); }, zap: function (o) { zaps.push(o); },
         blocked: blocked, heroShape: function (colour, alpha) { var nm = hero.anim in sprites.warden ? hero.anim : 'idle', img = facing('warden', nm, Math.min(hero.frame, sprites.warden[nm].length - 1), hero.dir); fpen.globalAlpha = alpha; fpen.drawImage(P.silhouette(img, colour), Math.round(hero.x) - P.warden.anchor.x - Math.round(cam.x), Math.round(hero.y) - P.warden.anchor.y - Math.round(cam.y)); fpen.globalAlpha = 1; },
-        light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text });
+        light: light, glow: glow, shake: shake, hitstop: hitstop, flash: function (colour, life) { flash = { colour: colour, life: life }; }, sfx: sfx, number: number, text: text }));
     }
-    function stepWeapons() {
-      var k, b, t;
-      runDelayed();
+    // once a step, for the room: the lights and rings anybody's weapon has left, and everything in arms.js (each effect stepped as its owner)
+    function stepSharedFx() {
+      var k;
       if (AR) AR.step(kit());
       for (k = pillars.length - 1; k >= 0; k--) if (--pillars[k].life <= 0) pillars.splice(k, 1);
       for (k = rings.length - 1; k >= 0; k--) { rings[k].r += rings[k].grow; if (--rings[k].life <= 0) rings.splice(k, 1); }
       for (k = spikes.length - 1; k >= 0; k--) if (--spikes[k].life <= 0) spikes.splice(k, 1);
+    }
+    function stepWeapons() {
+      var k, b, t;
+      runDelayed();
       if (lash && --lash.life <= 0) lash = null;
       // the flock: each light keeps with the others, wheels, and turns toward what she faces
       for (k = flock.length - 1; k >= 0; k--) {
@@ -1123,8 +1202,12 @@
       }
       for (k = 0; k < rings.length; k++) { b = rings[k]; fpen.globalAlpha = b.life / b.max; fpen.strokeStyle = b.colour; fpen.lineWidth = 2; fpen.beginPath(); fpen.ellipse(Math.round(b.x) - cx, Math.round(b.y) - cy, b.r, b.r * 0.3, 0, 0, 6.2832); fpen.stroke(); fpen.globalAlpha = 1; }
       for (k = 0; k < spikes.length; k++) { b = spikes[k]; var up = Math.sin(Math.min(1, (b.max - b.life) / 6) * Math.PI / 2) * (b.life < 8 ? b.life / 8 : 1), hh = Math.round(30 * up), sx = Math.round(b.x) - cx, sy = Math.round(b.y) - cy; fpen.fillStyle = '#9fd8ff'; fpen.beginPath(); fpen.moveTo(sx - 6, sy); fpen.lineTo(sx, sy - hh); fpen.lineTo(sx + 6, sy); fpen.fill(); fpen.fillStyle = '#e6f6ff'; fpen.beginPath(); fpen.moveTo(sx - 2, sy); fpen.lineTo(sx, sy - hh); fpen.lineTo(sx + 1, sy); fpen.fill(); light(b.x, b.y - 12, 22, 0.6); }
-      // the whip: a living curve from the hand, cracking at its end
       if (AR) AR.draw(kit());
+    }
+    // what follows one hero: her lash, her ribbon, her drops, her flock
+    function drawOwnFx() {
+      var cx = Math.round(cam.x), cy = Math.round(cam.y), k, b;
+      // the whip: a living curve from the hand, cracking at its end
       if (lash) { var lc = weapon.lash || ['#4e9a52', '#c5ff9a'], p = 1 - lash.life / lash.max, ext = Math.sin(Math.min(1, p * 1.6) * Math.PI / 2) * lash.reach, hx = Math.round(hero.x) + lash.dir * 8 - cx, hy = Math.round(hero.y) - 16 - cy; fpen.strokeStyle = lc[0]; fpen.lineWidth = 2; fpen.beginPath(); fpen.moveTo(hx, hy); for (var s2 = 1; s2 <= 12; s2++) { var f = s2 / 12; fpen.lineTo(hx + lash.dir * ext * f, hy + Math.sin(f * 7 - p * 12) * 6 * (1 - f) * (1 - p) - f * 4 + f * f * 8); } fpen.stroke(); fpen.fillStyle = lc[1]; fpen.fillRect(hx + lash.dir * ext - 1, hy + 3, 3, 3); if (lash.life === lash.max - 5) spark(hero.x + lash.dir * (8 + ext), hero.y - 12, lc[1], 8, 1.8, 12, 0); }
       // the flowing blade's ribbon, chrome with a blue edge
       if (ribbon.length >= 4) { for (var pass = 0; pass < 2; pass++) { fpen.strokeStyle = pass ? '#f4f8ff' : '#3d5bff'; fpen.lineWidth = pass ? 2 : 4; fpen.globalAlpha = pass ? 1 : 0.5; fpen.beginPath(); fpen.moveTo(ribbon[0] - cx, ribbon[1] - cy); for (k = 2; k < ribbon.length; k += 2) fpen.lineTo(ribbon[k] - cx, ribbon[k + 1] - cy); fpen.stroke(); } fpen.globalAlpha = 1; }
@@ -1191,7 +1274,7 @@
       for (k = flakes.length - 1; k >= 0; k--) if (--flakes[k].life <= 0) flakes.splice(k, 1);
       if (banner && ++banner.t > 110) banner = null;
       if (bell && --bell.life <= 0) bell = null;
-      slowmo = mods.sandglass && hero.alive && hero.hp <= 2;
+      if (mods.sandglass && hero.alive && hero.hp <= 2) slowmo = true;
     }
     function stepCeremony() { ceremony.t++; if (ceremony.t > 170 || ceremony.t > 60 && (hit('attack') || hit('jump') || hit('start'))) { ceremony = null; state = 'run'; } }
 
@@ -1202,7 +1285,7 @@
         bell = { life: 50, max: 50, m: 2 + Math.floor(random() * 4), n: 1 + Math.floor(random() * 3) };
         if (bell.m === bell.n) bell.m++;
         sfx('bell'); shake(3); flash = { colour: '#ffb347', life: 6 };
-        for (var k = 0; k < creatures.length; k++) { var c = creatures[k]; if (!c.dying && c.x > cam.x - 20 && c.x < cam.x + W + 20) { AC.hurt(c, 3, hero.x, ctx); if (c.boss) c.hp -= 0; number(c.x, c.y - c.h - 8, 3, '#ffb347'); } }
+        for (var k = 0; k < creatures.length; k++) { var c = creatures[k]; if (!c.dying && Math.abs(c.x - hero.x) < W / 2 + 20 && Math.abs(c.y - hero.y) < H) { AC.hurt(c, 3, hero.x, ctx); if (c.boss) c.hp -= 0; number(c.x, c.y - c.h - 8, 3, '#ffb347'); } }
       }
     }
     // Reiter's snowflake: a six-fold flake where the dash began, and frost on what is near
@@ -1311,10 +1394,10 @@
     function portalOpen() { return !level.locked && !(level.sanctuary && !level.taken); }
     function stepPortal() {
       nearPortal = false;
-      if (SND) { var hd = level.portal && portalOpen() && state === 'run' ? Math.sqrt(Math.pow(hero.x - level.door.x, 2) + Math.pow(hero.y - level.door.y, 2)) : 9999; SND.hum('portalhum', Math.max(0, 1 - hd / 260)); }
+      if (SND && cur === players[me]) { var hd = level.portal && portalOpen() && state === 'run' ? Math.sqrt(Math.pow(hero.x - level.door.x, 2) + Math.pow(hero.y - level.door.y, 2)) : 9999; SND.hum('portalhum', Math.max(0, 1 - hd / 260)); }
       if (!level.portal || !hero.alive || transition !== 0) return;
       var px = level.door.x, py = level.door.y - 16, open = portalOpen();
-      if (open && tick % 2 === 0) { var a = random() * 6.2832, r = 22 + random() * 10; particles.push({ x: px + Math.cos(a) * r, y: py + Math.sin(a) * r * 1.3, vx: -Math.cos(a) * r / 18 - Math.sin(a) * 0.8, vy: -Math.sin(a) * r * 1.3 / 18 + Math.cos(a) * 0.8, life: 18, max: 18, colour: random() < 0.4 ? '#ffffff' : element.glow, size: 1, gravity: 0 }); }
+      if (open && tick % 2 === 0 && cur === firstPlayer()) { var a = random() * 6.2832, r = 22 + random() * 10; particles.push({ x: px + Math.cos(a) * r, y: py + Math.sin(a) * r * 1.3, vx: -Math.cos(a) * r / 18 - Math.sin(a) * 0.8, vy: -Math.sin(a) * r * 1.3 / 18 + Math.cos(a) * 0.8, life: 18, max: 18, colour: random() < 0.4 ? '#ffffff' : element.glow, size: 1, gravity: 0 }); }
       if (open && Math.abs(hero.x - px) < 12 && Math.abs(hero.y - level.door.y) < 26) { nearPortal = true; if (hit('up') && !prompt) { transition = 1; sfx('portal'); flash = { colour: element.glow, life: 10 }; } }
       // the chambers she has stood in are drawn on her map
       if (level.grid) { var G = level.grid, ccx = Math.floor((hero.x / TILE - 1) / G.cw), ccy = Math.floor(((hero.y - 4) / TILE - 1) / G.ch); if (ccx >= 0 && ccy >= 0 && ccx < G.gw && ccy < G.gh) seenCells[ccy * G.gw + ccx] = true; }
@@ -1384,7 +1467,8 @@
       var mid = Math.max(A.left + 70, Math.min(A.right - 70, cx));
       level.plinths = pool.map(function (q, n) { return { x: mid + (n - (pool.length - 1) / 2) * 46, y: A.groundY }; });
       perks = pool.map(function (q, n) { rewarded[q.id] = true; return { relic: q, x: level.plinths[n].x, y: level.plinths[n].y, phase: n * 2.1, gone: 0, rise: 40 }; });
-      banner = { t: 0, text: 'It leaves three things', sub: 'ONE MAY BE TAKEN, AND THE DOOR WILL OPEN', colour: element.glow };
+      players.forEach(function (Q) { Q.took = false; });
+      banner = { t: 0, text: 'It leaves three things', sub: company() > 1 ? 'ONE EACH, AND THE DOOR WILL OPEN' : 'ONE MAY BE TAKEN, AND THE DOOR WILL OPEN', colour: element.glow };
     }
     function placePerks() {
       perks = []; nearPerk = null;
@@ -1402,20 +1486,22 @@
       var k, p;
       for (k = perks.length - 1; k >= 0; k--) {
         p = perks[k];
-        if (p.gone) { p.gone++; if (p.gone > 30) perks.splice(k, 1); continue; }
-        if (p.rise > 0) p.rise--;
+        if (p.gone) { if (cur === firstPlayer()) { p.gone++; if (p.gone > 30) perks.splice(k, 1); } continue; }
+        if (p.rise > 0 && cur === firstPlayer()) p.rise--;
         var r = rarity(p.relic.rarity), by = p.y - 30 + Math.sin(tick * 0.05 + p.phase) * 3;
-        if (tick % (r.rank >= 4 ? 2 : 4) === 0) { var a = random() * 6.2832; particles.push({ x: p.x + Math.cos(a) * 12, y: by + Math.sin(a) * 12, vx: -Math.cos(a) * 0.3, vy: -0.35 - random() * 0.3, life: 26, max: 26, colour: random() < 0.3 ? '#ffffff' : r.colour, size: 1, gravity: -0.004 }); }
-        if (!level.taken && hero.alive && Math.abs(hero.x - p.x) < 13 && Math.abs(hero.y - p.y) < 30 && (!nearPerk || Math.abs(hero.x - p.x) < Math.abs(hero.x - nearPerk.x))) nearPerk = p;
+        if (tick % (r.rank >= 4 ? 2 : 4) === 0 && cur === firstPlayer()) { var a = random() * 6.2832; particles.push({ x: p.x + Math.cos(a) * 12, y: by + Math.sin(a) * 12, vx: -Math.cos(a) * 0.3, vy: -0.35 - random() * 0.3, life: 26, max: 26, colour: random() < 0.3 ? '#ffffff' : r.colour, size: 1, gravity: -0.004 }); }
+        if (!level.taken && !cur.took && hero.alive && Math.abs(hero.x - p.x) < 13 && Math.abs(hero.y - p.y) < 30 && (!nearPerk || Math.abs(hero.x - p.x) < Math.abs(hero.x - nearPerk.x))) nearPerk = p;
       }
       if (nearPerk && hit('up')) {
-        var took = nearPerk; level.taken = true; visited[run.stage] = true; perks.splice(perks.indexOf(took), 1);
-        perks.forEach(function (q) { q.gone = 1; spark(q.x, q.y - 30, '#5c5a56', 14, 1.4, 24, 0.02); });
+        var took = nearPerk; cur.took = true; perks.splice(perks.indexOf(took), 1);
+        // one each: what is left stays until everybody who is up has chosen
+        var waiting = players.some(function (Q) { return !Q.gone && Q.hero.alive && !Q.took; }) && perks.some(function (q) { return !q.gone; });
+        if (!waiting) { level.taken = true; visited[run.stage] = true; perks.forEach(function (q) { q.gone = 1; spark(q.x, q.y - 30, '#5c5a56', 14, 1.4, 24, 0.02); }); }
         if (took.relic.kind === 'power') { power = took.relic.id; number(hero.x, hero.y - 34, RL.POWERS[power].name.toUpperCase(), RL.POWERS[power].colour); spark(hero.x, hero.y - 14, RL.POWERS[power].colour, 40, 2.4, 36, -0.01); flash = { colour: RL.POWERS[power].colour, life: 8 }; sfx('cast' + RL.POWERS[power].element); }
         else takePickup({ kind: took.relic.kind === 'weapon' ? 'weapon' : 'relic', id: took.relic.id, rarity: took.relic.rarity });
-        if (level.boss) { level.locked = false; sfx('door'); }
+        if (level.boss && !waiting) { level.locked = false; sfx('door'); }
         rings.push({ x: took.x, y: took.y - 30, r: 4, grow: 3, life: 16, max: 16, colour: rarity(took.relic.rarity).colour });
-        banner = { t: 0, text: took.relic.name, sub: level.boss ? 'THE DOOR IS OPEN' : 'THE WAY ON IS OPEN', colour: rarity(took.relic.rarity).colour };
+        banner = { t: 0, text: took.relic.name, sub: waiting ? 'ONE IS LEFT FOR THE OTHER OF YOU' : level.boss ? 'THE DOOR IS OPEN' : 'THE WAY ON IS OPEN', colour: rarity(took.relic.rarity).colour };
         sfx('perk'); nearPerk = null;
       }
     }
@@ -1446,7 +1532,7 @@
     // when nothing is near enough to read, a word about what is on offer
     function drawPerkLabel() {
       if ((!level.sanctuary && !perks.length) || state !== 'run') return;
-      if (!nearPerk && !level.taken && perks.length && !perks[0].gone && !banner) text('THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
+      if (!nearPerk && !level.taken && perks.length && !perks[0].gone && !banner) text(cur && cur.took ? 'YOU HAVE CHOSEN. THE OTHER OF YOU HAS NOT' : company() > 1 ? 'THREE ARE OFFERED. ONE EACH MAY BE TAKEN' : 'THREE ARE OFFERED. ONE MAY BE TAKEN', W / 2, 40, '#8f8d88', 1, 'center');
     }
     // a line of the small type broken at spaces, two lines at most
     function wrapText(s, x, y, width) {
@@ -1556,7 +1642,7 @@
       afterimages.push({ img: P.silhouette(img, '#6b84ff'), x: x, y: y, dir: dir, life: 12 });
     }
     function shake(amount) { cam.shake = Math.max(cam.shake, amount); }
-    function hitstop(frames) { freeze = Math.max(freeze, frames); }
+    function hitstop(frames) { freeze = Math.max(freeze, players.length > 1 ? Math.min(2, frames) : frames); }
 
     function stepFx() {
       var k, p;
@@ -1842,6 +1928,15 @@
       text(pw.name, 4 + hero.maxEnergy * 6 + 11, 16, pw.colour);
       if (mods.shield) { fpen.fillStyle = shieldUp > 0 ? '#3a3936' : '#ffdc9a'; fpen.fillRect(4, 24, 8, 2); }
       if (state === 'run' || state === 'paused') drawHands();
+      if (state === 'run' || state === 'paused') for (k = 0; k < players.length; k++) {
+        var OQ = players[k]; if (OQ === cur || OQ.gone) continue;
+        var oh = OQ.hero, ox = Math.round(oh.x - cam.x), oy = Math.round(oh.y - cam.y) - 34, inside = ox > 8 && ox < W - 8 && oy > 18 && oy < H - 8, tag = 'P' + (k + 1), oc = oh.alive ? '#9fd8ff' : '#5c5a56', pip;
+        if (!inside) { ox = Math.max(14, Math.min(W - 14, ox)); oy = Math.max(30, Math.min(H - 44, oy)); }
+        text(tag, ox, oy - 8, oc, 1, 'center');
+        for (pip = 0; pip < oh.maxHp; pip++) { fpen.fillStyle = pip < oh.hp ? '#ff4f7b' : '#3a3936'; fpen.fillRect(ox - oh.maxHp * 2 + pip * 4, oy, 3, 2); }
+        if (!inside) { var ang = Math.atan2(oh.y - 34 - cam.y - oy, oh.x - cam.x - ox); fpen.fillStyle = oc; fpen.fillRect(Math.round(ox + Math.cos(ang) * 9) - 1, Math.round(oy - 3 + Math.sin(ang) * 9) - 1, 3, 3); fpen.fillRect(Math.round(ox + Math.cos(ang) * 6), Math.round(oy - 3 + Math.sin(ang) * 6), 1, 1); }
+        if (!oh.alive) text('DOWN', ox, oy + 5, '#ff4f7b', 1, 'center');
+      }
       for (k = 0; k < held.length; k++) { var rel = RL.BY_ID[held[k]]; var rc = rel && rel.element ? WD.ELEMENTS.filter(function (el) { return el.name === rel.element; })[0].glow : '#c4c1ba'; fpen.fillStyle = rc; fpen.fillRect(W - 8 - k * 6, 14, 4, 4); }
       if (state === 'title') drawTitle();
       if (state === 'choose') drawChoose();
@@ -1859,7 +1954,7 @@
       if (transition === 24) {
         run.stage++;
         if (run.stage >= STAGES.length) { run.stage = STAGES.length - 1; won = true; endRun(true); return true; }
-        loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
+        loadSection(); placeCreatures(); spawnAll();
         particles.length = 0; afterimages.length = 0; numbers.length = 0; if (AR) AR.clear();
       }
       if (transition >= 48) transition = 0;
@@ -1872,6 +1967,7 @@
     }
     function render() {
       if (sheetMode) return;
+      drawing = true;
       var sx = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0, sy = cam.shake > 0 ? (random() - 0.5) * cam.shake * 2 : 0;
       cam.x += sx; cam.y += sy;
       drawBackdrop();
@@ -1879,8 +1975,10 @@
       drawChestsAndPickups();
       drawHazards();
       drawCreatures();
-      drawHero();
-      drawWeaponFx();
+      var mine = cur, dk;
+      for (dk = 0; dk < players.length; dk++) if (players[dk] !== mine && !players[dk].gone) { use(players[dk]); drawHero(); drawOwnFx(); }
+      use(mine); drawHero(); drawOwnFx();
+      drawWeaponFx(); use(mine);
       drawCrescents();
       drawFx();
       drawDark(0.97 + 0.03 * Math.sin(tick * 0.4) + (hero.act && hero.act.kind === 'cast' ? 0.15 : 0));
@@ -1888,13 +1986,14 @@
       drawGlows();
       drawBoxes();
       drawFlash();
-      if (AR) AR.over(kit());
+      if (AR) { var overFor = cur; AR.over(kit()); use(overFor); }
       drawTransition();
       drawHud();
       drawMap(); drawChambers(); drawPortalHint(); drawPerkLabel();
       if (nearPortal && !prompt && state === 'run') text('E: STEP THROUGH', Math.round(level.door.x - cam.x), Math.round(level.door.y - cam.y) - 46, '#ffffff', 1, 'center');
       drawBossBar();
       if (!(prompt || nearPerk)) drawBanner();   // a banner never covers what she is reading
+      if (notice) { notice.t++; var nw = textWidth(notice.text, 1) + 12; fpen.fillStyle = 'rgba(8,8,14,0.82)'; fpen.fillRect(Math.round(W / 2 - nw / 2), 58, nw, 13); text(notice.text, W / 2, 62, (notice.t >> 4) % 2 ? '#9fd8ff' : '#e9e6df', 1, 'center'); if (notice.t > 360 && !(session && session.waiting())) notice = null; }
       drawInfoboxes();
       drawCeremony();
       // into the stage, scaled without smoothing, letterboxed in the dark
@@ -1906,6 +2005,7 @@
       pen.drawImage(frame, view.x, view.y, view.w, view.h);
       drawZones();
       cam.x -= sx; cam.y -= sy;
+      drawing = false;
     }
 
     /* ---- the run: its seed, its clock, its end, and what is kept between runs ---- */
@@ -1973,7 +2073,8 @@
       save();
       if (SND) SND.hum('portalhum', 0);
       if (wonRun) sfx('victory');
-      summary = { who: klass.name, won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
+      var mineAtEnd = players[me] || cur; store();
+      summary = { who: mineAtEnd.klass.name, company: company(), won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: mineAtEnd.held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[mineAtEnd.lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
       state = 'summary';
     }
     function stepSummary() {
@@ -2073,39 +2174,151 @@
       text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
       text('C OR L DASH   V OR I CAST   E OR UP TAKES   Q CHANGES WEAPON', W / 2, 170, '#8f8d88', 1, 'center');
       text('ENTER TO CHOOSE WHO GOES', W / 2, 180, '#8f8d88', 1, 'center');
+      if (NET && window.UndercroftWire) text('OR GO DOWN TOGETHER: HOST OR JOIN, ON THIS PAGE', W / 2, 194, '#9fd8ff', 1, 'center');
     }
 
     /* ---- the loop and the room's wiring ---- */
 
+    /* ---- who is playing ----
+       Everything that belongs to one hero (the body, the class and its frames, hands, items, power, afflictions, the
+       weapon effects that follow her, what she stands next to, her buttons) lives in loose variables above, because
+       that is how a one-hero game was written. A player is a record of all of them. `use(P)` puts the loaded
+       player's away and takes P's out, so every function above works on whoever is loaded, unchanged. One player
+       is simply a list of one. Outside step() the local player (`me`) is always the one loaded. */
+    var players = [], me = 0, cur = null, roster = null, rosterMe = 0;
+    function store() {
+      var Q = cur; if (!Q) return;
+      Q.hero = hero; Q.classId = classId; Q.klass = klass; Q.sprites = sprites; Q.afflictions = afflictions;
+      Q.power = power; Q.held = held; Q.mods = mods; Q.casts = casts; Q.shieldUp = shieldUp;
+      Q.weaponId = weaponId; Q.weapon = weapon; Q.swings = swings; Q.hands = hands; Q.handIn = handIn; Q.swapT = swapT;
+      Q.ribbon = ribbon; Q.droplets = droplets; Q.flock = flock; Q.lash = lash; Q.delayed = delayed; Q.reaped = reaped; Q.hitCount = hitCount;
+      Q.airJumped = airJumped; Q.pounding = pounding; Q.onIce = onIce; Q.slick = slick;
+      Q.prompt = prompt; Q.nearPerk = nearPerk; Q.nearPortal = nearPortal; Q.lastHurtBy = lastHurtBy; Q.pad = pad;
+    }
+    function use(Q) {
+      if (Q === cur) return Q;
+      store(); cur = Q;
+      hero = Q.hero; classId = Q.classId; klass = Q.klass; sprites = Q.sprites; afflictions = Q.afflictions;
+      power = Q.power; held = Q.held; mods = Q.mods; casts = Q.casts; shieldUp = Q.shieldUp;
+      weaponId = Q.weaponId; weapon = Q.weapon; swings = Q.swings; hands = Q.hands; handIn = Q.handIn; swapT = Q.swapT;
+      ribbon = Q.ribbon; droplets = Q.droplets; flock = Q.flock; lash = Q.lash; delayed = Q.delayed; reaped = Q.reaped; hitCount = Q.hitCount;
+      airJumped = Q.airJumped; pounding = Q.pounding; onIce = Q.onIce; slick = Q.slick;
+      prompt = Q.prompt; nearPerk = Q.nearPerk; nearPortal = Q.nearPortal; lastHurtBy = Q.lastHurtBy; pad = Q.pad;
+      return Q;
+    }
+    // a new player: their own everything, at its beginnings
+    function makePlayer(index, who, powerId) {
+      var K = CL.CLASSES[who] ? who : 'warden';
+      return { index: index, hero: freshHero(), classId: K, klass: CL.CLASSES[K], sprites: { warden: P.hero.build(K) }, afflictions: { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0 },
+        power: powerId || 'emberwave', held: [], mods: RL.baseMods(), casts: 0, shieldUp: 0,
+        weaponId: 'shortsword', weapon: WP.WEAPONS.shortsword, swings: WP.MOVESETS.sword, hands: ['shortsword', null], handIn: 0, swapT: 0,
+        ribbon: [], droplets: [], flock: [], lash: null, delayed: [], reaped: 0, hitCount: 0, airJumped: 0, pounding: false, onIce: false, slick: false,
+        prompt: null, nearPerk: null, nearPortal: false, lastHurtBy: '', pad: { held: 0, pressed: 0 } };
+    }
+    function liveHero(table) { Object.defineProperty(table, 'hero', { get: function () { return hero; }, enumerable: true }); return table; }
+    liveHero(ctx);
+
     function pickClass(who) { if (CL.CLASSES[who]) { classId = who; klass = CL.CLASSES[who]; } return classId; }
     function begin() {
-      state = 'run';
-      run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; lastHurtBy = '';
-      held = []; casts = 0; shieldUp = 0; won = false; visited = {}; rewarded = {}; applyRelics();
-      hands = [null, null]; handIn = 0; swapT = 0; equip(klass.weapon); reaped = 0; hitCount = 0; ceremony = null; banner = null; bell = null; flock = []; droplets = []; pillars = []; rings = []; spikes = []; delayed = []; lash = null; if (AR) AR.clear(true);
-      loadSection(); placeCreatures(); spawnHero(); stepCamera(true);
+      state = 'run'; tick = 0; freeze = 0;
+      rng = (Math.imul(run.seed | 0, 2654435761) ^ 0x5bd1e995) >>> 0;
+      run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; slowmo = false;
+      won = false; visited = {}; rewarded = {}; ceremony = null; banner = null; bell = null; pillars = []; rings = []; spikes = []; if (AR) AR.clear(true);
+      // one player unless a session has said otherwise: a fresh record each, in their class, with its weapon in hand
+      var list = roster || [{ who: classId, power: power }];
+      me = roster ? Math.max(0, Math.min(list.length - 1, rosterMe)) : 0;
+      cur = null; players = list.map(function (r, k) { return makePlayer(k, r.who, r.power); });
+      players.forEach(function (Q) { use(Q); applyRelics(); hands = [null, null]; equip(klass.weapon); hero.hp = hero.maxHp; hero.energy = hero.maxEnergy; });
+      use(players[0]);
+      loadSection(); placeCreatures(); spawnAll();
+      use(players[me]);
       particles.length = 0; afterimages.length = 0; numbers.length = 0;
     }
 
-    function step() {
-      poll();
+    var hashF = new Float64Array(1), hashU = new Uint32Array(hashF.buffer);
+    var hashTrace = null;   // when a harness asks, every value that goes into the hash is kept, so that two copies can be compared value by value
+    function checksum() {
+      var h = 2166136261 >>> 0, k;
+      function mix(v) { if (hashTrace) hashTrace.push(+v || 0); hashF[0] = +v || 0; h = Math.imul(h ^ hashU[0], 16777619); h = Math.imul(h ^ hashU[1], 16777619); }
+      mix(tick); mix(rng); mix(run.stage); mix(flames); mix(freeze); mix(transition); mix(kills); mix(state === 'run' ? 1 : state === 'paused' ? 2 : state === 'ceremony' ? 3 : state === 'summary' ? 4 : 0);
+      store();
+      for (k = 0; k < players.length; k++) { var Q = players[k], hh = Q.hero; mix(hh.x); mix(hh.y); mix(hh.vx); mix(hh.vy); mix(hh.hp); mix(hh.energy); mix(hh.invuln); mix(hh.alive ? 1 : 0); mix(hh.act ? hh.act.ticks : -1); mix(Q.held.length); mix(Q.handIn); mix(Q.gone ? 1 : 0); }
+      for (k = 0; k < creatures.length; k++) { var e = creatures[k]; mix(e.x); mix(e.y); mix(e.hp); mix(e.dying); mix(e.attack ? e.attack.t : -1); mix(e.cooldown); }
+      for (k = 0; k < projectiles.length; k++) { mix(projectiles[k].x); mix(projectiles[k].y); }
+      for (k = 0; k < pickups.length; k++) { mix(pickups[k].x); mix(pickups[k].y); }
+      mix(creatures.length); mix(projectiles.length); mix(pickups.length); mix(hazards.length); mix(AR ? AR.count() : 0);
+      return h >>> 0;
+    }
+    /* ---- company over a wire (net.js) ----
+       net.js is told how to read the local buttons, begin a run with a roster, step with everybody's buttons, hash,
+       and what to do when the other side must be caught up or has gone. It is never told anything about the game. */
+    var NET = window.UndercroftNet || null, session = null, notice = null, scriptPad = null;
+    function record() {
+      store();
+      return { seed: run.seed, stage: run.stage, flames: flames, clock: clockSeconds, kills: kills, visited: JSON.parse(JSON.stringify(visited)), rewarded: JSON.parse(JSON.stringify(rewarded)),
+        players: players.map(function (Q) { return { who: Q.classId, power: Q.power, held: Q.held.slice(), hands: Q.hands.slice(), handIn: Q.handIn, gone: !!Q.gone }; }) };
+    }
+    // begin this stage again from a record: everybody whole at its head, the room as its seed makes it, chance seeded from where and when
+    function restore(rec, stepNo) {
+      run.seed = rec.seed; run.stage = rec.stage; flames = rec.flames; clockSeconds = rec.clock; kills = rec.kills; visited = rec.visited || {}; rewarded = rec.rewarded || {};
+      state = 'run'; tick = stepNo; freeze = 0; transition = 0; ceremony = null; banner = null; bell = null; slowmo = false; pillars = []; rings = []; spikes = []; if (AR) AR.clear(true);
+      rng = (Math.imul(run.seed | 0, 2654435761) ^ Math.imul(run.stage + 1, 40503) ^ Math.imul(stepNo | 0, 69069)) >>> 0;
+      cur = null; players = rec.players.map(function (r, k) { return makePlayer(k, r.who, r.power); });
+      players.forEach(function (Q, k) { var r = rec.players[k]; use(Q); held = r.held.slice(); applyRelics(); hands = r.hands.slice(); handIn = r.handIn; equip(hands[handIn] || klass.weapon); hero.hp = hero.maxHp; hero.energy = hero.maxEnergy; Q.gone = !!r.gone; });
+      use(firstPlayer()); loadSection(); placeCreatures(); spawnAll();
+      particles.length = 0; afterimages.length = 0; numbers.length = 0;
+      use(players[me] || firstPlayer());
+    }
+    var netGame = {
+      sample: function () { if (scriptPad) { var sp = scriptPad; scriptPad = { held: sp.held, pressed: 0 }; return sp; } return sample(); },
+      begin: function (config) { run.seed = config.seed; roster = config.roster; rosterMe = config.me; begin(); roster = null; },
+      step: function (pads) { step(pads); },
+      checksum: function () { return checksum(); },
+      record: record, restore: restore,
+      leave: function (index) { if (players[index]) { players[index].gone = true; store(); if (cur === players[index]) use(firstPlayer()); } },
+      notice: function (words) { notice = words ? { text: words, t: 0 } : null; },
+      ended: function () { return state === 'summary' || state === 'title' || state === 'choose'; }
+    };
+    function openSession(wire, opts) { if (!NET) return null; if (session) session.leave(); session = NET.create(netGame, wire, opts || {}); return session; }
+    var manual = false, probeHeld = [];   // a harness is stepping the game itself: the frame loop only draws
+
+    /* One step. `pads` is every player's buttons for this step when a session supplies them; otherwise there is one
+       player and the buttons are the local ones. Inside, the order never depends on who is sitting at this machine:
+       players are stepped first to last, the room is stepped as the first player, and only at the very end is the
+       local player loaded again, for the camera and for whatever is drawn. */
+    function anyHit(name) { for (var k = 0; k < players.length; k++) if (!players[k].gone && (players[k].pad.pressed & BIT[name])) return true; return false; }
+    function step(pads) {
+      if (!pads) poll();
       tick++;
       if (state === 'title') { stepTitle(); return; }
       if (state === 'choose') { stepChoose(); return; }
       if (state === 'summary') { stepSummary(); return; }
-      if (state === 'ceremony') { stepCeremony(); return; }
-      if (hit('pause')) state = state === 'paused' ? 'run' : 'paused';
-      if (state !== 'run') return;
+      var k;
+      for (k = 0; k < players.length; k++) players[k].pad = pads ? (pads[k] || { held: 0, pressed: 0 }) : (k === me ? pad : { held: 0, pressed: 0 });
+      pad = cur.pad;   // the loaded player's register must agree with their record before anybody is put away
+      use(firstPlayer()); pad = cur.pad;
+      if (state === 'ceremony') { if (anyHit('attack') || anyHit('jump') || anyHit('start')) pad = { held: 0, pressed: BIT.attack }; stepCeremony(); use(players[me]); return; }
+      if (anyHit('pause')) state = state === 'paused' ? 'run' : 'paused';
+      if (state !== 'run') { use(players[me]); return; }
       clockSeconds += STEP;
-      if (stepTransition()) { stepFx(); return; }
-      if (freeze > 0) { freeze--; return; }
-      stepHero();
-      stepWeapons();
-      stepItems();
-      stepAfflictions();
-      if (AR && AR.stopped()) { /* a weapon is holding the world still: only she moves */ }
-      else if (!slowmo || tick % 2 === 0) { stepLit.lights.length = 0; stepLit.glows.length = 0; stepCreatures(); stepHazards(); }
-      stepFx();
+      if (stepTransition()) { stepFx(); use(players[me]); return; }
+      if (freeze > 0) { freeze--; use(players[me]); return; }
+      slowmo = false;
+      for (k = 0; k < players.length; k++) {
+        if (players[k].gone) continue;
+        use(players[k]); pad = cur.pad;
+        stepHero(); stepWeapons(); stepItems(); stepAfflictions();
+        claim(k);
+      }
+      use(firstPlayer());
+      stepFallen();
+      if (state === 'run') {
+        stepSharedFx();
+        if (AR && AR.stopped()) { /* a weapon is holding the world still: only the heroes move */ }
+        else if (!slowmo || tick % 2 === 0) { stepLit.lights.length = 0; stepLit.glows.length = 0; stepCreatures(); stepHazards(); }
+        stepFx();
+      }
+      use(players[me] || firstPlayer());
       stepCamera(false);
     }
 
@@ -2126,6 +2339,67 @@
       });
     }
 
+
+    /* ---- the lobby: host a game or join one, beside the picture ----
+       Plain controls in the page, so that they can be read aloud, tabbed to and used on a phone. The code is found
+       by wire.js; what happens on the line once it is open is net.js's business. */
+    (function lobby() {
+      var box = env.room.querySelector('[data-undercroft-together]'), WIRE = window.UndercroftWire;
+      if (!box) return;
+      function find(sel) { return box.querySelector(sel); }
+      var who = find('[data-together-who]'), hostBtn = find('[data-together-host]'), joinBtn = find('[data-together-join]'), leaveBtn = find('[data-together-leave]'), startBtn = find('[data-together-start]'), copyBtn = find('[data-together-copy]'),
+        field = find('[data-together-code]'), status = find('[data-together-status]'), invite = find('[data-together-invite]'), codeOut = find('[data-together-codeout]'), joinField = find('[data-together-joinfield]');
+      if (!NET || !WIRE || !WIRE.supported()) { box.hidden = true; return; }
+      var handle = null, heart = null, link = '';
+      CL.ORDER.forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = CL.CLASSES[id].name; who.appendChild(o); });
+      who.value = CL.CLASSES[kept.klass] ? kept.klass : 'warden';
+      function myPower() { return kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)] || 'emberwave'; }
+      function say(words, bad) { status.textContent = words || ''; status.classList.toggle('is-bad', !!bad); }
+      function busy(on) { hostBtn.disabled = on; joinBtn.disabled = on; field.disabled = on; leaveBtn.hidden = !on; if (!on) { invite.hidden = true; startBtn.disabled = true; joinField.hidden = false; joinBtn.hidden = false; hostBtn.hidden = false; } }
+      function stop(words, bad) { if (heart) { clearInterval(heart); heart = null; } if (handle) { handle.close(); handle = null; } busy(false); say(words, bad); }
+      function opened(wire, asHost) {
+        var sess = openSession(wire, {
+          onchange: function (S) {
+            if (S.role === 'host' && S.state === 'lobby' && S.guest) { startBtn.disabled = false; say((CL.CLASSES[S.guest.who] ? CL.CLASSES[S.guest.who].name : 'Someone') + ' has joined you. Start when you are both ready.'); }
+            if (S.state === 'run' && !box.started) { box.started = true; if (handle && handle.done) handle.done(); say('Together. P or Esc pauses for both of you.' + (S.rtt ? ' About ' + Math.round(S.rtt) + ' ms apart.' : '')); try { env.stage.focus({ preventScroll: true }); } catch (e) { /* not fatal */ } }
+          },
+          onover: function (reason) { box.started = false; stop(reason === 'the run is over' ? 'That run is over. Host or join again for another.' : reason === 'you left' ? 'You left. The game goes on alone.' : reason === 'they left' || reason === 'the connection closed' ? 'The other of you has gone. You play on alone.' : reason, reason !== 'the run is over' && reason !== 'you left'); }
+        });
+        if (!sess) { stop('The game could not open a session.', true); return; }
+        if (asHost) { sess.host(); say('Someone is connecting\u2026'); } else { sess.join(who.value, myPower()); say('Connected. Waiting for the host to start.'); }
+        heart = setInterval(function () { if (session) session.beat(); }, 1000); sess.beat();
+      }
+      hostBtn.addEventListener('click', function () {
+        busy(true); joinField.hidden = true; joinBtn.hidden = true; say('Asking for a code\u2026');
+        handle = WIRE.host({
+          code: function (code) { link = location.origin + location.pathname + '?join=' + code; codeOut.textContent = code; invite.hidden = false; },
+          status: function (words) { say(words); }, error: function (words) { stop(words, true); },
+          wire: function (wire) { opened(wire, true); }
+        });
+      });
+      joinBtn.addEventListener('click', function () {
+        var code = WIRE.tidy(field.value); field.value = code;
+        if (code.length !== 6) { say('A code is six letters and numbers.', true); field.focus(); return; }
+        busy(true); hostBtn.hidden = true; say('Reaching the broker\u2026');
+        handle = WIRE.join(code, { status: function (words) { say(words); }, error: function (words) { stop(words, true); }, wire: function (wire) { opened(wire, false); } });
+      });
+      field.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); joinBtn.click(); } });
+      startBtn.addEventListener('click', function () {
+        if (!session || !session.start({ seed: chosenSeed().seed, who: who.value, power: myPower() })) say('Nobody has joined yet.', true);
+      });
+      leaveBtn.addEventListener('click', function () { if (session && session.S.state !== 'over') session.leave(); else stop('Closed.'); });
+      copyBtn.addEventListener('click', function () {
+        var done = function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy invite link'; }, 1600); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { say(link); }); else say(link);
+      });
+      who.addEventListener('change', function () { kept.klass = who.value; save(); pickClass(who.value); if (session && session.S.role === 'guest' && session.S.state === 'lobby') session.join(who.value, myPower()); });
+      // a tab put away stops drawing, and the other machine would wait for it: say pause first
+      document.addEventListener('visibilitychange', function () { if (document.hidden && session && session.active() && state === 'run') queued.pause = true; });
+      var asked = /[?&]join=([A-Za-z0-9]{4,8})/.exec(location.search);
+      if (asked) { field.value = WIRE.tidy(asked[1]); say('You were sent a code. Choose who you go down as, then Join.'); }
+    })();
+
+    cur = { index: 0 }; store(); players = [cur];
     loadSection();
     placeCreatures();
     spawnHero();
@@ -2151,8 +2425,17 @@
       },
       frame: function (time, dt) {
         var t0 = performance.now();
-        accumulator = Math.min(accumulator + Math.min(dt, 0.1), 0.25);
-        while (accumulator >= STEP) { step(); accumulator -= STEP; }
+        if (session && session.waiting() && session.S.stalled > 600) { var lp = sample(); if (lp.pressed & BIT.pause) session.leave(); else if (notice) notice.text = 'STILL WAITING. P OR ESC TO PLAY ON ALONE'; }
+        if (!manual) {
+          accumulator = Math.min(accumulator + Math.min(dt, 0.1), 0.25);
+          while (accumulator >= STEP) {
+            if (session && session.active()) { if (!session.advance()) { accumulator = Math.min(accumulator, STEP * 0.99); break; } }
+            else step();
+            accumulator -= STEP;
+          }
+          // fallen behind the other machine (a slow frame, a hidden tab): hurry, a step at a time
+          if (session && session.active() && session.ahead() > session.S.delay + 3) session.advance();
+        }
         render();
         cost = cost * 0.9 + (performance.now() - t0) * 0.1;
         if (tick % 30 === 0) env.live('cost', cost.toFixed(1));
@@ -2165,6 +2448,44 @@
       state: function () {
         return { state: state, tick: tick, hero: { x: hero.x, y: hero.y, vx: hero.vx, vy: hero.vy, dir: hero.dir, onGround: hero.onGround, anim: hero.anim, frame: hero.frame, hp: hero.hp, energy: hero.energy, act: hero.act ? hero.act.kind : null, combo: hero.combo, alive: hero.alive }, weapon: weaponId, fx: { flock: flock.length, droplets: droplets.length, pillars: pillars.length, spikes: spikes.length, crescents: crescents.length }, creatures: creatures.map(function (e) { return { kind: e.kind, hp: e.hp, x: Math.round(e.x), y: Math.round(e.y), state: e.state, dying: e.dying, elder: e.elder, status: e.status, anim: e.anim, frame: e.frame, attack: e.attack ? e.attack.def.name + ':' + e.attack.phase : null, boxes: e.boxes ? e.boxes.length : 0 }; }), kills: kills, projectiles: projectiles.length, afflictions: afflictions, particles: particles.length, freeze: freeze, cam: { x: cam.x, y: cam.y }, level: { cols: level.cols, rows: level.rows, element: element.name, door: level.door, relics: level.relics.length, lights: level.lights.length }, run: { seed: run.seed, floor: run.floor, section: run.section, seconds: Math.round(clockSeconds) }, transition: transition, locked: !!level.locked, hazards: hazards.length, telegraphs: telegraphs.length, won: won, view: view, cost: cost };
       },
+      // for the lockstep harness: take the stepping away from the frame loop; step once with exactly these buttons held; hash the state
+      manual: function (on) { manual = on !== false; accumulator = 0; return manual; },
+      advance: function (names, draw) {
+        var list = String(names || '').split(/[\s,]+/).filter(Boolean), want = {}, k;
+        for (k = 0; k < list.length; k++) want[list[k]] = true;
+        for (k in keysDown) if (keysDown[k] && !want[k]) keysDown[k] = false;
+        for (k in want) { if (!keysDown[k]) queued[k] = true; keysDown[k] = true; }
+        step(); if (draw) render();
+        return checksum();
+      },
+      checksum: function () { return checksum(); },
+      traced: function (names) { rngTrace = []; this.together(names, false); var out = rngTrace; rngTrace = null; return out; },
+      // a session over any wire, for the harness: open it as host or guest, start it, give it one chance to step with these buttons
+      netOpen: function (wire, role, who, power, opts) { var sess = openSession(wire, opts); if (!sess) return null; if (role === 'host') sess.host(); else sess.join(who || 'warden', power || 'emberwave'); return sess.S; },
+      netStart: function (seedValue, who, power) { return session ? session.start({ seed: seedValue, who: who || 'warden', power: power || 'emberwave' }) : false; },
+      netTick: function (names, draw) {
+        if (!session) return null;
+        var list = String(names || '').split(/[\s,]+/).filter(Boolean), held = 0, j; for (j = 0; j < list.length; j++) held |= BIT[list[j]] || 0;
+        scriptPad = { held: held, pressed: held & ~(probeHeld[9] || 0) }; probeHeld[9] = held;
+        var did = session ? session.advance() : false; if (draw) render();
+        return { did: did, step: session ? session.S.step : -1, state: session ? session.S.state : 'none', stalled: session ? session.S.stalled : 0, resyncs: session ? session.S.resyncs : 0 };
+      },
+      netBeat: function () { if (session) session.beat(); return true; },
+      netInfo: function () { return session ? JSON.parse(JSON.stringify(session.S)) : null; },
+      netLeave: function () { if (session) session.leave(); return true; },
+      record: function () { return record(); },
+      hashed: function () { hashTrace = []; checksum(); var out = hashTrace; hashTrace = null; return out; },
+      // company, for tests: a roster of { who, power } and which of them sits here; then begin() as usual. party(null) is one player again
+      party: function (list, mine) { roster = list || null; rosterMe = mine || 0; return roster ? roster.length : 1; },
+      // step once with these buttons for each player in turn ('right attack', 'left'); returns the hash
+      together: function (names, draw) {
+        var pads = [], k;
+        for (k = 0; k < players.length; k++) { var list = String((names && names[k]) || '').split(/[\s,]+/).filter(Boolean), held = 0, j; for (j = 0; j < list.length; j++) held |= BIT[list[j]] || 0; var was = probeHeld[k] || 0; pads.push({ held: held, pressed: held & ~was }); probeHeld[k] = held; }
+        step(pads); if (draw) render();
+        return checksum();
+      },
+      players: function () { store(); return players.map(function (Q) { return { index: Q.index, who: Q.classId, x: Q.hero.x, y: Q.hero.y, hp: Q.hero.hp, maxHp: Q.hero.maxHp, alive: Q.hero.alive, energy: Q.hero.energy, weapon: Q.weaponId, hands: Q.hands.slice(), held: Q.held.slice(), power: Q.power, hits: Q.hero.hits, gone: !!Q.gone, me: Q.index === me }; }); },
+      place: function (index, x, y) { var Q = players[index]; if (!Q) return null; Q.hero.x = x; if (y !== undefined) Q.hero.y = y; Q.hero.vx = 0; Q.hero.vy = 0; return { x: Q.hero.x, y: Q.hero.y }; },
       // drive the game from a test: hold these keys for so many steps
       press: function (names, frames) {
         var list = String(names).split(/[\s,]+/).filter(Boolean), k;
@@ -2180,10 +2501,10 @@
       kept: function (reset) { if (reset) { kept = { best: 0, wins: 0, runs: 0, fastest: 0, unlocked: ['emberwave'], sound: false }; save(); } return kept; },
       lastHurtBy: function () { return lastHurtBy; },
       guardian: function (set) { if (boss && set) for (var gk in set) boss[gk] = set[gk]; return boss ? { kind: boss.kind, hp: boss.hp, maxHp: boss.maxHp, state: boss.state, phase: boss.phase, dying: boss.dying, x: Math.round(boss.x), y: Math.round(boss.y), dir: boss.dir, anim: boss.anim, frame: boss.frame, attack: boss.attack ? boss.attack.def.name + ':' + boss.attack.phase + ':' + boss.attack.t : null, boxes: boss.boxes ? boss.boxes.length : 0, stun: boss.stun, cooldown: boss.cooldown, hurtBoxes: boxesOf(boss).length, targets: boxesOf(boss).map(function (b) { return { x: Math.round((b.x0 + b.x1) / 2), y: Math.round((b.y0 + b.y1) / 2), mult: b.onHit ? 3 : b.mult }; }), balls: boss.vars && boss.vars.balls ? boss.vars.balls.map(function (b) { return { x: Math.round(b.x), y: Math.round(b.y), struck: b.struck }; }) : undefined } : null; },
-      stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
+      stage: function (n) { if (n !== undefined) { run.stage = Math.max(0, Math.min(STAGES.length - 1, n)); transition = 0; use(firstPlayer()); loadSection(); placeCreatures(); spawnAll(); use(players[me]); } return { stage: run.stage, of: STAGES.length, flames: flames, floor: run.floor, section: run.section, element: element.name, fountain: level.fountain || null }; },
       perks: function () { return { near: nearPerk ? nearPerk.relic.id : null, taken: !!level.taken, offered: perks.map(function (p) { return { id: p.relic.id, rarity: p.relic.rarity, x: p.x, y: p.y }; }) }; },
       portal: function () { return { x: level.door.x, y: level.door.y, portal: !!level.portal, open: portalOpen(), grid: level.grid || null, seen: Object.keys(seenCells).length, rows: level.rows, cols: level.cols, chests: chests.length, creatures: creatures.length }; },
-      arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; loadSection(); placeCreatures(); spawnHero(); stepCamera(true); return run; },
+      arena: function (floor) { for (var si = 0; si < STAGES.length; si++) if (STAGES[si].boss && STAGES[si].floor === (floor || run.floor)) run.stage = si; transition = 0; use(firstPlayer()); loadSection(); placeCreatures(); spawnAll(); use(players[me]); return run; },
       slay: function () { if (boss) { boss.hp = 0; } },
       command: function (stateName, wait) { if (boss && !boss.dying) return GD.command(boss, stateName, ctx); return null; },
       drop: function (kind, id, dx) { dropPickup({ kind: kind, id: id }, hero.x + (dx === undefined ? 0 : dx), hero.y - 12); return pickups.length; },
@@ -2191,7 +2512,7 @@
       hands: function () { return { hands: hands.slice(), inUse: handIn, weapon: weaponId }; },
       arms: function (kind) { return AR ? AR.count(kind) : -1; },
       swap: function () { return changeHands(); },
-      wield: function (id) { takeWeapon(id); return { hands: hands.slice(), inUse: handIn }; },
+      wield: function (id, index) { var was = cur; use(players[index === undefined ? me : index]); takeWeapon(id); var out = { hands: hands.slice(), inUse: handIn }; use(was); return out; },
       equip: function (id) { return equip(id) ? { id: weaponId, name: weapon.name, rarity: weapon.rarity, swings: swings.length } : null; },
       weapons: function () { return WP.ORDER.slice(); },
       setPower: function (name) { if (RL.POWERS[name]) power = name; return power; },
@@ -2202,7 +2523,7 @@
       pick: function (who) { return pickClass(who); },
       classes: function () { return CL.ORDER.slice(); },
       choose: function (index) { if (state !== 'choose') enterChoose(); if (index !== undefined) { choose.index = index; choose.t = 0; } return { state: state, index: choose.index, id: CL.ORDER[choose.index] }; },
-      hurt: function (damage) { hero.invuln = 0; return hurtHero(hero.x + 10, damage || 1); },
+      hurt: function (damage, index) { var was = cur; use(players[index === undefined ? me : index]); hero.invuln = 0; var out = hurtHero(hero.x + 10, damage || 1); use(was); return out; },
       sprites: function () {
         var out = {};
         Object.keys(sprites.warden).forEach(function (name) { out[name] = sprites.warden[name].map(function (img) { return P.count(img); }); });

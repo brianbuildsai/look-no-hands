@@ -112,3 +112,64 @@ handshake can be changed or added to without touching the game.
 10. End to end in two tabs through the real transport: a stage, a sanctuary,
     a guardian, a death and a rising, a leaver. README: how it works and the
     three rules new content must keep. Plan status, audits.
+
+## Status
+
+All ten tasks done on `feat/undercroft-together` (tasks 8 and 9 in one commit:
+the wire and the lobby could only be proved together).
+
+GitHub: the repository is <https://github.com/brianbuildsai/look-no-hands>
+(`brianbuildsai` is the account's real login; `gh` labels it brian77-git).
+Every branch is pushed, `main` was fast-forwarded to the finished game, and
+Pages serves `main` at <https://brianbuildsai.github.io/look-no-hands/>. The
+first push hung on Windows' credential prompt; pushes are made with
+`git -c credential.helper='!gh auth git-credential' push`, which changes no
+configuration. History was searched for keys before it went public: none.
+
+Decided along the way:
+
+- Lockstep, not replication: only buttons cross the wire, so new content needs
+  no network code, only determinism. The cost was moving the hero's forty
+  loose variables into a player record that is switched in and out (`use`).
+  The refactor was proved by hash: eighteen harness scenes ended on exactly
+  the hashes they had before it.
+- Chance is two streams, and `render()` switches them itself. `begin()` now
+  seeds the simulation's stream from the run's seed (it never had been).
+- Two leaks were found by the harness and fixed: the bell relic reached as far
+  as the *camera*, and Thunderhead's bolt drew more or less chance depending
+  on the camera's height. Both now measure from the hero or the ground.
+- Each side sets its own input delay (2 to 12 steps) from the round trip it
+  measures and how much it wobbles. An earlier version raised the delay
+  whenever it had to wait, which a merely slower machine also causes, and
+  climbed to the maximum on a good wire; that was removed.
+- The PeerJS public broker silently hangs up on any message not shaped like
+  the PeerJS library's own (payload `type`, `connectionId`, and for offers
+  `label`, `reliable`, `serialization`, `browser`). `wire.js` shapes its
+  messages so. This cost an hour and is written in the file's header.
+- With company a blow's pause (hitstop) is at most two steps, since everybody
+  feels it. Whoever is down rises at the next stage with half their life.
+  Perks and guardian rewards are one each; chest loot is first come.
+- Room 36's controls now come before its long label text (they were 1600
+  pixels down the page), by a `controlsFirst` flag in `tools/rooms.js`; every
+  other room's page is byte for byte what it was.
+- Not done: a relay for networks that refuse direct connections (you chose
+  the broker alone; `wire.js` is four functions to replace if you add one),
+  more than two players (the simulation is written for a list; the lobby and
+  `net.js` admit two), joining a run already under way.
+
+Proved:
+
+- `tools/lockstep.html`: eighteen scenes alone, the same eighteen with two
+  heroes and each copy seated as a different one, 1000 to 1200 steps each,
+  never apart. Five scenes over a bad wire: good; 110 ms each way with jitter
+  and one packet in five lost (96% of full speed); begun with far too little
+  delay (it learns); a copy spoiled on purpose (one resync, then identical);
+  the wire cut (both play on alone).
+- Two real browser tabs through the real broker and WebRTC: code issued, link
+  prefilled the guest's field, 900 steps with identical hashes and no resync,
+  delay settled at 2; the guest left and each side played on.
+- By script in one simulation: life scaling, one perk each and the portal
+  opening only after both, one down and the run going on, rising half whole
+  through a portal, both down spending a flame.
+- Not proved here: two machines on two real networks. That needs you and a
+  friend; what would fail there is NAT traversal, and the page reports it.

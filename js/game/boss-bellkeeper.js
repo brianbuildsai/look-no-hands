@@ -217,7 +217,7 @@
       b.vx += dx / len * 0.03; b.vy += dy / len * 0.03 + Math.sin(b.age * 0.09) * 0.012; b.vx *= 0.97; b.vy *= 0.97;
       var sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy); if (sp > top && b.age > 24) { b.vx *= top / sp; b.vy *= top / sp; }
       b.x += b.vx; b.y += b.vy;
-      if (hero.alive && len < b.r + 5 && b.age > 14) { if (ctx.hurtHero(b.x, 1, e)) ctx.afflict('tide'); b.pop = true; }
+      if (b.age > 14 && ctx.touch({ x0: b.x - b.r - 1, x1: b.x + b.r + 1, y0: b.y - b.r - 1, y1: b.y + b.r + 1 }, 1, 'tide', e, b.x)) b.pop = true;
       if (b.pop || b.age > b.life) { ctx.spark(b.x, b.y, '#9ff5e6', 8, 1.6, 12, 0.04); v.bubbles.splice(k, 1); }
     }
   }
