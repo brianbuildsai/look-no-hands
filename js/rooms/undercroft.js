@@ -1993,6 +1993,7 @@
       if (nearPortal && !prompt && state === 'run') text('E: STEP THROUGH', Math.round(level.door.x - cam.x), Math.round(level.door.y - cam.y) - 46, '#ffffff', 1, 'center');
       drawBossBar();
       if (!(prompt || nearPerk)) drawBanner();   // a banner never covers what she is reading
+      if (notice) { notice.t++; var nw = textWidth(notice.text, 1) + 12; fpen.fillStyle = 'rgba(8,8,14,0.82)'; fpen.fillRect(Math.round(W / 2 - nw / 2), 58, nw, 13); text(notice.text, W / 2, 62, (notice.t >> 4) % 2 ? '#9fd8ff' : '#e9e6df', 1, 'center'); if (notice.t > 360 && !(session && session.waiting())) notice = null; }
       drawInfoboxes();
       drawCeremony();
       // into the stage, scaled without smoothing, letterboxed in the dark
@@ -2247,6 +2248,37 @@
       mix(creatures.length); mix(projectiles.length); mix(pickups.length); mix(hazards.length); mix(AR ? AR.count() : 0);
       return h >>> 0;
     }
+    /* ---- company over a wire (net.js) ----
+       net.js is told how to read the local buttons, begin a run with a roster, step with everybody's buttons, hash,
+       and what to do when the other side must be caught up or has gone. It is never told anything about the game. */
+    var NET = window.UndercroftNet || null, session = null, notice = null, scriptPad = null;
+    function record() {
+      store();
+      return { seed: run.seed, stage: run.stage, flames: flames, clock: clockSeconds, kills: kills, visited: JSON.parse(JSON.stringify(visited)), rewarded: JSON.parse(JSON.stringify(rewarded)),
+        players: players.map(function (Q) { return { who: Q.classId, power: Q.power, held: Q.held.slice(), hands: Q.hands.slice(), handIn: Q.handIn, gone: !!Q.gone }; }) };
+    }
+    // begin this stage again from a record: everybody whole at its head, the room as its seed makes it, chance seeded from where and when
+    function restore(rec, stepNo) {
+      run.seed = rec.seed; run.stage = rec.stage; flames = rec.flames; clockSeconds = rec.clock; kills = rec.kills; visited = rec.visited || {}; rewarded = rec.rewarded || {};
+      state = 'run'; tick = stepNo; freeze = 0; transition = 0; ceremony = null; banner = null; bell = null; slowmo = false; pillars = []; rings = []; spikes = []; if (AR) AR.clear(true);
+      rng = (Math.imul(run.seed | 0, 2654435761) ^ Math.imul(run.stage + 1, 40503) ^ Math.imul(stepNo | 0, 69069)) >>> 0;
+      cur = null; players = rec.players.map(function (r, k) { return makePlayer(k, r.who, r.power); });
+      players.forEach(function (Q, k) { var r = rec.players[k]; use(Q); held = r.held.slice(); applyRelics(); hands = r.hands.slice(); handIn = r.handIn; equip(hands[handIn] || klass.weapon); hero.hp = hero.maxHp; hero.energy = hero.maxEnergy; Q.gone = !!r.gone; });
+      use(firstPlayer()); loadSection(); placeCreatures(); spawnAll();
+      particles.length = 0; afterimages.length = 0; numbers.length = 0;
+      use(players[me] || firstPlayer());
+    }
+    var netGame = {
+      sample: function () { if (scriptPad) { var sp = scriptPad; scriptPad = { held: sp.held, pressed: 0 }; return sp; } return sample(); },
+      begin: function (config) { run.seed = config.seed; roster = config.roster; rosterMe = config.me; begin(); roster = null; },
+      step: function (pads) { step(pads); },
+      checksum: function () { return checksum(); },
+      record: record, restore: restore,
+      leave: function (index) { if (players[index]) { players[index].gone = true; store(); if (cur === players[index]) use(firstPlayer()); } },
+      notice: function (words) { notice = words ? { text: words, t: 0 } : null; },
+      ended: function () { return state === 'summary' || state === 'title' || state === 'choose'; }
+    };
+    function openSession(wire, opts) { if (!NET) return null; if (session) session.leave(); session = NET.create(netGame, wire, opts || {}); return session; }
     var manual = false, probeHeld = [];   // a harness is stepping the game itself: the frame loop only draws
 
     /* One step. `pads` is every player's buttons for this step when a session supplies them; otherwise there is one
@@ -2255,7 +2287,7 @@
        local player loaded again, for the camera and for whatever is drawn. */
     function anyHit(name) { for (var k = 0; k < players.length; k++) if (!players[k].gone && (players[k].pad.pressed & BIT[name])) return true; return false; }
     function step(pads) {
-      poll();
+      if (!pads) poll();
       tick++;
       if (state === 'title') { stepTitle(); return; }
       if (state === 'choose') { stepChoose(); return; }
@@ -2332,7 +2364,17 @@
       },
       frame: function (time, dt) {
         var t0 = performance.now();
-        if (!manual) { accumulator = Math.min(accumulator + Math.min(dt, 0.1), 0.25); while (accumulator >= STEP) { step(); accumulator -= STEP; } }
+        if (session && session.waiting() && session.S.stalled > 600) { var lp = sample(); if (lp.pressed & BIT.pause) session.leave(); else if (notice) notice.text = 'STILL WAITING. P OR ESC TO PLAY ON ALONE'; }
+        if (!manual) {
+          accumulator = Math.min(accumulator + Math.min(dt, 0.1), 0.25);
+          while (accumulator >= STEP) {
+            if (session && session.active()) { if (!session.advance()) { accumulator = Math.min(accumulator, STEP * 0.99); break; } }
+            else step();
+            accumulator -= STEP;
+          }
+          // fallen behind the other machine (a slow frame, a hidden tab): hurry, a step at a time
+          if (session && session.active() && session.ahead() > session.S.delay + 3) session.advance();
+        }
         render();
         cost = cost * 0.9 + (performance.now() - t0) * 0.1;
         if (tick % 30 === 0) env.live('cost', cost.toFixed(1));
@@ -2357,6 +2399,20 @@
       },
       checksum: function () { return checksum(); },
       traced: function (names) { rngTrace = []; this.together(names, false); var out = rngTrace; rngTrace = null; return out; },
+      // a session over any wire, for the harness: open it as host or guest, start it, give it one chance to step with these buttons
+      netOpen: function (wire, role, who, power, opts) { var sess = openSession(wire, opts); if (!sess) return null; if (role === 'host') sess.host(); else sess.join(who || 'warden', power || 'emberwave'); return sess.S; },
+      netStart: function (seedValue, who, power) { return session ? session.start({ seed: seedValue, who: who || 'warden', power: power || 'emberwave' }) : false; },
+      netTick: function (names, draw) {
+        if (!session) return null;
+        var list = String(names || '').split(/[\s,]+/).filter(Boolean), held = 0, j; for (j = 0; j < list.length; j++) held |= BIT[list[j]] || 0;
+        scriptPad = { held: held, pressed: held & ~(probeHeld[9] || 0) }; probeHeld[9] = held;
+        var did = session ? session.advance() : false; if (draw) render();
+        return { did: did, step: session ? session.S.step : -1, state: session ? session.S.state : 'none', stalled: session ? session.S.stalled : 0, resyncs: session ? session.S.resyncs : 0 };
+      },
+      netBeat: function () { if (session) session.beat(); return true; },
+      netInfo: function () { return session ? JSON.parse(JSON.stringify(session.S)) : null; },
+      netLeave: function () { if (session) session.leave(); return true; },
+      record: function () { return record(); },
       hashed: function () { hashTrace = []; checksum(); var out = hashTrace; hashTrace = null; return out; },
       // company, for tests: a roster of { who, power } and which of them sits here; then begin() as usual. party(null) is one player again
       party: function (list, mine) { roster = list || null; rosterMe = mine || 0; return roster ? roster.length : 1; },

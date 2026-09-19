@@ -26,6 +26,7 @@
   <button class="harness__button" type="button" data-run="all">Everything</button>
   <button class="harness__button" type="button" data-run="quick2">Quick, two players</button>
   <button class="harness__button" type="button" data-run="all2">Everything, two players</button>
+  <button class="harness__button" type="button" data-net="1">Over a bad wire (net.js)</button>
 </div>
 <div class="harness__frames">
   <iframe class="harness__frame" data-copy="a" src="../rooms/undercroft.html" title="Copy A"></iframe>
@@ -101,6 +102,77 @@
       }, pair);
     })();
   }
+  /* ---- net.js over a wire that delays, jitters, reorders and drops ----
+     Time here is counted in steps. Each copy gets its own chance to step each tick, and not always, as two machines would. */
+  function wirePair(cfg) {
+    var clock = 0, queue = [], seq = 0, s = cfg.seed >>> 0, ends = [];
+    function r() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+    function end(n) {
+      var E = { closed: false, onmessage: null, onclose: null,
+        send: function (text, loose) { if (E.closed) return; if (loose && r() < cfg.loss) return; queue.push({ to: 1 - n, text: text, due: clock + cfg.delay + (loose ? r() * cfg.jitter : 0), seq: seq++ }); },
+        close: function () { if (E.closed) return; E.closed = true; if (E.onclose) E.onclose(); var o = ends[1 - n]; if (o && !o.closed) { o.closed = true; if (o.onclose) o.onclose(); } } };
+      return E;
+    }
+    ends = [end(0), end(1)];
+    return { ends: ends, r: r, clock: function () { return clock; }, tick: function () { clock++; var due = queue.filter(function (m) { return m.due <= clock; }); queue = queue.filter(function (m) { return m.due > clock; }); due.sort(function (a, b) { return a.due - b.due || a.seq - b.seq; }); due.forEach(function (m) { var E = ends[m.to]; if (!E.closed && E.onmessage) E.onmessage(m.text); }); } };
+  }
+  function runNet(cfg, done) {
+    var A = api('a'), B = api('b'), pair = wirePair(cfg), pa = masher(cfg.seed + 1), pb = masher(cfg.seed + 2), t = 0, hashA = {}, hashB = {}, res = { name: cfg.name, ok: true, notes: [] }, jumped = false, broke = false, cut = false;
+    [A, B].forEach(function (c) { c.manual(true); c.party(null); });
+    var clockMs = function () { return pair.clock() * 1000 / 60; };
+    A.netOpen(pair.ends[0], 'host', null, null, { delay: cfg.inputDelay, now: clockMs }); B.netOpen(pair.ends[1], 'guest', 'kite', 'frostlance', { now: clockMs });
+    for (var w = 0; w < 90; w++) { pair.tick(); if (w % 15 === 0) { A.netBeat(); B.netBeat(); } }   // a moment in the lobby: hello, and the round trip measured
+    if (!A.netStart(4242 + cfg.seed, 'smith', 'emberwave')) { done({ name: cfg.name, ok: false, notes: ['the guest never said hello'] }); return; }
+    function note(x) { res.notes.push(x); }
+    function chunk() {
+      var end = Math.min(cfg.ticks, t + 300);
+      for (; t < end; t++) {
+        pair.tick();
+        var ia = A.netInfo(), ib = B.netInfo();
+        // at the same step on both: jump to a guardian; later, spoil one copy on purpose; later still, cut the wire
+        if (!jumped && ia.step === ib.step && ia.step > 200 && ia.state === 'run' && ib.state === 'run') { jumped = true; A.arena(cfg.arena); B.arena(cfg.arena); note('to guardian ' + cfg.arena + ' at step ' + ia.step); }
+        if (cfg.spoil && !broke && jumped && ia.step > cfg.spoil) { broke = true; B.hurt(1, 0); note('copy B spoiled at its step ' + ib.step); }
+        if (cfg.cut && !cut && ia.step > cfg.cut) { cut = true; pair.ends[0].close(); note('wire cut at step ' + ia.step); }
+        var ka = pa(t), kb = pb(t);
+        if (t % 60 === 30) { A.netBeat(); B.netBeat(); }
+        if (cut) { A.advance(ka, false); B.advance(kb, false); continue; }
+        if (pair.r() < 0.97) { var ra = A.netTick(ka, t % 3 === 0); if (ra && ra.did) hashA[ra.step] = A.checksum(); }
+        if (pair.r() < 0.93) { var rb = B.netTick(kb, t % 11 === 0); if (rb && rb.did) hashB[rb.step] = B.checksum(); }
+        if (pair.r() < 0.08) { var rc = B.netTick(kb, false); if (rc && rc.did) hashB[rc.step] = B.checksum(); }
+      }
+      if (t < cfg.ticks) { setTimeout(chunk, 0); return; }
+      var ia2 = A.netInfo(), ib2 = B.netInfo(), both = 0, differ = [], last = Math.min(ia2.step, ib2.step);
+      Object.keys(hashA).forEach(function (k) { if (hashB[k] !== undefined) { both++; if (hashA[k] !== hashB[k]) differ.push(+k); } });
+      res.steps = [ia2.step, ib2.step]; res.compared = both; res.resyncs = ia2.resyncs; res.states = [ia2.state, ib2.state]; res.delay = ia2.delay;
+      // after a deliberate spoiling the copies differ until the host notices and both begin the stage again: only what follows counts
+      var after = differ.filter(function (k) { return k > (cfg.spoil ? cfg.spoil + 120 : 0); });
+      res.differAfter = after.length; res.differFirst = differ.length ? differ[0] : null;
+      if (cfg.spoil) { if (!ia2.resyncs) { res.ok = false; note('spoiled, and the host never noticed'); } }
+      else if (ia2.resyncs) { res.ok = false; note('resynced without cause'); }
+      if (after.length) { res.ok = false; note('hashes differ at steps ' + after.slice(0, 5).join(', ')); }
+      if (cfg.cut) { var gone = [A.players(), B.players()]; if (ia2.state !== 'over' || ib2.state !== 'over') { res.ok = false; note('a session outlived its wire'); } if (!gone[0][1].gone || !gone[1][0].gone) { res.ok = false; note('the one who left is still standing'); } res.alone = [A.state().state, B.state().state]; }
+      else if (last < cfg.ticks * (cfg.slack || 0.8)) { res.ok = false; note('too slow: only ' + last + ' steps in ' + cfg.ticks + ' ticks'); }
+      done(res);
+    }
+    chunk();
+  }
+  function runNets() {
+    if (!state.ready || state.running) return;
+    state.running = true; state.done = false; state.results = []; state.failed = 0; logEl.classList.remove('harness__log--bad'); logEl.textContent = 'running net…';
+    var list = [
+      { name: 'a good wire', seed: 11, delay: 1, jitter: 1, loss: 0, inputDelay: 3, ticks: 1500, arena: 2 },
+      { name: 'a far one (about 110 ms each way), jittery, losing one in five', seed: 23, delay: 5, jitter: 4, loss: 0.2, inputDelay: 0, ticks: 1800, arena: 5 },
+      { name: 'begun with far too little delay for the distance: it must wait, then learn', seed: 37, delay: 6, jitter: 4, loss: 0.1, inputDelay: 2, ticks: 1800, arena: 7, slack: 0.7 },
+      { name: 'one copy spoiled on purpose: the host must notice and both begin the stage again', seed: 41, delay: 3, jitter: 2, loss: 0.05, inputDelay: 4, ticks: 1800, arena: 4, spoil: 420 },
+      { name: 'the wire is cut: each plays on alone', seed: 53, delay: 2, jitter: 2, loss: 0, inputDelay: 3, ticks: 900, arena: 1, cut: 500 }
+    ], k = 0;
+    (function next() {
+      if (k >= list.length) { state.running = false; state.done = true; log(state.failed ? state.failed + ' net scene(s) failed' : 'all ' + list.length + ' net scenes held'); return; }
+      runNet(list[k], function (res) { state.results.push(res); if (!res.ok) { state.failed++; logEl.classList.add('harness__log--bad'); } log((res.ok ? 'held   ' : 'FAILED ') + res.name + '\n       steps ' + JSON.stringify(res.steps) + ', hashes compared ' + res.compared + ', resyncs ' + res.resyncs + ', ' + res.notes.join('; ')); k++; setTimeout(next, 0); });
+    })();
+  }
+  window.__lockstep.net = runNets;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-net]'), function (b) { b.addEventListener('click', runNets); });
   window.__lockstep.run = run;
   Array.prototype.forEach.call(document.querySelectorAll('[data-run]'), function (b) { b.addEventListener('click', function () { run(b.getAttribute('data-run')); }); });
   whenReady(function () { if (/[?&]auto=(\w+)/.test(location.search)) run(RegExp.$1); });
