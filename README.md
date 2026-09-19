@@ -6,8 +6,8 @@ browser.
 
 ## Where it lives
 
-The source is at <https://github.com/brian77-git/look-no-hands> and the site itself is served from `main` by GitHub Pages at
-<https://brian77-git.github.io/look-no-hands/>. There is no build: what is in the repository is what is served (`.nojekyll` tells Pages to leave it alone).
+The source is at <https://github.com/brianbuildsai/look-no-hands> and the site itself is served from `main` by GitHub Pages at
+<https://brianbuildsai.github.io/look-no-hands/>. There is no build: what is in the repository is what is served (`.nojekyll` tells Pages to leave it alone).
 
 ## Running it
 

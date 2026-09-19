@@ -6,7 +6,7 @@ No libraries, nothing built.
 
 ## Part one: GitHub
 
-- A repository under `brian77-git` (name `look-no-hands` unless you say
+- A repository under `brianbuildsai` (the account gh calls brian77-git) (name `look-no-hands` unless you say
   otherwise), every branch pushed, `main` fast-forwarded to the finished game
   (it is a plain ancestor of it, 108 commits behind, so nothing is rewritten).
 - GitHub Pages serving `main` from the root: the site is static and needs no
