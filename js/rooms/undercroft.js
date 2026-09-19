@@ -2174,6 +2174,7 @@
       text('ARROWS OR WASD MOVE   X OR K JUMP   Z OR J ATTACK', W / 2, 160, '#8f8d88', 1, 'center');
       text('C OR L DASH   V OR I CAST   E OR UP TAKES   Q CHANGES WEAPON', W / 2, 170, '#8f8d88', 1, 'center');
       text('ENTER TO CHOOSE WHO GOES', W / 2, 180, '#8f8d88', 1, 'center');
+      if (NET && window.UndercroftWire) text('OR GO DOWN TOGETHER: HOST OR JOIN, ON THIS PAGE', W / 2, 194, '#9fd8ff', 1, 'center');
     }
 
     /* ---- the loop and the room's wiring ---- */
@@ -2337,6 +2338,65 @@
         try { env.stage.focus({ preventScroll: true }); } catch (err) { /* not fatal */ }
       });
     }
+
+
+    /* ---- the lobby: host a game or join one, beside the picture ----
+       Plain controls in the page, so that they can be read aloud, tabbed to and used on a phone. The code is found
+       by wire.js; what happens on the line once it is open is net.js's business. */
+    (function lobby() {
+      var box = env.room.querySelector('[data-undercroft-together]'), WIRE = window.UndercroftWire;
+      if (!box) return;
+      function el(name) { return box.querySelector('[data-together-' + name + ']'); }
+      var who = el('who'), hostBtn = el('host'), joinBtn = el('join'), leaveBtn = el('leave'), startBtn = el('start'), copyBtn = el('copy'), field = el('code'), status = el('status'), invite = el('invite'), codeOut = el('codeout'), joinField = el('joinfield');
+      if (!NET || !WIRE || !WIRE.supported()) { box.hidden = true; return; }
+      var handle = null, heart = null, link = '';
+      CL.ORDER.forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = CL.CLASSES[id].name; who.appendChild(o); });
+      who.value = CL.CLASSES[kept.klass] ? kept.klass : 'warden';
+      function myPower() { return kept.unlocked[Math.min(startPower, kept.unlocked.length - 1)] || 'emberwave'; }
+      function say(words, bad) { status.textContent = words || ''; status.classList.toggle('is-bad', !!bad); }
+      function busy(on) { hostBtn.disabled = on; joinBtn.disabled = on; field.disabled = on; leaveBtn.hidden = !on; if (!on) { invite.hidden = true; startBtn.disabled = true; joinField.hidden = false; joinBtn.hidden = false; hostBtn.hidden = false; } }
+      function stop(words, bad) { if (heart) { clearInterval(heart); heart = null; } if (handle) { handle.close(); handle = null; } busy(false); say(words, bad); }
+      function opened(wire, asHost) {
+        var sess = openSession(wire, {
+          onchange: function (S) {
+            if (S.role === 'host' && S.state === 'lobby' && S.guest) { startBtn.disabled = false; say((CL.CLASSES[S.guest.who] ? CL.CLASSES[S.guest.who].name : 'Someone') + ' has joined you. Start when you are both ready.'); }
+            if (S.state === 'run' && !box.started) { box.started = true; if (handle && handle.done) handle.done(); say('Together. P or Esc pauses for both of you.' + (S.rtt ? ' About ' + Math.round(S.rtt) + ' ms apart.' : '')); try { env.stage.focus({ preventScroll: true }); } catch (e) { /* not fatal */ } }
+          },
+          onover: function (reason) { box.started = false; stop(reason === 'the run is over' ? 'That run is over. Host or join again for another.' : reason === 'you left' ? 'You left. The game goes on alone.' : reason === 'they left' || reason === 'the connection closed' ? 'The other of you has gone. You play on alone.' : reason, reason !== 'the run is over' && reason !== 'you left'); }
+        });
+        if (!sess) { stop('The game could not open a session.', true); return; }
+        if (asHost) { sess.host(); say('Someone is connecting\u2026'); } else { sess.join(who.value, myPower()); say('Connected. Waiting for the host to start.'); }
+        heart = setInterval(function () { if (session) session.beat(); }, 1000); sess.beat();
+      }
+      hostBtn.addEventListener('click', function () {
+        busy(true); joinField.hidden = true; joinBtn.hidden = true; say('Asking for a code\u2026');
+        handle = WIRE.host({
+          code: function (code) { link = location.origin + location.pathname + '?join=' + code; codeOut.textContent = code; invite.hidden = false; },
+          status: function (words) { say(words); }, error: function (words) { stop(words, true); },
+          wire: function (wire) { opened(wire, true); }
+        });
+      });
+      joinBtn.addEventListener('click', function () {
+        var code = WIRE.tidy(field.value); field.value = code;
+        if (code.length !== 6) { say('A code is six letters and numbers.', true); field.focus(); return; }
+        busy(true); hostBtn.hidden = true; say('Reaching the broker\u2026');
+        handle = WIRE.join(code, { status: function (words) { say(words); }, error: function (words) { stop(words, true); }, wire: function (wire) { opened(wire, false); } });
+      });
+      field.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); joinBtn.click(); } });
+      startBtn.addEventListener('click', function () {
+        if (!session || !session.start({ seed: chosenSeed().seed, who: who.value, power: myPower() })) say('Nobody has joined yet.', true);
+      });
+      leaveBtn.addEventListener('click', function () { if (session && session.S.state !== 'over') session.leave(); else stop('Closed.'); });
+      copyBtn.addEventListener('click', function () {
+        var done = function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy invite link'; }, 1600); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { say(link); }); else say(link);
+      });
+      who.addEventListener('change', function () { kept.klass = who.value; save(); pickClass(who.value); if (session && session.S.role === 'guest' && session.S.state === 'lobby') session.join(who.value, myPower()); });
+      // a tab put away stops drawing, and the other machine would wait for it: say pause first
+      document.addEventListener('visibilitychange', function () { if (document.hidden && session && session.active() && state === 'run') queued.pause = true; });
+      var asked = /[?&]join=([A-Za-z0-9]{4,8})/.exec(location.search);
+      if (asked) { field.value = WIRE.tidy(asked[1]); say('You were sent a code. Choose who you go down as, then Join.'); }
+    })();
 
     cur = { index: 0 }; store(); players = [cur];
     loadSection();

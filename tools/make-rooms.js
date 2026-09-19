@@ -89,8 +89,9 @@ function page(room, index) {
     '      <div class="label">',
     '        <h1 class="label__title">' + escapeHtml(room.title) + '</h1>',
     '        <p class="label__medium">' + room.medium + '</p>',
-    '        <p class="label__text">' + room.text + '</p>',
-    room.controls ? indent(room.controls, 8) : '',
+    // a room that is played rather than read (36) puts its controls before its long label
+    room.controls && room.controlsFirst ? indent(room.controls, 8) : '        <p class="label__text">' + room.text + '</p>',
+    room.controls && room.controlsFirst ? '        <p class="label__text">' + room.text + '</p>' : room.controls ? indent(room.controls, 8) : '',
     '        <a class="label__next" href="' + onward.href + '"><span class="label__next-label">' + (next ? 'Next room' : 'Round again') + '</span><span class="label__next-name">' + escapeHtml(onward.name) + '</span><span class="label__next-arrow" aria-hidden="true">&rarr;</span></a>',
     '      </div>',
     '    </section>',
