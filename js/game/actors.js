@@ -527,6 +527,9 @@
   // a creature for a spawn point: the element's walker or flyer, an elder for arenas
   function spawn(point, element, floor, rnd) {
     var pair = BY_ELEMENT[element], name = (point.kind === 'flyer' || point.kind === 'perch') ? pair[1] : pair[0];
+    // an element with a third kind (the wood's Bog Mound) gives it some of the walkers' places; elders stay walkers.
+    // Only such an element draws the extra chance, so no other floor changes
+    if (pair[2] && name === pair[0] && point.kind !== 'brute' && rnd() < 0.45) name = pair[2];
     return make(name, point.x * 16 + 8, point.y * 16, point.kind === 'brute', floor, rnd);
   }
 
@@ -547,7 +550,7 @@
   function hurt(e, damage, fromX, ctx) {
     if (e.dying) return false;
     e.hp -= damage; e.hurt = 10; e.flash = 4;
-    if (!e.elder) { e.vx = (e.x < fromX ? -1 : 1) * (e.spec.flying ? 1.6 : 1.2); if (!e.spec.flying) e.vy = Math.min(e.vy, -1.4); }
+    if (!e.elder) { e.vx = (e.x < fromX ? -1 : 1) * (e.spec.flying ? 1.6 : e.spec.stout ? 0.4 : 1.2); if (!e.spec.flying && !e.spec.stout) e.vy = Math.min(e.vy, -1.4); }
     // a blow during the wind-up breaks an ordinary creature's attack
     if (e.attack && e.attack.phase === 'windup' && !e.elder && !e.attack.def.steady) { if (e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; e.cooldown = 40; }
     if (e.spec.struck) e.spec.struck(e, ctx);
@@ -593,7 +596,7 @@
   }
   // which attack, if any, the creature will begin: the first whose range the Warden stands in
   function chooseAttack(e, ctx, sees) {
-    if (!sees || e.cooldown > 0 || e.hurt > 0) return null;
+    if (!sees || e.cooldown > 0 || (e.hurt > 0 && !e.spec.stout)) return null;   // a stout kind (the Rootwalker) may begin while it is being struck
     var hero = ctx.hero, dx = Math.abs(hero.x - e.x), dy = (hero.y - 11) - (e.spec.flying ? e.y : e.y - e.h / 2), list = e.spec.attacks;
     for (var k = 0; k < list.length; k++) {
       var A = list[k];
