@@ -243,6 +243,8 @@
     // the element's stone, drawn once per floor: a brick course in the floor's colours, with a lit top edge
     var TILES = null;
     function makeTiles(el) {
+      // a floor that paints itself (the Sunken Wood, wood.js) brings its own tiles, and draws each knowing its neighbours
+      if (el.painted && window.UndercroftWood) { TILES = window.UndercroftWood.tiles(el); return; }
       var out = [], v;
       for (v = 0; v < 3; v++) {
         var c = P.blank(TILE, TILE), g = c.getContext('2d');
@@ -1839,6 +1841,7 @@
         var t = tileAt(tx, ty);
         if (!t) continue;
         var px = tx * TILE - Math.round(cam.x), py = ty * TILE - Math.round(cam.y);
+        if (TILES.paint) { TILES.paint(fpen, TILES, t, tx, ty, px, py, tileAt, tick); if (t === 4) light(tx * TILE + 8, ty * TILE + 8, 20, 0.3); continue; }
         if (t === 1) {
           fpen.drawImage(TILES.stone[((tx * 7 + ty * 13) % 3 + 3) % 3], px, py);
           if (tileAt(tx, ty - 1) !== 1) fpen.drawImage(TILES.top, px, py);
