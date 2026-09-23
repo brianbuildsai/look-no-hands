@@ -219,6 +219,12 @@
       if (F.boss) STAGES.push({ floor: floor, boss: F.boss, element: F.element });
       else STAGES.push({ floor: floor, section: 1, element: F.element, grid: F.deeper || F.grid });
     });
+    // where a run may begin: floor 1, or any floor below it to practise on (a practice run keeps nothing). The room's address
+    // may choose it in advance (?floor=2); the main screen's FLOOR line changes it
+    function firstStageOf(floor) { for (var k = 0; k < STAGES.length; k++) if (STAGES[k].floor === floor) return k; return 0; }
+    function floorName(f) { var F = FLOORS[f - 1], el = F && WD.byName(F.element); if (!F) return ''; if (F.boss === 'lightless') return 'The Vault'; if (F.boss === 'orrery') return 'The Approach'; return el ? el.title : ''; }
+    var startFloor = 1, runFrom = 1;
+    (function () { var m = /[?&]floor=(\d+)/.exec(window.location.search || ''); if (m) startFloor = Math.max(1, Math.min(FLOORS.length, parseInt(m[1], 10) || 1)); })();
     // until a guardian's own file is written, another stands in for it
     function guardianFor(st) { var GR = window.Guardians.REG; return GR[st.boss] ? st.boss : { thornmother: 'wyrm', orrery: 'herald', bellkeeper: 'wyrm', regulator: 'herald', reflected: 'orrery' }[st.boss] || 'golem'; }
 
@@ -2092,19 +2098,20 @@
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };
     function endRun(wonRun) {
-      var floorsDown = wonRun ? FLOORS.length : run.floor;
-      kept.runs++;
+      var floorsDown = wonRun ? FLOORS.length : run.floor, practice = runFrom > 1;
       var unlocked = [];
+      if (!practice) kept.runs++;
+      if (practice) floorsDown = 0;   // begun below the first floor: nothing it did is kept
       if (floorsDown >= 2 && kept.unlocked.indexOf('frostlance') < 0) { kept.unlocked.push('frostlance'); unlocked.push('Frostlance'); }
       if (floorsDown >= 3 && kept.unlocked.indexOf('stormchain') < 0) { kept.unlocked.push('stormchain'); unlocked.push('Stormchain'); }
       if (floorsDown >= 4 && kept.unlocked.indexOf('bloomburst') < 0) { kept.unlocked.push('bloomburst'); unlocked.push('Bloomburst'); }
       if (floorsDown > kept.best) kept.best = floorsDown;
-      if (wonRun) { kept.wins++; if (!kept.fastest || clockSeconds < kept.fastest) kept.fastest = Math.round(clockSeconds); }
+      if (wonRun && !practice) { kept.wins++; if (!kept.fastest || clockSeconds < kept.fastest) kept.fastest = Math.round(clockSeconds); }
       save();
       if (SND) SND.hum('portalhum', 0);
       if (wonRun) sfx('victory');
       var mineAtEnd = players[me] || cur; store();
-      summary = { who: mineAtEnd.klass.name, company: company(), won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: mineAtEnd.held.slice(), seed: run.seed, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[mineAtEnd.lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
+      summary = { who: mineAtEnd.klass.name, company: company(), won: wonRun, floor: run.floor, section: run.section, kills: kills, seconds: Math.round(clockSeconds), relics: mineAtEnd.held.slice(), seed: run.seed, practice: practice ? runFrom : 0, lesson: wonRun ? 'Nothing carried back up but what you learned.' : (LESSONS[mineAtEnd.lastHurtBy] || 'The undercroft draws itself again.'), unlocked: unlocked, ticks: 0 };
       state = 'summary';
     }
     function stepSummary() {
@@ -2122,6 +2129,7 @@
       text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
       if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
       if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }
+      if (summary.practice) text('A PRACTICE RUN FROM FLOOR ' + summary.practice + '. NOTHING IS KEPT', W / 2, y + 6, '#9fd8ff', 1, 'center'); else
       text('BEST: FLOOR ' + kept.best + (kept.wins ? '   WON ' + kept.wins + (kept.fastest ? ' (BEST ' + timeText(kept.fastest) + ')' : '') : '') + '   RUNS ' + kept.runs, W / 2, y + 6, '#8f8d88', 1, 'center');
       if (summary.ticks > 40 && (tick >> 4) % 2 === 0) text('PRESS TO GO ON', W / 2, H - 22, '#e9e6df', 1, 'center');
     }
@@ -2139,7 +2147,7 @@
       if (choose.t > 8 && (hit('start') || hit('jump') || hit('attack') || hit('up'))) {
         sfx('confirm'); pickClass(CL.ORDER[choose.index]); kept.klass = classId; save();
         if (choose.then !== 'solo' && lobbyUI) { state = 'title'; lobbyUI.setWho(classId); if (choose.then === 'host') lobbyUI.host(); else lobbyUI.joinMode(); }
-        else { var c = chosenSeed(); run.seed = c.seed; begin(); }
+        else { var c = chosenSeed(); run.seed = c.seed; begin(startFloor); }
       }
     }
     // what the chosen one does while you look: stands, runs, strikes, dashes, and whatever else is theirs
@@ -2187,13 +2195,15 @@
        can go stand on a ledge beside it, the one who went last lit. Hosting and joining happen here too: the panel
        shows what the lobby (the plain controls in the page, which do the work) has to say. */
     var menu = { index: 0, t: 0 }, lobbyUI = null;
-    var MENU = [{ id: 'solo', label: 'GO DOWN ALONE' }, { id: 'host', label: 'HOST A GAME' }, { id: 'join', label: 'JOIN A GAME' }, { id: 'power', label: 'POWER' }];
-    function menuItems() { return lobbyUI ? MENU : [MENU[0], MENU[3]]; }
-    function menuRow(k) { return touchy ? { x: 36, y: 62 + k * 23, w: 158, h: 21 } : { x: 40, y: 70 + k * 17, w: 150, h: 15 }; }   // taller lines for a thumb
+    var MENU = [{ id: 'solo', label: 'GO DOWN ALONE' }, { id: 'host', label: 'HOST A GAME' }, { id: 'join', label: 'JOIN A GAME' }, { id: 'floor', label: 'FLOOR' }, { id: 'power', label: 'POWER' }];
+    function menuItems() { return lobbyUI ? MENU : [MENU[0], MENU[3], MENU[4]]; }
+    function menuRow(k) { return touchy ? { x: 36, y: 58 + k * 20, w: 158, h: 18 } : { x: 40, y: 64 + k * 16, w: 150, h: 15 }; }   // taller lines for a thumb
     function lobbyView() { return lobbyUI ? lobbyUI.view : null; }
     function cyclePower(by) { var options = kept.unlocked; startPower = (Math.min(startPower, options.length - 1) + by + options.length) % options.length; sfx('select'); }
+    function cycleFloor(by) { startFloor = ((startFloor - 1 + by) % FLOORS.length + FLOORS.length) % FLOORS.length + 1; sfx('select'); }
     function chooseMenu(id) {
       if (id === 'power') { cyclePower(1); return; }
+      if (id === 'floor') { cycleFloor(1); return; }
       choose.then = id; enterChoose();
     }
     function stepTitle() {
@@ -2208,8 +2218,10 @@
       }
       if (hit('up')) { menu.index = (menu.index + n - 1) % n; sfx('select'); }
       if (hit('down')) { menu.index = (menu.index + 1) % n; sfx('select'); }
-      if (hit('left')) cyclePower(-1);
-      if (hit('right')) cyclePower(1);
+      // left and right change the line they are on when it is the floor; otherwise, as always, the power
+      var onFloor = items[Math.min(menu.index, n - 1)].id === 'floor';
+      if (hit('left')) { if (onFloor) cycleFloor(-1); else cyclePower(-1); }
+      if (hit('right')) { if (onFloor) cycleFloor(1); else cyclePower(1); }
       if (hit('start') || hit('jump') || hit('attack')) chooseMenu(items[Math.min(menu.index, n - 1)].id);
     }
     // a click or a tap on the main screen: on a line of the menu it chooses that line
@@ -2266,10 +2278,17 @@
             fpen.fillStyle = pw.colour; fpen.fillRect(r.x + 46, py, 5, 5);
             text(pw.name.toUpperCase(), r.x + 55, py, pw.colour, 1, 'left');
             if (kept.unlocked.length > 1) { fpen.fillStyle = on ? '#ffdc9a' : '#5c5a56'; var ax = r.x + r.w - 16; fpen.fillRect(ax, py + 2, 1, 1); fpen.fillRect(ax + 1, py + 1, 1, 3); fpen.fillRect(ax + 2, py, 1, 5); fpen.fillRect(ax + 10, py + 2, 1, 1); fpen.fillRect(ax + 9, py + 1, 1, 3); fpen.fillRect(ax + 8, py, 1, 5); }
+          } else if (it.id === 'floor') {
+            // the floor to begin on, named in its own colour; the first is the true run, the rest are practice
+            var fy = r.y + Math.round((r.h - 5) / 2), fel = WD.byName(FLOORS[startFloor - 1].element), fcol = startFloor === 1 ? '#c4c1ba' : fel.glow;
+            text('FLOOR', r.x + 16, fy, on ? '#ffdc9a' : '#8f8d88', 1, 'left');
+            text(startFloor + ' ' + floorName(startFloor).toUpperCase(), r.x + 46, fy, fcol, 1, 'left');
+            fpen.fillStyle = on ? '#ffdc9a' : '#5c5a56'; var fax = r.x + r.w - 16; fpen.fillRect(fax, fy + 2, 1, 1); fpen.fillRect(fax + 1, fy + 1, 1, 3); fpen.fillRect(fax + 2, fy, 1, 5); fpen.fillRect(fax + 10, fy + 2, 1, 1); fpen.fillRect(fax + 9, fy + 1, 1, 3); fpen.fillRect(fax + 8, fy, 1, 5);
+            if (FLOORS[startFloor - 1].element === 'mire' && (tick >> 4) % 2 === 0) text('NEW', r.x + r.w + 4, fy, '#ffb347', 1, 'left');
           } else text(it.label, r.x + 16, r.y + Math.round((r.h - 10) / 2), on ? '#ffdc9a' : '#c4c1ba', 2, 'left');
         }
         var hint = items[Math.min(menu.index, items.length - 1)].id;
-        if (!touchy) text(hint === 'solo' ? 'A RUN OF YOUR OWN, FROM ' + (chosenSeed().daily ? "TODAY'S SEED" : 'YOUR SEED') : hint === 'host' ? 'YOU GET A CODE TO SEND TO SOMEONE' : hint === 'join' ? 'SOMEONE SENT YOU A CODE' : kept.unlocked.length > 1 ? 'LEFT AND RIGHT CHANGE IT' : 'MORE UNLOCK AS YOU GO DEEPER', 40, 70 + items.length * 17 + 4, '#5c5a56', 1, 'left');
+        if (!touchy) text(hint === 'solo' ? 'A RUN OF YOUR OWN, FROM ' + (chosenSeed().daily ? "TODAY'S SEED" : 'YOUR SEED') : hint === 'host' ? 'YOU GET A CODE TO SEND TO SOMEONE' : hint === 'join' ? 'SOMEONE SENT YOU A CODE' : hint === 'floor' ? (startFloor === 1 ? 'LEFT AND RIGHT: BEGIN DEEPER, TO PRACTISE' : 'A PRACTICE RUN: NOTHING IS KEPT') : kept.unlocked.length > 1 ? 'LEFT AND RIGHT CHANGE IT' : 'MORE UNLOCK AS YOU GO DEEPER', 40, menuRow(items.length).y + 3, '#5c5a56', 1, 'left');
       }
 
       // what you have done here, and the keys
@@ -2338,10 +2357,11 @@
     liveHero(ctx);
 
     function pickClass(who) { if (CL.CLASSES[who]) { classId = who; klass = CL.CLASSES[who]; } return classId; }
-    function begin() {
+    function begin(fromFloor) {
       state = 'run'; tick = 0; freeze = 0;
       rng = (Math.imul(run.seed | 0, 2654435761) ^ 0x5bd1e995) >>> 0;
-      run.stage = 0; run.floor = 1; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; slowmo = false;
+      runFrom = Math.max(1, Math.min(FLOORS.length, fromFloor || 1));
+      run.stage = firstStageOf(runFrom); run.floor = runFrom; run.section = 0; flames = 3; transition = 0; clockSeconds = 0; kills = 0; slowmo = false;
       won = false; visited = {}; rewarded = {}; ceremony = null; banner = null; bell = null; pillars = []; rings = []; spikes = []; if (AR) AR.clear(true);
       // one player unless a session has said otherwise: a fresh record each, in their class, with its weapon in hand
       var list = roster || [{ who: classId, power: power }];
@@ -2374,12 +2394,12 @@
     var NET = window.UndercroftNet || null, session = null, notice = null, scriptPad = null;
     function record() {
       store();
-      return { seed: run.seed, stage: run.stage, flames: flames, clock: clockSeconds, kills: kills, visited: JSON.parse(JSON.stringify(visited)), rewarded: JSON.parse(JSON.stringify(rewarded)),
+      return { seed: run.seed, from: runFrom, stage: run.stage, flames: flames, clock: clockSeconds, kills: kills, visited: JSON.parse(JSON.stringify(visited)), rewarded: JSON.parse(JSON.stringify(rewarded)),
         players: players.map(function (Q) { return { who: Q.classId, power: Q.power, held: Q.held.slice(), hands: Q.hands.slice(), handIn: Q.handIn, gone: !!Q.gone }; }) };
     }
     // begin this stage again from a record: everybody whole at its head, the room as its seed makes it, chance seeded from where and when
     function restore(rec, stepNo) {
-      run.seed = rec.seed; run.stage = rec.stage; flames = rec.flames; clockSeconds = rec.clock; kills = rec.kills; visited = rec.visited || {}; rewarded = rec.rewarded || {};
+      run.seed = rec.seed; runFrom = rec.from || 1; run.stage = rec.stage; flames = rec.flames; clockSeconds = rec.clock; kills = rec.kills; visited = rec.visited || {}; rewarded = rec.rewarded || {};
       state = 'run'; tick = stepNo; freeze = 0; transition = 0; ceremony = null; banner = null; bell = null; slowmo = false; pillars = []; rings = []; spikes = []; if (AR) AR.clear(true);
       rng = (Math.imul(run.seed | 0, 2654435761) ^ Math.imul(run.stage + 1, 40503) ^ Math.imul(stepNo | 0, 69069)) >>> 0;
       cur = null; players = rec.players.map(function (r, k) { return makePlayer(k, r.who, r.power); });
@@ -2390,7 +2410,7 @@
     }
     var netGame = {
       sample: function () { if (scriptPad) { var sp = scriptPad; scriptPad = { held: sp.held, pressed: 0 }; return sp; } return sample(); },
-      begin: function (config) { run.seed = config.seed; roster = config.roster; rosterMe = config.me; begin(); roster = null; },
+      begin: function (config) { run.seed = config.seed; roster = config.roster; rosterMe = config.me; begin(config.floor || 1); roster = null; },   // the host's floor, for both
       step: function (pads) { step(pads); },
       checksum: function () { return checksum(); },
       record: record, restore: restore,
@@ -2522,7 +2542,7 @@
         leave: function () { if (lv.busy) leaveBtn.click(); else { lv.role = null; say(''); } }
       };
       startBtn.addEventListener('click', function () {
-        if (!session || !session.start({ seed: chosenSeed().seed, who: who.value, power: myPower() })) say('Nobody has joined yet.', true);
+        if (!session || !session.start({ seed: chosenSeed().seed, who: who.value, power: myPower(), floor: startFloor })) say('Nobody has joined yet.', true);
       });
       leaveBtn.addEventListener('click', function () { if (session && session.S.state !== 'over') session.leave(); else stop('Closed.'); });
       copyBtn.addEventListener('click', function () {
@@ -2601,7 +2621,7 @@
       traced: function (names) { rngTrace = []; this.together(names, false); var out = rngTrace; rngTrace = null; return out; },
       // a session over any wire, for the harness: open it as host or guest, start it, give it one chance to step with these buttons
       netOpen: function (wire, role, who, power, opts) { var sess = openSession(wire, opts); if (!sess) return null; if (role === 'host') sess.host(); else sess.join(who || 'warden', power || 'emberwave'); return sess.S; },
-      netStart: function (seedValue, who, power) { return session ? session.start({ seed: seedValue, who: who || 'warden', power: power || 'emberwave' }) : false; },
+      netStart: function (seedValue, who, power, floor) { return session ? session.start({ seed: seedValue, who: who || 'warden', power: power || 'emberwave', floor: floor || 1 }) : false; },
       netTick: function (names, draw) {
         if (!session) return null;
         var list = String(names || '').split(/[\s,]+/).filter(Boolean), held = 0, j; for (j = 0; j < list.length; j++) held |= BIT[list[j]] || 0;
@@ -2658,7 +2678,7 @@
       relics: function () { return { power: power, held: held.slice(), mods: mods }; },
       take: function (id) { takeRelic(id); return held.slice(); },
       reward: function () { if (boss) offerRewards(boss.x); return perks.map(function (q) { return q.relic.kind + ':' + q.relic.id; }); },
-      begin: function (seed, who) { if (seed !== undefined) run.seed = seed; if (who) pickClass(who); begin(); kills = 0; return run; },
+      begin: function (seed, who, floor) { if (seed !== undefined) run.seed = seed; if (who) pickClass(who); begin(floor || 1); kills = 0; return run; },
       pick: function (who) { return pickClass(who); },
       classes: function () { return CL.ORDER.slice(); },
       choose: function (index) { if (state !== 'choose') enterChoose(); if (index !== undefined) { choose.index = index; choose.t = 0; } return { state: state, index: choose.index, id: CL.ORDER[choose.index] }; },
