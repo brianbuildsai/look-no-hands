@@ -96,3 +96,72 @@ kinds, not the usual two: the Bog Mound shares the walkers' spawn points.
 
 Every piece above seen moving in the browser; lockstep harness and
 cross-browser print equal; console clean after a hard reload.
+
+## Status
+
+Built, 2026-09-22. The user chose "Build it" at the plan gate.
+
+### What was found on the way
+
+- **The dark was never the number in the code.** The engine lays its dark
+  over what is left of the last frame's (it is never cleared), so outside
+  the lights every floor goes to black whatever alpha it is given. The wood
+  needs its painted sky to be seen, so a floor that sets a night of its own
+  (`dark` on the element, 0.42 here) starts each frame from clear. Every
+  other floor is untouched and looks as it did.
+- **Green on moss is invisible.** The creatures' warnings (the crack for the
+  roots, the ring where the Mound comes up) were first drawn in the floor's
+  green and could not be seen on the moss. They are amber.
+- **A creature that can be stood inside is harmless.** A scripted fighter
+  that simply mashes attack took no wound from the first Rootwalker in any
+  run: blows stop an ordinary creature from beginning an attack, and its
+  roots need distance. It gained a close sweep that blows do not break and
+  that reaches through its own trunk, and a `stout` flag (only it has one):
+  struck, it is barely moved and may still begin.
+- A test hall is not flat: the sanctuary's raised floor stopped the roots,
+  correctly, and looked at first like a bug.
+- A custom wind-up animation loops unless the attack sets its own frame
+  (only one named `windup` is spread over the wind-up): the Mound sank over
+  and over until it did.
+
+### Decisions made for the user
+
+- Floor 2, reached after the first guardian. No guardian of its own; it has
+  a second stage instead. Creature life grows 0.15 a floor instead of 0.17,
+  so floor 10 is as tough as floor 9 was.
+- The references are looked at, never shipped: the site has no images, and
+  the asset library and tilesets are licensed to the user, not to a public
+  repository. The creatures were drawn by hand in text at game size from a
+  shrunk copy of each still, then given the frames the still lacks.
+- Three creatures, not the usual two; the Bog Mound takes some of the
+  walkers' places (an extra draw of chance only on this floor, so no other
+  floor's layout or creatures change).
+- Sounds are borrowed from the recorded set (`roots` already existed; the
+  rest map to `spit`, `crack`, `castbloom`, `blink`): making new recordings
+  needs the ElevenLabs key, which is not in this environment.
+
+### Proof
+
+| what | result |
+| --- | --- |
+| the way down | 37 stages; floor 2 is sanctuary, stage, sanctuary, stage |
+| the bog and the snare | the bog wounds and snares; dash refused while snared, back after |
+| tiles, backdrop, dressing | seen at 1280 wide in the browser; a four-frame strip of the sky moving |
+| each creature | frames rendered offline from its rig; filmed in the browser through its attack; each wounds and snares |
+| the floor's creatures | stage 4: 5 Rusalkas, 3 Rootwalkers, 3 Mounds, an elder Rootwalker; stage 6: 3, 4, 7 |
+| balance (scripted fighter, four creatures on flat ground, wounds a run) | Kilns about 2.5, Wood about 1, Cellars 7 (and not cleared) |
+| lockstep harness `all` after each creature | 18 of 18 together; the other floors' hashes unchanged |
+| harness scenes | now cover both of the wood's stages (4 and 6) and every guardian, floor 10's included (20 scenes) |
+| `all`, Chrome against headless Firefox | 20 of 20 together in each; the twenty final hashes identical in both |
+| `all2` (two players), Chrome against headless Firefox | 20 of 20 together; the twenty final hashes identical in both |
+| net harness (a bad wire) | 6 of 6 held |
+| at 375 and 1440 wide | no sideways scroll; 3.1 and 1.9 ms a frame on the wood; console clean |
+
+### Not proved
+
+- Safari, as before (none here). Nothing new in the simulation is left to
+  the engine: the wood's creatures use only the engine's chance, adding,
+  multiplying, square roots and rounding.
+- Play by a person. The balance numbers come from a scripted fighter that
+  never dashes, so the snare costs it nothing; a player will feel the wood
+  as harder than the fighter did.
