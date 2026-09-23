@@ -104,7 +104,7 @@
   }
 
   // one tile, knowing its neighbours: moss where it meets air above or beside, roots under an overhang, logs with ends
-  function paint(pen, T, t, tx, ty, px, py, at, tick) {
+  function paint(pen, T, t, tx, ty, px, py, at, tick, glow) {
     if (t === 1) {
       var h = mix(tx, ty);
       pen.drawImage(T.stone[PICK[(h >>> 7) & 7]], px, py);
@@ -113,14 +113,19 @@
       if (up === 1 && left === 1 && right === 1 && down === 1) { pen.fillStyle = 'rgba(4,7,4,0.42)'; pen.fillRect(px, py, TILE, TILE); }
       if (left !== 1) pen.drawImage(T.side[0], px, py);
       if (right !== 1) pen.drawImage(T.side[1], px + TILE - 3, py);
-      if (up !== 1) pen.drawImage(T.cap[((h >>> 11) % 3) * 4 + ((Math.floor(tick / 14) + tx * 3) & 3)], px, py - 4);
-      if (down === 0) roots(pen, tx, ty, px, py + TILE, tick);
+      if (up !== 1 && up !== 4) pen.drawImage(T.cap[((h >>> 11) % 3) * 4 + ((Math.floor(tick / 14) + tx * 3) & 3)], px, py - 4);
+      if (down === 0) { roots(pen, tx, ty, px, py + TILE, tick); if ((h >>> 20) % 7 === 0) vine(pen, px + 4 + ((h >>> 3) & 7), py + TILE, 22 + ((h >>> 24) & 31), tick, tx * 0.7); }
+      if (up === 0 && (h >>> 25) % 9 === 0) mushroom(pen, px + 3 + ((h >>> 2) & 7), py - 3, tx * TILE + 4 + ((h >>> 2) & 7), ty * TILE - 3, tick, glow, tx);
     } else if (t === 2) {
       pen.drawImage(T.log, px, py);
       if (at(tx - 1, ty) !== 2) pen.drawImage(T.end[0], px, py);
       if (at(tx + 1, ty) !== 2) pen.drawImage(T.end[1], px + TILE - 4, py);
     } else if (t === 3) pen.drawImage(T.spikes, px, py);
-    else if (t === 4) pen.drawImage(T.hazard[(Math.floor(tick / 10) + tx * 2) % 6], px, py);
+    else if (t === 4) {
+      pen.drawImage(T.hazard[(Math.floor(tick / 10) + tx * 2) % 6], px, py);
+      if (at(tx - 1, ty) === 1) reeds(pen, px + 1, py + 4, tick, tx);
+      if (at(tx + 1, ty) === 1) reeds(pen, px + 10, py + 4, tick, tx + 5);
+    }
   }
 
   // roots and moss that hang from an overhang, a few to a tile, swaying from the knee down
@@ -291,8 +296,49 @@
     }
   }
 
-  /* ---- the dressing ---- */
-  // (plan 15, task 4)
+  /* ---- the dressing ----
+     What grows on the tiles and what lights the wood: long vines from some overhangs, reeds and a cattail where
+     the bog meets the bank, small mushrooms that glow in the moss, and in place of the other floors' wall lamps,
+     pale pods hanging on a vine, breathing. */
 
-  window.UndercroftWood = { tiles: tiles, backdrop: backdrop, INK: INK };
+  // a long vine, leaves along it, swaying more the further down it goes
+  function vine(pen, px, py, len, tick, seed) {
+    for (var y = 0; y < len; y++) {
+      var x = Math.round(px + ST.sin(tick * 0.025 + seed + y * 0.04) * (y / len) * 3);
+      pen.fillStyle = y % 7 === 3 ? INK.b : INK.a; pen.fillRect(x, py + y, 1, 1);
+      if (y % 6 === 2) { pen.fillStyle = y % 12 === 2 ? INK.c : INK.b; pen.fillRect(y % 12 === 2 ? x + 1 : x - 2, py + y, 2, 1); }
+    }
+    pen.fillStyle = INK.d; pen.fillRect(Math.round(px + ST.sin(tick * 0.025 + seed + len * 0.04) * 3), py + len, 1, 1);
+  }
+  // three reeds, the middle one a cattail, leaning with the air
+  function reeds(pen, x, y, tick, seed) {
+    for (var k = 0; k < 3; k++) {
+      var rx = x + k * 2, h = 6 + ((seed * 3 + k * 5) % 7), sw = Math.round(ST.sin(tick * 0.03 + seed + k * 0.9));
+      for (var s = 0; s < h; s++) { pen.fillStyle = s < 2 ? INK.a : INK.b; pen.fillRect(rx + (s > h - 3 ? sw : 0), y - s, 1, 1); }
+      if (k === 1) { pen.fillStyle = INK['5']; pen.fillRect(rx + sw, y - h - 2, 1, 3); }
+      else { pen.fillStyle = INK.c; pen.fillRect(rx + sw, y - h, 1, 1); }
+    }
+  }
+  // a small mushroom in the moss, and the glow about it
+  function mushroom(pen, x, y, wx, wy, tick, glow, seed) {
+    var breath = 0.7 + 0.3 * ST.sin(tick * 0.04 + seed);
+    pen.fillStyle = INK.x; pen.fillRect(x + 1, y + 1, 1, 2);
+    pen.fillStyle = '#7fe0c0'; pen.fillRect(x, y, 3, 1); pen.fillStyle = '#c8fff0'; pen.fillRect(x + 1, y, 1, 1);
+    if (glow) glow(wx + 1, wy, 9, '#7fe0c0', 0.28 * breath);
+  }
+  // the wood's lamp: pods on a vine from above, breathing light
+  function lamp(pen, x, y, tick, k, glow, wx, wy) {
+    var sw = ST.sin(tick * 0.03 + k * 1.9) * 2, breath = 0.75 + 0.25 * ST.sin(tick * 0.05 + k * 2);
+    for (var yy = -44; yy < -1; yy++) { pen.fillStyle = yy % 5 ? INK.a : INK.b; pen.fillRect(x + Math.round(sw * (yy + 44) / 44), y + yy, 1, 1); }
+    var bx = x + Math.round(sw), pods = [[-2, -2], [1, -1], [-1, 1]];
+    for (var p = 0; p < 3; p++) {
+      var P0 = pods[p];
+      pen.fillStyle = '#a9c24a'; pen.fillRect(bx + P0[0], y + P0[1] - 1, 2, 1);
+      pen.fillStyle = '#e6f5a0'; pen.fillRect(bx + P0[0], y + P0[1], 2, 3);
+      pen.fillStyle = '#fffbd0'; pen.fillRect(bx + P0[0], y + P0[1] + 1, 1, 1);
+    }
+    if (glow) glow(wx + sw, wy, 26, '#e6f5a0', 0.3 * breath);
+  }
+
+  window.UndercroftWood = { tiles: tiles, backdrop: backdrop, lamp: lamp, INK: INK };
 })();

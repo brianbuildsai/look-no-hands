@@ -1846,7 +1846,7 @@
         var t = tileAt(tx, ty);
         if (!t) continue;
         var px = tx * TILE - Math.round(cam.x), py = ty * TILE - Math.round(cam.y);
-        if (TILES.paint) { TILES.paint(fpen, TILES, t, tx, ty, px, py, tileAt, tick); if (t === 4) light(tx * TILE + 8, ty * TILE + 8, 20, 0.3); continue; }
+        if (TILES.paint) { TILES.paint(fpen, TILES, t, tx, ty, px, py, tileAt, tick, glow); if (t === 4) light(tx * TILE + 8, ty * TILE + 8, 20, 0.3); continue; }
         if (t === 1) {
           fpen.drawImage(TILES.stone[((tx * 7 + ty * 13) % 3 + 3) % 3], px, py);
           if (tileAt(tx, ty - 1) !== 1) fpen.drawImage(TILES.top, px, py);
@@ -1876,6 +1876,8 @@
       for (k = 0; k < level.lights.length; k++) {
         var lamp = level.lights[k], lx = lamp.x * TILE + 8, ly = lamp.y * TILE + 8;
         if (lx < cam.x - 40 || lx > cam.x + W + 40) continue;
+        // the wood hangs pods on a vine where the other floors fix a lamp to the wall
+        if (TILES.paint && window.UndercroftWood) { window.UndercroftWood.lamp(fpen, lx - cx, ly - cy, tick, k, glow, lx, ly); light(lx, ly, 46, 0.7); continue; }
         fpen.fillStyle = '#4a3b2a'; fpen.fillRect(lx - 2 - cx, ly - 4 - cy, 4, 7);
         fpen.fillStyle = '#ffb347'; fpen.fillRect(lx - 1 - cx, ly - 3 - cy, 2, 4);
         fpen.fillStyle = '#ffdc9a'; fpen.fillRect(lx - 1 - cx, ly - 3 - cy, 1, 2);
