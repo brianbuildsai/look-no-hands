@@ -25,7 +25,7 @@
     { name: 'glass', title: 'The Hall of Glass', stone: ['#352a34', '#4f3f4e', '#8a7088', '#221a22'], top: '#f0d4e6', hazard: 'shards', hazardColours: ['#c46a98', '#ff9ecb', '#ffe8f4'], sky: ['#0c070b', '#1e1220'], glow: '#ff9ecb', accent: '#ffe8f4' },
     // a wood that grew in the dark under the kilns: peat and root, moss that hangs over every edge, black bog water, fog and wisps.
     // `dark` is how deep its night is (the other floors keep the engine's own); `painted` says the engine draws its stone and sky itself
-    { name: 'mire', title: 'The Sunken Wood', stone: ['#23261c', '#343a28', '#5d6e3a', '#15170f'], top: '#a9c24a', hazard: 'bog', hazardColours: ['#0f1d18', '#2c5446', '#c8e6a0'], sky: ['#0a1613', '#1b302b'], glow: '#e6eea0', accent: '#8fd6b0', dark: 0.6, painted: true }
+    { name: 'mire', title: 'The Sunken Wood', stone: ['#23261c', '#343a28', '#5d6e3a', '#15170f'], top: '#a9c24a', hazard: 'bog', hazardColours: ['#0f1d18', '#2c5446', '#c8e6a0'], sky: ['#0a1613', '#1b302b'], glow: '#e6eea0', accent: '#8fd6b0', dark: 0.42, painted: true }
   ];
 
   function makeRandom(seed) {

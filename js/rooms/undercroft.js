@@ -1705,7 +1705,10 @@
     function drawDark(flicker) {
       for (var hk = 0; hk < stepLit.lights.length; hk++) lights.push(stepLit.lights[hk]);
       dpen.globalCompositeOperation = 'source-over';
-      dpen.fillStyle = blackout ? 'rgba(0,0,4,0.95)' : level.boss ? 'rgba(2,2,8,0.5)' : 'rgba(2,2,8,0.74)';   // a guardian's hall is lit by the guardian
+      // the dark is laid over what is left of the last frame's, so it thickens to black outside the lights; a floor with a night of
+      // its own (the Sunken Wood's is lighter, so its painted sky can be seen) starts each frame from clear
+      if (element.dark && !blackout && !level.boss) dpen.clearRect(0, 0, W, H);
+      dpen.fillStyle = blackout ? 'rgba(0,0,4,0.95)' : level.boss ? 'rgba(2,2,8,0.5)' : 'rgba(2,2,8,' + (element.dark || 0.74) + ')';   // a guardian's hall is lit by the guardian
       dpen.fillRect(0, 0, W, H);
       dpen.globalCompositeOperation = 'destination-out';
       var cx = Math.round(cam.x), cy = Math.round(cam.y), k, r;
@@ -1776,6 +1779,8 @@
 
     // the backdrop: the vault in the floor's colours, its arches sliding slower than the floor, and the element's own furniture behind
     function drawBackdrop() {
+      // a floor that paints itself draws its own sky and all that moves in it (the Sunken Wood: wood.js)
+      if (element.painted && window.UndercroftWood) { window.UndercroftWood.backdrop(fpen, W, H, cam, tick, glow); return; }
       var grad = fpen.createLinearGradient(0, 0, 0, H);
       grad.addColorStop(0, element.sky[0]); grad.addColorStop(1, element.sky[1]);
       fpen.fillStyle = grad; fpen.fillRect(0, 0, W, H);
