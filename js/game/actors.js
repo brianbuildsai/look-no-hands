@@ -30,8 +30,12 @@
     tide:  { k: '#03100f', p: '#2f8f86', q: '#1a5550', l: '#9ff5e6', e: '#ffffff', w: '#d6fff8' },
     gear:  { k: '#140d04', p: '#b08a3c', q: '#6e5220', l: '#efd27a', e: '#fff3b0', w: '#ffdc9a' },
     glass: { k: '#140a12', p: '#d88ab4', q: '#8a4f72', l: '#ffe8f4', e: '#ffffff', w: '#ffd0e6' },
-    // the wood: bark for p and q, moss for l; its creatures add figures of their own (actors-wood.js)
-    mire:  { k: '#0b0d08', p: '#5a4632', q: '#33271a', l: '#9dc24a', e: '#f4f0c0', w: '#e6eea0' }
+    // the wood: bark for p and q, moss for l; its three creatures (actors-wood.js) bring colours of their own:
+    // bark 1-4 and leaves 5-8 for the Rootwalker, bog moss m n o O and eyes E d for the Mound, teal t T u U g G and the wisp y Y for the Rusalka
+    mire:  { k: '#0b0d08', p: '#5a4632', q: '#33271a', l: '#9dc24a', e: '#f4f0c0', w: '#e6eea0',
+             '1': '#241a12', '2': '#3d2c1e', '3': '#5e4430', '4': '#80603f', '5': '#2f4a1c', '6': '#4f7324', '7': '#7fa332', '8': '#a9c24a',
+             m: '#39482a', n: '#566a38', o: '#7b8e4c', O: '#a4b46c', E: '#eceadb', d: '#15150c',
+             t: '#0f3431', T: '#1d5a52', u: '#2f8a7e', U: '#5cc2ae', g: '#a6eed8', G: '#e2fff4', y: '#f3e3a6', Y: '#fffbe0' }
   };
 
   /* ---- the kinds ----

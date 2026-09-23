@@ -638,7 +638,7 @@
       },
       // everybody who is up, for what needs to look at all of them (read, do not keep)
       heroes: function () { return players.filter(function (Q) { return !Q.gone && Q.hero.alive; }).map(function (Q) { return Q.hero; }); },
-      projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (Math.abs(p.x - hero.x) < W) sfx('shot'); },
+      projectile: function (p) { p.from = 'enemy'; projectiles.push(p); if (!p.quiet && Math.abs(p.x - hero.x) < W) sfx('shot'); },   // quiet: it makes its own sound
       zap: function (x0, y0, x1, y1, colour) { zaps.push({ x0: x0, y0: y0, x1: x1, y1: y1, colour: colour, life: 8 }); },
       hazard: function (h) { hazards.push(h); },
       telegraph: function (x, y, w, h, life, colour) { telegraphs.push({ x: x, y: y, w: w, h: h, life: life, max: life, colour: colour }); },
@@ -2086,6 +2086,7 @@
       fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', jelly: 'Never stand under a jelly whose arms have gone stiff.', puff: 'Pop it while it swells, or stand well back.', watcher: 'The line it draws is the line it burns.', toad: 'The toad\u2019s tongue is longer than you think.', shade: 'When the shade vanishes, turn round.', 
       thornmother: 'She cannot come to you. Everything she has must.', orrery: 'What orbits can be walked between.', pod: 'A pod is a bramble that has not landed yet.', pollen: 'Pollen is slow. So is forgetting it is there.',
       golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', lightless: 'It was you, and then it was not.', coal: 'Where a coal lands, the floor burns.', icicle: 'What hangs will fall.',
+      roots: 'Roots come along the ground. Be off it when they arrive.', rootwalker: 'When its arms go up, get off the ground.', mound: 'Where the ground bubbles, it comes up.', rusalka: 'Her light is slow. Make it turn.', wisp: 'Her light is slow. Make it turn.', snare: 'Roots hold. Dash before they catch you, not after.',
       burn: 'Burning does not stop when the flame does.', poison: 'Poison keeps count.', wave: 'The ground can come at you.', beam: 'The beam bends.', shard: 'Hail falls straight.'
     };
     function endRun(wonRun) {

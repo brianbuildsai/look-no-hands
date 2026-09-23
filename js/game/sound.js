@@ -145,7 +145,8 @@
 
   // newer things that have no recording of their own yet borrow the nearest that has; make the file and it takes over
   var BORROW = { swap: 'swingquick', toll: 'bell', surge: 'gust', bubble: 'spit', harpoon: 'shot', tick: 'select', cogthrow: 'clink', weightfall: 'boom', handsweep: 'swingheavy', mirror: 'clink', glassbreak: 'shatter', shardfly: 'icicle',
-    whale: 'roarwyrm', timestop: 'bell', tempest: 'roarherald', nightfall: 'eclipse', nightcut: 'shatter', starfigure: 'perk', geyser: 'gust', singularity: 'eclipse', roarbell: 'roar', roarclock: 'roargolem', roarglass: 'roarlightless' };
+    whale: 'roarwyrm', timestop: 'bell', tempest: 'roarherald', nightfall: 'eclipse', nightcut: 'shatter', starfigure: 'perk', geyser: 'gust', singularity: 'eclipse', roarbell: 'roar', roarclock: 'roargolem', roarglass: 'roarlightless',
+    sink: 'spit', erupt: 'crack', wisp: 'castbloom', release: 'blink' };   // the Sunken Wood's creatures (the Rootwalker has 'roots' of its own)
   function play(name) {
     if (!on || !ctx) return;
     if (!samples[name] && BORROW[name]) name = samples[BORROW[name]] ? BORROW[name] : (STAND_IN[BORROW[name]] || BORROW[name]);
