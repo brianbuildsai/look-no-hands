@@ -204,9 +204,10 @@
     if (!WD) { env.fail('The undercroft’s floors did not load. The other rooms still run.'); return null; }
     var level = null, run = { seed: 36, floor: 1, section: 0, stage: 0 }, flames = 3;
     // the way down: two sections and a guardian on each of three floors, then the vault
-    // eight floors, one to an element and each with its guardian, and under them the Vault; stages grow as they go down
+    // nine floors, one to an element, and under them the Vault; stages grow as they go down. Every floor has its guardian but the
+    // Sunken Wood, which has a second stage instead
     var FLOORS = [
-      { element: 'ember', boss: 'golem', grid: [4, 3] }, { element: 'frost', boss: 'wyrm', grid: [4, 3] }, { element: 'bloom', boss: 'thornmother', grid: [5, 3] },
+      { element: 'ember', boss: 'golem', grid: [4, 3] }, { element: 'mire', boss: null, grid: [4, 3], deeper: [5, 3] }, { element: 'frost', boss: 'wyrm', grid: [4, 3] }, { element: 'bloom', boss: 'thornmother', grid: [5, 3] },
       { element: 'tide', boss: 'bellkeeper', grid: [5, 3] }, { element: 'storm', boss: 'herald', grid: [5, 3] }, { element: 'gear', boss: 'regulator', grid: [5, 4] },
       { element: 'glass', boss: 'reflected', grid: [5, 4] }, { element: 'void', boss: 'orrery', grid: [5, 4] }, { element: 'void', boss: 'lightless', grid: null }
     ];
@@ -215,7 +216,8 @@
       var floor = n + 1;
       if (n > 0) STAGES.push({ floor: floor, sanctuary: true, element: F.element });
       if (F.grid) { STAGES.push({ floor: floor, section: 0, element: F.element, grid: F.grid }); STAGES.push({ floor: floor, sanctuary: true, element: F.element }); }
-      STAGES.push({ floor: floor, boss: F.boss, element: F.element });
+      if (F.boss) STAGES.push({ floor: floor, boss: F.boss, element: F.element });
+      else STAGES.push({ floor: floor, section: 1, element: F.element, grid: F.deeper || F.grid });
     });
     // until a guardian's own file is written, another stands in for it
     function guardianFor(st) { var GR = window.Guardians.REG; return GR[st.boss] ? st.boss : { thornmother: 'wyrm', orrery: 'herald', bellkeeper: 'wyrm', regulator: 'herald', reflected: 'orrery' }[st.boss] || 'golem'; }
@@ -310,7 +312,7 @@
       hero.anim = 'idle'; hero.frame = 0; hero.clock = 0; hero.landed = 0;
       hero.hp = hero.maxHp; hero.energy = hero.maxEnergy;
       hero.act = null; hero.combo = 0; hero.queued = false; hero.dashCd = 0; hero.airDash = true; hero.invuln = 0; hero.flash = 0; hero.alive = true; hero.deadFor = 0; hero.wall = 0; pounding = false;
-      afflictions.burn = 0; afflictions.chill = 0; afflictions.poison = 0; afflictions.soak = 0; afflictions.jam = 0; afflictions.cut = 0;
+      afflictions.burn = 0; afflictions.chill = 0; afflictions.poison = 0; afflictions.soak = 0; afflictions.jam = 0; afflictions.cut = 0; afflictions.snare = 0;
     }
 
     // does the box [x0, x1) by [y0, y1) overlap a solid tile, or (when asked) a ledge?
@@ -374,6 +376,8 @@
       hero.x = to;
     }
     function startDash() {
+      // snared: the wood's roots hold her feet, and there is no dash until they let go
+      if (afflictions.snare > 0) { if (hero.dashCd <= 0) { number(hero.x, hero.y - 32, 'SNARED', '#b8d86a'); hero.dashCd = 16; } return; }
       hero.act = { kind: 'dash', ticks: 0 };
       hero.anim = 'dash'; hero.frame = 0; hero.clock = 0;
       hero.act.speed = klass.dash === 'charge' ? 3.5 : klass.dash === 'flicker' ? -3.8 : klass.dash === 'blink' ? 1.4 : DASH_SPEED; hero.act.frames = klass.dash === 'blink' ? 7 : Math.round((klass.dash === 'charge' ? 17 : klass.dash === 'flicker' ? 10 : DASH_FRAMES) * mods.dashLength); hero.act.struck = [];
@@ -574,7 +578,7 @@
           // brine does not wound: it soaks, and wading is slow
           if (element.hazard === 'brine') { if (!(afflictions.soak > 120)) { if (!(afflictions.soak > 0)) { number(hero.x, hero.y - 32, 'SOAKED', '#5fd4c4'); sfx('land'); } afflictions.soak = 170; } hero.vx *= 0.86; if (tick % 4 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 1, vx: (random() - 0.5) * 0.8, vy: -0.8 - random(), life: 12, max: 12, colour: '#9ff5e6', size: 1, gravity: 0.1 }); continue; }
           if (element.hazard === 'rail' && tick % 150 >= 75) continue;
-          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1, element.hazard === 'void' ? 'voidpool' : element.hazard)) { hero.vy = -3.2; status(element.name); if (element.hazard === 'cogs') hero.vx = (tx % 2 ? -1 : 1) * 3.4; if (element.hazard === 'shards') afflict('glass'); }
+          if (hurtHero(tx * TILE + 8, element.hazard === 'void' ? 2 : 1, element.hazard === 'void' ? 'voidpool' : element.hazard)) { hero.vy = -3.2; status(element.name); if (element.hazard === 'cogs') hero.vx = (tx % 2 ? -1 : 1) * 3.4; if (element.hazard === 'shards') afflict('glass'); if (element.hazard === 'bog') afflict('mire'); }
           return;
         }
       }
@@ -938,13 +942,13 @@
 
     /* ---- what the elements do to the Warden ---- */
 
-    var afflictions = { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0 };
+    var afflictions = { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0, snare: 0 };
     function afflict(elementName) {
       var st = AC.STATUS[elementName];
       if (!st) return;
       if (st.name === 'drain') { if (hero.energy > 0) { hero.energy--; number(hero.x, hero.y - 32, '-', '#a48cff'); } return; }
       if (st.name === 'shock') { hero.vx *= 0.2; return; }
-      if (!(afflictions[st.name] > 0) && (st.name === 'soak' || st.name === 'jam' || st.name === 'cut')) number(hero.x, hero.y - 32, st.name === 'soak' ? 'SOAKED' : st.name === 'jam' ? 'JAMMED' : 'CUT', st.colour);
+      if (!(afflictions[st.name] > 0) && (st.name === 'soak' || st.name === 'jam' || st.name === 'cut' || st.name === 'snare')) number(hero.x, hero.y - 32, st.name === 'soak' ? 'SOAKED' : st.name === 'jam' ? 'JAMMED' : st.name === 'snare' ? 'SNARED' : 'CUT', st.colour);
       afflictions[st.name] = st.time;
     }
     function stepAfflictions() {
@@ -954,6 +958,7 @@
       // soaked: jumps and dashes fall short. Jammed: the power will not fire, and blows give no energy. Cut: the next wound is one deeper
       if (afflictions.soak > 0) { afflictions.soak--; if (tick % 7 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 8 - random() * 10, vx: 0, vy: 0.5, life: 14, max: 14, colour: '#5fd4c4', size: 1, gravity: 0.06 }); }
       if (afflictions.jam > 0) { afflictions.jam--; if (tick % 9 === 0) particles.push({ x: hero.x + (random() - 0.5) * 10, y: hero.y - 20, vx: (random() - 0.5) * 0.6, vy: -0.4, life: 14, max: 14, colour: '#e0b04a', size: 1, gravity: 0 }); }
+      if (afflictions.snare > 0) { afflictions.snare--; if (tick % 10 === 0) particles.push({ x: hero.x + (random() - 0.5) * 10, y: hero.y - 1, vx: 0, vy: -0.25, life: 16, max: 16, colour: '#b8d86a', size: 1, gravity: 0 }); }
       if (afflictions.cut > 0) { afflictions.cut--; if (tick % 8 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y - 6 - random() * 14, vx: 0, vy: 0.3, life: 12, max: 12, colour: '#ff9ecb', size: 1, gravity: 0.03 }); }
       if (element.hazard === 'ice' && onIce && tick % 6 === 0) particles.push({ x: hero.x + (random() - 0.5) * 8, y: hero.y, vx: -hero.vx * 0.3, vy: -0.4, life: 14, max: 14, colour: '#d8f1ff', size: 1, gravity: 0.02 });
     }
@@ -2067,7 +2072,7 @@
       reflected: 'The true mirror carries your lantern.',
       regulator: 'The other half of the hall is safe.', weight: 'It strikes the hour. Count, and do not stand on the mark.',
       bellkeeper: 'A bell can be rung from outside.', toll: 'Low rings are jumped. High rings are stood under.', diver: 'The harpoon goes where the line was drawn.', angler: 'When the lure goes out, move.', winder: 'It runs down. Wait for it.', governor: 'What it throws comes back.', cog: 'What it throws comes back.', reflection: 'Its back is not a mirror.', prism: 'One beam becomes three at the mark.',
-      cogs: 'The works do not stop for you.', shards: 'Glass remembers being sharp.', spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.',
+      cogs: 'The works do not stop for you.', shards: 'Glass remembers being sharp.', spikes: 'Spikes are not a floor.', lava: 'The kilns are lit.', ice: 'Ice keeps its own counsel.', rail: 'The rails carry more than trains.', spores: 'Do not breathe in the cisterns.', voidpool: 'The vault does not give back.', bog: 'The wood keeps what steps in it.',
       fall: 'The floor is optional. So is the bottom.', imp: 'When the bellows swell, be elsewhere.', lantern: 'Embers fall in arcs. Walk under them.', crab: 'Do not stand by a shut shell.', owl: 'The owl shows you its line first.', hound: 'The hound crouches before it leaps.', jelly: 'Never stand under a jelly whose arms have gone stiff.', puff: 'Pop it while it swells, or stand well back.', watcher: 'The line it draws is the line it burns.', toad: 'The toad\u2019s tongue is longer than you think.', shade: 'When the shade vanishes, turn round.', 
       thornmother: 'She cannot come to you. Everything she has must.', orrery: 'What orbits can be walked between.', pod: 'A pod is a bramble that has not landed yet.', pollen: 'Pollen is slow. So is forgetting it is there.',
       golem: 'The golem strikes where it looked.', wyrm: 'The wyrm tells you where it will fly.', herald: 'The herald is never where the bolt is.', lightless: 'It was you, and then it was not.', coal: 'Where a coal lands, the floor burns.', icicle: 'What hangs will fall.',
@@ -2100,7 +2105,7 @@
       var y = 34;
       text(summary.won ? 'YOU CAME BACK UP' : summary.floor === FLOORS.length ? 'YOU FELL IN THE VAULT' : 'YOU FELL ON FLOOR ' + summary.floor, W / 2, y, summary.won ? '#ffdc9a' : '#ff4f7b', 2, 'center'); y += 22;
       text(summary.lesson, W / 2, y, '#e9e6df', 1, 'center'); y += 18;
-      text((summary.won ? 'EIGHT FLOORS AND THE VAULT' : (summary.floor === FLOORS.length ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
+      text((summary.won ? 'NINE FLOORS AND THE VAULT' : (summary.floor === FLOORS.length ? 'THE VAULT' : 'FLOOR ' + summary.floor) + (summary.section >= 3 ? ', AT THE GUARDIAN' : ', SECTION ' + (summary.section + 1))) + '   ' + (summary.who ? summary.who.toUpperCase() + '   ' : '') + summary.kills + ' SLAIN   ' + timeText(summary.seconds), W / 2, y, '#8f8d88', 1, 'center'); y += 12;
       text('SEED ' + summary.seed, W / 2, y, '#8f8d88', 1, 'center'); y += 16;
       if (summary.relics.length) { text('CARRIED: ' + summary.relics.map(function (id) { return RL.BY_ID[id].name; }).join(', ').toUpperCase(), W / 2, y, '#c4c1ba', 1, 'center'); y += 12; }
       if (summary.unlocked.length) { text(summary.unlocked.join(' AND ').toUpperCase() + ' UNLOCKED', W / 2, y, '#ffb347', 1, 'center'); y += 12; }
@@ -2310,7 +2315,7 @@
     // a new player: their own everything, at its beginnings
     function makePlayer(index, who, powerId) {
       var K = CL.CLASSES[who] ? who : 'warden';
-      return { index: index, hero: freshHero(), classId: K, klass: CL.CLASSES[K], sprites: { warden: P.hero.build(K) }, afflictions: { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0 },
+      return { index: index, hero: freshHero(), classId: K, klass: CL.CLASSES[K], sprites: { warden: P.hero.build(K) }, afflictions: { burn: 0, chill: 0, poison: 0, soak: 0, jam: 0, cut: 0, snare: 0 },
         power: powerId || 'emberwave', held: [], mods: RL.baseMods(), casts: 0, shieldUp: 0,
         weaponId: 'shortsword', weapon: WP.WEAPONS.shortsword, swings: WP.MOVESETS.sword, hands: ['shortsword', null], handIn: 0, swapT: 0,
         ribbon: [], droplets: [], flock: [], lash: null, delayed: [], reaped: 0, hitCount: 0, airJumped: 0, pounding: false, onIce: false, slick: false,

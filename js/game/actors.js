@@ -29,7 +29,9 @@
     void:  { k: '#000000', p: '#1e1a2c', q: '#0d0b14', l: '#5b3fa0', e: '#ffffff', w: '#a48cff' },
     tide:  { k: '#03100f', p: '#2f8f86', q: '#1a5550', l: '#9ff5e6', e: '#ffffff', w: '#d6fff8' },
     gear:  { k: '#140d04', p: '#b08a3c', q: '#6e5220', l: '#efd27a', e: '#fff3b0', w: '#ffdc9a' },
-    glass: { k: '#140a12', p: '#d88ab4', q: '#8a4f72', l: '#ffe8f4', e: '#ffffff', w: '#ffd0e6' }
+    glass: { k: '#140a12', p: '#d88ab4', q: '#8a4f72', l: '#ffe8f4', e: '#ffffff', w: '#ffd0e6' },
+    // the wood: bark for p and q, moss for l; its creatures add figures of their own (actors-wood.js)
+    mire:  { k: '#0b0d08', p: '#5a4632', q: '#33271a', l: '#9dc24a', e: '#f4f0c0', w: '#e6eea0' }
   };
 
   /* ---- the kinds ----
@@ -467,7 +469,7 @@
 
   BY_ELEMENT.storm = ['hound', 'jelly']; BY_ELEMENT.bloom = ['toad', 'puff']; BY_ELEMENT.void = ['shade', 'watcher'];
   // until their own are written, the newer floors borrow
-  BY_ELEMENT.tide = ['crab', 'puff']; BY_ELEMENT.gear = ['hound', 'lantern']; BY_ELEMENT.glass = ['shade', 'watcher'];
+  BY_ELEMENT.tide = ['crab', 'puff']; BY_ELEMENT.gear = ['hound', 'lantern']; BY_ELEMENT.glass = ['shade', 'watcher']; BY_ELEMENT.mire = ['toad', 'puff'];
 
   // compile every kind's rig into frames, and their mirror images
   var SPRITES = null;
@@ -502,12 +504,13 @@
     void:  { name: 'drain', time: 1, colour: '#a48cff' },
     tide:  { name: 'soak', time: 170, colour: '#5fd4c4' },
     gear:  { name: 'jam', time: 180, colour: '#e0b04a' },
-    glass: { name: 'cut', time: 240, colour: '#ff9ecb' }
+    glass: { name: 'cut', time: 240, colour: '#ff9ecb' },
+    mire:  { name: 'snare', time: 150, colour: '#b8d86a' }
   };
   function statusName(element) { return STATUS[element].name; }
 
   function make(name, x, groundY, elder, floor, rnd) {
-    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.17, size = elder ? 1.4 : 1;
+    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.15, size = elder ? 1.4 : 1;
     var hp = Math.round(K.hp * scale * (elder ? 3 : 1));
     return {
       kind: name, spec: K, element: K.element, elder: !!elder, size: size,

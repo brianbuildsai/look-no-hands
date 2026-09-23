@@ -15,8 +15,8 @@
   var ctx = null, master = null, limiter = null, on = false, noiseBuffer = null;
   var music = { playing: false, element: null, timer: null, next: 0, step: 0, tension: 0, drone: null, gain: null, rnd: null };
 
-  var ROOTS = { ember: 55, frost: 65.41, storm: 61.74, bloom: 58.27, void: 51.91, tide: 49, gear: 73.42, glass: 69.3 };   // A1, C2, B1, Bb1, G#1
-  var SCALES = { ember: [0, 3, 5, 7, 10], frost: [0, 2, 4, 7, 9], storm: [0, 2, 3, 7, 10], bloom: [0, 2, 4, 7, 9], void: [0, 1, 5, 6, 10], tide: [0, 2, 3, 7, 8], gear: [0, 2, 5, 7, 9], glass: [0, 4, 6, 7, 11] };
+  var ROOTS = { ember: 55, frost: 65.41, storm: 61.74, bloom: 58.27, void: 51.91, tide: 49, gear: 73.42, glass: 69.3, mire: 46.25 };   // A1, C2, B1, Bb1, G#1
+  var SCALES = { ember: [0, 3, 5, 7, 10], frost: [0, 2, 4, 7, 9], storm: [0, 2, 3, 7, 10], bloom: [0, 2, 4, 7, 9], void: [0, 1, 5, 6, 10], tide: [0, 2, 3, 7, 8], gear: [0, 2, 5, 7, 9], glass: [0, 4, 6, 7, 11], mire: [0, 2, 3, 7, 9] };
 
   function start() {
     if (ctx) return true;
