@@ -66,8 +66,9 @@
   function scenes(which) {
     var list = [], k;
     if (which === 'quick') return [{ name: 'stage 0', stage: 0 }, { name: 'guardian 4', arena: 4 }, { name: 'guardian 7', arena: 7 }];
-    [0, 1, 4, 8, 12, 16, 20, 24, 28].forEach(function (n) { list.push({ name: 'stage ' + n, stage: n }); });
-    for (k = 1; k <= 9; k++) list.push({ name: 'guardian ' + k, arena: k });
+    // stages 4 and 6 are the Sunken Wood's (floor 2, which has no guardian of its own)
+    [0, 1, 4, 6, 8, 12, 16, 20, 24, 28, 32].forEach(function (n) { list.push({ name: 'stage ' + n, stage: n }); });
+    for (k = 1; k <= 10; k++) if (k !== 2) list.push({ name: 'guardian ' + k, arena: k });
     return list;
   }
 
@@ -168,7 +169,7 @@
     if (!state.ready || state.running) return;
     state.running = true; state.done = false; state.results = []; state.failed = 0; logEl.classList.remove('harness__log--bad'); logEl.textContent = 'running net…';
     var list = [
-      { name: 'a good wire', seed: 11, delay: 1, jitter: 1, loss: 0, inputDelay: 3, ticks: 1500, arena: 2 },
+      { name: 'a good wire', seed: 11, delay: 1, jitter: 1, loss: 0, inputDelay: 3, ticks: 1500, arena: 3 },
       { name: 'a far one (about 110 ms each way), jittery, losing one in five', seed: 23, delay: 5, jitter: 4, loss: 0.2, inputDelay: 0, ticks: 1800, arena: 5 },
       { name: 'begun with far too little delay for the distance: it must wait, then learn', seed: 37, delay: 6, jitter: 4, loss: 0.1, inputDelay: 2, ticks: 1800, arena: 7, slack: 0.7 },
       { name: 'one copy spoiled on purpose: the host must notice and both begin the stage again', seed: 41, delay: 3, jitter: 2, loss: 0.05, inputDelay: 4, ticks: 1800, arena: 4, spoil: 420 },

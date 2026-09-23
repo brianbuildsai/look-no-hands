@@ -1904,6 +1904,8 @@
       if (afflictions.chill > 0) { fpen.globalAlpha = 0.45; fpen.drawImage(P.silhouette(img, '#9fd8ff'), x, y); fpen.globalAlpha = 1; }
       if (afflictions.soak > 0) { fpen.globalAlpha = 0.3; fpen.drawImage(P.silhouette(img, '#2fae9e'), x, y); fpen.globalAlpha = 1; }
       fpen.globalAlpha = 1;
+      // snared: roots up round her ankles, working at them, loosening as the snare runs out
+      if (afflictions.snare > 0 && hero.alive && hero.onGround) { var rx = Math.round(hero.x) - Math.round(cam.x), ry = Math.round(hero.y) - Math.round(cam.y), grip = Math.min(1, afflictions.snare / 40); for (var sr = -2; sr <= 2; sr++) { var rh = Math.round((3 + ((tick >> 3) + sr * 3) % 3) * grip); fpen.fillStyle = sr % 2 ? '#5e4430' : '#3d2c1e'; fpen.fillRect(rx + sr * 2, ry - rh, 1, rh); if (rh > 2) { fpen.fillStyle = '#7fa332'; fpen.fillRect(rx + sr * 2 + (sr < 0 ? 1 : -1), ry - rh, 1, 1); } } fpen.fillStyle = '#3d2c1e'; fpen.fillRect(rx - 5, ry - 1, 11, 1); }
       // the lantern's light travels with the hand
       if (hero.alive) light(hero.x - hero.dir * 7, hero.y - 12, Math.round((78 + (hero.act && hero.act.kind === 'cast' ? 40 : 0)) * mods.lantern), 1, true);
     }
