@@ -15,6 +15,16 @@ Open the Undercroft and choose **Host a game** on its main screen (or in the
 controls beside it), pick who you go down as, and send the six-character code
 (or the link with it in) to someone. They open the same page, choose **Join a
 game**, type the code and press Enter; you press Enter to start together.
+The **FLOOR** line on the host's main screen says where you both begin.
+
+## Beginning on any floor (room 36)
+
+The main screen's **FLOOR** line (left and right to change it) or the room's
+address (`rooms/undercroft.html?floor=2`) chooses the floor a run begins on.
+Floor 1 is the true run. Begun deeper, a run starts in that floor's
+sanctuary with what everyone starts with, and is practice: nothing it does is
+kept (best floor, wins, runs, unlocks). The hall's game tab lists every floor
+with a link of this kind.
 
 How it works, because it decides how new things must be written:
 
@@ -110,7 +120,7 @@ Fonts. Offline it falls back to system fonts and still works.
 ## Layout
 
 ```
-index.html            the hall: rooms 1 to 5, and the floor plan to the rest
+index.html            the hall: two tabs, the exhibition (rooms 1 to 5 and the floor plan to the rest) and the game (#game)
 rooms/*.html          rooms 6 to 36, one work to a page (generated, committed)
 css/style.css
 js/core.js            frame loop, visibility, motion switch, GL helpers
@@ -187,6 +197,13 @@ docs/                 design and task plans
 
 ## Getting from room to room
 
+The hall opens with two tabs under its masthead: **Exhibition**, which is
+everything described here, and **Game**, a page for room 36 with a way down,
+all ten floors to begin on and how to play together. `index.html#game` opens
+the second; any link to a place in the exhibition brings the first back.
+While the game's tab is open the exhibition is not displayed, so its works are
+out of sight and stop drawing (`js/core.js`, `wireDoors`).
+
 Every room page has previous and next arrows in its masthead, a "Next room"
 link under its controls, and the same in a footer; the left and right arrow
 keys do the same unless a slider or text box has focus. Rooms 1 to 5 in the
@@ -232,7 +249,7 @@ Gallery.inspect('docent').label()       // rooms/docent.html: the label being wr
 Gallery.inspect('undercroft').state()   // rooms/undercroft.html: the Warden, the run, the creatures, the frame cost
 Gallery.inspect('undercroft').press('right jump', 12)  // hold keys for so many steps (left right up down jump attack dash cast start pause)
 Gallery.inspect('undercroft').generate(seed, floor, section)  // a floor: columns, reachable, enemies, relics
-Gallery.inspect('undercroft').begin(seed, 'kite'); .pick(who); .classes(); .choose(index)  // who goes down
+Gallery.inspect('undercroft').begin(seed, 'kite', floor); .pick(who); .classes(); .choose(index)  // who goes down, and on which floor (1 if left out)
 Gallery.inspect('undercroft').portal(); .perks(); .reward()  // where the portal is and the chamber grid; what is offered (a sanctuary's perks or a guardian's rewards)
 Sound.recorded()  // rooms/undercroft.html: how many recorded effects are listed and loaded
 Gallery.inspect('undercroft').stage(n)  // any of the thirty-seven stages of the way down; .arena(floor) goes straight to a guardian (1, and 3 to 10: floor 2, the Sunken Wood, has none)
