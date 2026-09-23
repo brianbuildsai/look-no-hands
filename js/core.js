@@ -345,6 +345,53 @@
     setTimeout(reveal, 2500);
   }
 
+  /* ---- the hall's two doors: the exhibition, and the game ------------------------- */
+
+  // Two tabs under the masthead. The game's is #game; any other place in the hall belongs to the exhibition, so its
+  // links (the rooms in the masthead, the floor plan) bring the exhibition back. While the game's door is open the
+  // exhibition is not displayed, so its works are out of sight and stop drawing.
+  function wireDoors() {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-door]'));
+    if (!tabs.length) return;
+    var root = document.documentElement;
+    function show(which, toTop) {
+      var game = which === 'game';
+      root.classList.toggle('is-game', game);
+      if (game) root.classList.remove('is-loading');
+      tabs.forEach(function (t) {
+        var on = t.getAttribute('data-door') === which;
+        t.classList.toggle('is-on', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+      });
+      if (toTop) window.scrollTo(0, 0);
+    }
+    function open(which) {
+      show(which, true);
+      try { history.replaceState(null, '', which === 'game' ? '#game' : location.pathname + location.search); } catch (e) { location.hash = which === 'game' ? 'game' : ''; }
+    }
+    tabs.forEach(function (t, k) {
+      t.addEventListener('click', function () { open(t.getAttribute('data-door')); });
+      // a tab list: left and right (and Home, End) move between the tabs
+      t.addEventListener('keydown', function (e) {
+        var to = e.key === 'ArrowRight' ? k + 1 : e.key === 'ArrowLeft' ? k - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : null;
+        if (to === null) return;
+        e.preventDefault();
+        var next = tabs[(to + tabs.length) % tabs.length];
+        next.focus(); open(next.getAttribute('data-door'));
+      });
+    });
+    window.addEventListener('hashchange', function () {
+      var h = location.hash.slice(1);
+      if (h === 'game') { show('game', true); return; }
+      if (!root.classList.contains('is-game')) return;
+      show('exhibition', false);
+      var at = h && document.getElementById(h);
+      if (at) at.scrollIntoView(); else window.scrollTo(0, 0);
+    });
+    show(location.hash === '#game' ? 'game' : 'exhibition', false);
+  }
+
   /* ---- a favicon, computed like everything else ------------------------------- */
 
   function drawFavicon() {
@@ -495,6 +542,7 @@
     drawFavicon();
     wireMotionToggle();
     wireRoomsNav();
+    wireDoors();
     wireArrowKeys();
     watch();
     scheduleReveal();

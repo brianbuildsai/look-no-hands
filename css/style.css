@@ -970,6 +970,297 @@ canvas {
   text-decoration-color: rgba(233, 230, 223, 0.6);
 }
 
+/* 10b. The hall's two doors, and the game's -------------------------- */
+
+/* Two tabs under the masthead, there from the first moment: the exhibition
+   (everything above) and the game (room 36, with every floor to begin on).
+   core.js sets .is-game on the root; the head script sets it early for #game. */
+.doors {
+  position: fixed;
+  top: calc(var(--masthead-h) - 0.35rem);
+  left: 50%;
+  z-index: 21;
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.66);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transform: translateX(-50%);
+  transition: opacity 0.6s ease-out 0.2s;
+}
+
+.doors__tab {
+  appearance: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55em;
+  min-height: 2rem;
+  padding: 0.4rem 1.05rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ash);
+  font: 500 var(--step--1) / 1.2 var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.doors__tab:hover {
+  color: var(--bone);
+}
+
+.doors__tab.is-on {
+  background: var(--bone);
+  color: var(--void);
+}
+
+.doors__new {
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.doors__tab.is-on .doors__new {
+  color: #7a3f00;
+}
+
+.is-loading .doors {
+  opacity: 0;
+}
+
+/* which door is open */
+.arcade {
+  display: none;
+}
+
+.is-game .hall {
+  display: none;
+}
+
+.is-game .arcade {
+  display: block;
+}
+
+.arcade {
+  min-height: 100vh;
+  padding: calc(var(--masthead-h) + clamp(4rem, 12vh, 7rem)) var(--gutter) clamp(4rem, 12vh, 8rem);
+}
+
+.arcade__kicker {
+  font-size: var(--step--1);
+  color: var(--ash);
+}
+
+.arcade__title {
+  margin-top: 0.75rem;
+  margin-left: -0.05em;
+  font-family: var(--serif);
+  font-size: clamp(3.5rem, 12vw, 11rem);
+  font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+}
+
+.arcade__intro {
+  max-width: 38rem;
+  margin-top: clamp(1.25rem, 3vh, 2rem);
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-weight: 340;
+  font-variation-settings: "opsz" 30, "SOFT" 50, "WONK" 0;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+.arcade__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.arcade__actions .btn {
+  text-decoration: none;
+}
+
+.btn--bright {
+  background: var(--bone);
+  border-color: var(--bone);
+  color: var(--void);
+}
+
+.btn--bright:hover {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.arcade__new {
+  max-width: 44rem;
+  margin-top: clamp(3rem, 8vh, 5rem);
+  padding: 1.25rem 1.4rem 1.4rem;
+  border: 1px solid rgba(255, 179, 71, 0.45);
+  border-left-width: 3px;
+  background: linear-gradient(100deg, rgba(143, 214, 176, 0.08), rgba(0, 0, 0, 0) 70%);
+}
+
+.arcade__new-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.arcade__new-title {
+  margin-top: 0.35rem;
+  font-family: var(--serif);
+  font-size: var(--step-2);
+  font-style: italic;
+  font-weight: 340;
+  font-variation-settings: "opsz" 48, "SOFT" 100, "WONK" 1;
+  line-height: 1.1;
+}
+
+.arcade__new-text,
+.arcade__text {
+  max-width: 40rem;
+  margin-top: 0.6rem;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  color: var(--ash);
+}
+
+.arcade__heading {
+  margin-top: clamp(3.5rem, 10vh, 6rem);
+  font-family: var(--serif);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.arcade__note {
+  max-width: 40rem;
+  margin-top: 1rem;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  color: var(--ash);
+}
+
+/* the floors, drawn like the floor plan: hairline rooms, each lit along its top in its element's colour */
+.floors {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: clamp(2rem, 5vh, 3rem);
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+
+.floors > li {
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.floor {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  height: 100%;
+  padding: 1.1rem 1rem 1.3rem;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.floor::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0 auto 0;
+  height: 2px;
+  background: var(--hue, var(--bone));
+  opacity: 0.8;
+}
+
+.floor:hover {
+  background: rgba(233, 230, 223, 0.07);
+}
+
+.floor__num {
+  font-size: var(--step--1);
+  color: var(--ash);
+  font-variant-numeric: tabular-nums;
+}
+
+.floor__name {
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  font-style: italic;
+  font-weight: 340;
+  font-variation-settings: "opsz" 30, "SOFT" 100, "WONK" 1;
+  line-height: 1.15;
+  color: var(--bone);
+}
+
+.floor__who {
+  font-size: var(--step--1);
+  line-height: 1.4;
+  color: var(--ash);
+}
+
+.floor__tag {
+  justify-self: start;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--amber);
+  color: var(--void);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.floor--new {
+  background: rgba(230, 238, 160, 0.06);
+}
+
+.arcade__more {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 4rem);
+  margin-top: clamp(3.5rem, 10vh, 6rem);
+}
+
+.arcade__subheading {
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--bone);
+}
+
+@media (max-width: 899px) {
+  .floors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .arcade__more {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .doors__tab {
+    padding: 0.4rem 0.85rem;
+  }
+}
+
 /* 11. Small screens ---------------------------------------------------- */
 @media (max-width: 899px) {
   .masthead {
@@ -1161,7 +1452,10 @@ canvas {
   .ways__link,
   .plan__door,
   .plan__link,
-  .plan__glyph {
+  .plan__glyph,
+  .doors,
+  .doors__tab,
+  .floor {
     transition: none;
   }
 }

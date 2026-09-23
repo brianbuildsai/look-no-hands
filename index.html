@@ -14,8 +14,10 @@
   <link rel="stylesheet" href="css/style.css">
   <script>
     // Hide the hero until the first frame is ready. The timeout is a failsafe
-    // so the page can never stay hidden if a script fails to load.
-    document.documentElement.classList.add('is-loading');
+    // so the page can never stay hidden if a script fails to load. Arriving at
+    // #game opens the game's door straight away, with nothing to wait for.
+    if (location.hash === '#game') document.documentElement.classList.add('is-game');
+    else document.documentElement.classList.add('is-loading');
     setTimeout(function () { document.documentElement.classList.remove('is-loading'); }, 4000);
   </script>
 </head>
@@ -37,7 +39,13 @@
     <button class="btn btn--quiet motion-toggle" type="button" aria-label="Pause motion" data-motion-toggle><span data-motion-verb>Pause</span><span class="motion-toggle__noun">&nbsp;motion</span></button>
   </header>
 
-  <main>
+  <!-- Two doors in: the exhibition, and the game. #game opens the second; core.js does the rest -->
+  <div class="doors" role="tablist" aria-label="Which part of the building">
+    <button class="doors__tab is-on" type="button" role="tab" id="door-exhibition" aria-selected="true" aria-controls="exhibition" data-door="exhibition">Exhibition</button>
+    <button class="doors__tab" type="button" role="tab" id="door-game" aria-selected="false" aria-controls="game" data-door="game" tabindex="-1">Game<span class="doors__new">New floor</span></button>
+  </div>
+
+  <main class="hall" id="exhibition" role="tabpanel" aria-labelledby="door-exhibition">
     <!-- Room 1: Quicksilver (hero) -->
     <section class="room room--hero" id="quicksilver" data-room>
       <div class="stage" data-work="quicksilver">
@@ -46,7 +54,7 @@
       </div>
       <div class="hero__text">
         <h1 class="hero__title">Look,<br>no hands.</h1>
-        <p class="hero__intro">Thirty-six works. Five in this hall, of light, language, learning, life and sound, thirty more in <a class="hero__link" href="#plan">the rooms beyond it</a>, and a game in the undercroft at the end. None of it is a picture or a recording. Every frame is worked out on your device as you watch, by code an AI wrote from a five-line brief. Go on, touch things.</p>
+        <p class="hero__intro">Thirty-six works. Five in this hall, of light, language, learning, life and sound, thirty more in <a class="hero__link" href="#plan">the rooms beyond it</a>, and <a class="hero__link" href="#game">a game in the undercroft</a> at the end. None of it is a picture or a recording. Every frame is worked out on your device as you watch, by code an AI wrote from a five-line brief. Go on, touch things.</p>
       </div>
       <div class="label label--hero">
         <h2 class="label__title">Quicksilver</h2>
@@ -441,7 +449,7 @@
       <dl class="facts">
         <div class="facts__row"><dt>Images, videos and recordings</dt><dd>0</dd></div>
         <div class="facts__row"><dt>Libraries and frameworks</dt><dd>0</dd></div>
-        <div class="facts__row"><dt>Lines of code, all of them readable</dt><dd data-fact="lines">28,547</dd></div>
+        <div class="facts__row"><dt>Lines of code, all of them readable</dt><dd data-fact="lines">29,660</dd></div>
         <div class="facts__row"><dt>Hands</dt><dd>0</dd></div>
       </dl>
       <p class="colophon__text">Don't take the wall text's word for it. The source is not minified or hidden. Read it:</p>
@@ -488,9 +496,11 @@
         <li><a href="js/game/weapons.js">game/weapons.js</a></li>
         <li><a href="js/game/arms.js">game/arms.js</a></li>
         <li><a href="js/game/world.js">game/world.js</a></li>
+        <li><a href="js/game/wood.js">game/wood.js</a></li>
         <li><a href="js/game/explore.js">game/explore.js</a></li>
         <li><a href="js/game/actors.js">game/actors.js</a></li>
         <li><a href="js/game/actors-deep.js">game/actors-deep.js</a></li>
+        <li><a href="js/game/actors-wood.js">game/actors-wood.js</a></li>
         <li><a href="js/game/relics.js">game/relics.js</a></li>
         <li><a href="js/game/guardians.js">game/guardians.js</a></li>
         <li><a href="js/game/boss-golem.js">game/boss-golem.js</a></li>
@@ -514,6 +524,51 @@
       </ul>
     </section>
   </main>
+
+  <!-- The game's door: room 36, the Undercroft, with every floor to begin on -->
+  <section class="arcade" id="game" role="tabpanel" aria-labelledby="door-game">
+    <div class="arcade__head">
+      <p class="arcade__kicker">Room 36, at the bottom of the building</p>
+      <h1 class="arcade__title">Undercroft</h1>
+      <p class="arcade__intro">A rogue-like platformer for one or two. Choose who goes down, find the portal hidden in every stage, take one of three gifts in the still place beyond it, and meet what waits at the foot of each floor. Every sprite in it is drawn from text when the page opens.</p>
+      <div class="arcade__actions">
+        <a class="btn btn--bright" href="rooms/undercroft.html">Go down</a>
+        <a class="btn" href="rooms/undercroft.html?floor=2">Try the new floor</a>
+      </div>
+    </div>
+
+    <aside class="arcade__new" aria-label="New">
+      <p class="arcade__new-tag">New</p>
+      <p class="arcade__new-title">The Sunken Wood, floor 2</p>
+      <p class="arcade__new-text">A wood that grew in the dark under the kilns: fog, fireflies and black bog water. A tree that walks and sends its roots along the floor, a mound of moss that sinks and comes up under you, a drowned girl who lets a light drift after you. Roots that catch your feet leave you no dash until they let go.</p>
+    </aside>
+
+    <h2 class="arcade__heading">Begin on any floor</h2>
+    <p class="arcade__note">Floor 1 is the true run. Begin deeper to practise: you start in that floor&rsquo;s still place with what everyone starts with, and nothing a practice run does is kept. On the game&rsquo;s own main screen the FLOOR line does the same, left and right to change it.</p>
+    <ol class="floors">
+      <li><a class="floor" href="rooms/undercroft.html?floor=1" style="--hue: #ff6a2b"><span class="floor__num">1</span><span class="floor__name">The Kilns</span><span class="floor__who">The Kiln Golem</span></a></li>
+      <li><a class="floor floor--new" href="rooms/undercroft.html?floor=2" style="--hue: #e6eea0"><span class="floor__num">2</span><span class="floor__name">The Sunken Wood</span><span class="floor__who">No guardian: two stages</span><span class="floor__tag">New</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=3" style="--hue: #9fd8ff"><span class="floor__num">3</span><span class="floor__name">The Cellars</span><span class="floor__who">The Rime Wyrm</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=4" style="--hue: #7cd66a"><span class="floor__num">4</span><span class="floor__name">The Cisterns</span><span class="floor__who">The Thornmother</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=5" style="--hue: #5fd4c4"><span class="floor__num">5</span><span class="floor__name">The Drowned Stacks</span><span class="floor__who">The Bellkeeper</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=6" style="--hue: #8fa3ff"><span class="floor__num">6</span><span class="floor__name">The Galleries</span><span class="floor__who">The Storm Herald</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=7" style="--hue: #e0b04a"><span class="floor__num">7</span><span class="floor__name">The Works</span><span class="floor__who">The Regulator</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=8" style="--hue: #ff9ecb"><span class="floor__num">8</span><span class="floor__name">The Hall of Glass</span><span class="floor__who">The Reflected</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=9" style="--hue: #a48cff"><span class="floor__num">9</span><span class="floor__name">The Vault&rsquo;s Approach</span><span class="floor__who">The Orrery</span></a></li>
+      <li><a class="floor" href="rooms/undercroft.html?floor=10" style="--hue: #ff4f7b"><span class="floor__num">10</span><span class="floor__name">The Vault</span><span class="floor__who">The Lightless</span></a></li>
+    </ol>
+
+    <div class="arcade__more">
+      <div>
+        <h2 class="arcade__subheading">Two of you</h2>
+        <p class="arcade__text">Choose Host a game on the main screen and send the six-letter code. The other opens the game, chooses Join a game and types it in. The floor the host chose is where you both begin. Reload with Ctrl+Shift+R first, so that both of you have the same game.</p>
+      </div>
+      <div>
+        <h2 class="arcade__subheading">Keys</h2>
+        <p class="arcade__text">Arrows or WASD to move, X or K to jump, Z or J to strike, C or L to dash, V or I to cast, E to take, Q for the other weapon, Enter to choose, Escape or P to pause. On a phone the controls are drawn under the picture.</p>
+      </div>
+    </div>
+  </section>
 
   <noscript>
     <p class="noscript">The works are computed live, so they need JavaScript to run. Nothing here is a recording that could play without it.</p>

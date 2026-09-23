@@ -29,7 +29,13 @@
     void:  { k: '#000000', p: '#1e1a2c', q: '#0d0b14', l: '#5b3fa0', e: '#ffffff', w: '#a48cff' },
     tide:  { k: '#03100f', p: '#2f8f86', q: '#1a5550', l: '#9ff5e6', e: '#ffffff', w: '#d6fff8' },
     gear:  { k: '#140d04', p: '#b08a3c', q: '#6e5220', l: '#efd27a', e: '#fff3b0', w: '#ffdc9a' },
-    glass: { k: '#140a12', p: '#d88ab4', q: '#8a4f72', l: '#ffe8f4', e: '#ffffff', w: '#ffd0e6' }
+    glass: { k: '#140a12', p: '#d88ab4', q: '#8a4f72', l: '#ffe8f4', e: '#ffffff', w: '#ffd0e6' },
+    // the wood: bark for p and q, moss for l; its three creatures (actors-wood.js) bring colours of their own:
+    // bark 1-4 and leaves 5-8 for the Rootwalker, bog moss m n o O and eyes E d for the Mound, teal t T u U g G and the wisp y Y for the Rusalka
+    mire:  { k: '#0b0d08', p: '#5a4632', q: '#33271a', l: '#9dc24a', e: '#f4f0c0', w: '#e6eea0',
+             '1': '#241a12', '2': '#3d2c1e', '3': '#5e4430', '4': '#80603f', '5': '#2f4a1c', '6': '#4f7324', '7': '#7fa332', '8': '#a9c24a',
+             m: '#39482a', n: '#566a38', o: '#7b8e4c', O: '#a4b46c', E: '#eceadb', d: '#15150c',
+             t: '#0f3431', T: '#1d5a52', u: '#2f8a7e', U: '#5cc2ae', g: '#a6eed8', G: '#e2fff4', y: '#f3e3a6', Y: '#fffbe0' }
   };
 
   /* ---- the kinds ----
@@ -467,7 +473,7 @@
 
   BY_ELEMENT.storm = ['hound', 'jelly']; BY_ELEMENT.bloom = ['toad', 'puff']; BY_ELEMENT.void = ['shade', 'watcher'];
   // until their own are written, the newer floors borrow
-  BY_ELEMENT.tide = ['crab', 'puff']; BY_ELEMENT.gear = ['hound', 'lantern']; BY_ELEMENT.glass = ['shade', 'watcher'];
+  BY_ELEMENT.tide = ['crab', 'puff']; BY_ELEMENT.gear = ['hound', 'lantern']; BY_ELEMENT.glass = ['shade', 'watcher']; BY_ELEMENT.mire = ['toad', 'puff'];
 
   // compile every kind's rig into frames, and their mirror images
   var SPRITES = null;
@@ -502,12 +508,13 @@
     void:  { name: 'drain', time: 1, colour: '#a48cff' },
     tide:  { name: 'soak', time: 170, colour: '#5fd4c4' },
     gear:  { name: 'jam', time: 180, colour: '#e0b04a' },
-    glass: { name: 'cut', time: 240, colour: '#ff9ecb' }
+    glass: { name: 'cut', time: 240, colour: '#ff9ecb' },
+    mire:  { name: 'snare', time: 150, colour: '#b8d86a' }
   };
   function statusName(element) { return STATUS[element].name; }
 
   function make(name, x, groundY, elder, floor, rnd) {
-    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.17, size = elder ? 1.4 : 1;
+    var K = KINDS[name], scale = 1 + ((floor || 1) - 1) * 0.15, size = elder ? 1.4 : 1;
     var hp = Math.round(K.hp * scale * (elder ? 3 : 1));
     return {
       kind: name, spec: K, element: K.element, elder: !!elder, size: size,
@@ -520,6 +527,9 @@
   // a creature for a spawn point: the element's walker or flyer, an elder for arenas
   function spawn(point, element, floor, rnd) {
     var pair = BY_ELEMENT[element], name = (point.kind === 'flyer' || point.kind === 'perch') ? pair[1] : pair[0];
+    // an element with a third kind (the wood's Bog Mound) gives it some of the walkers' places; elders stay walkers.
+    // Only such an element draws the extra chance, so no other floor changes
+    if (pair[2] && name === pair[0] && point.kind !== 'brute' && rnd() < 0.45) name = pair[2];
     return make(name, point.x * 16 + 8, point.y * 16, point.kind === 'brute', floor, rnd);
   }
 
@@ -540,7 +550,7 @@
   function hurt(e, damage, fromX, ctx) {
     if (e.dying) return false;
     e.hp -= damage; e.hurt = 10; e.flash = 4;
-    if (!e.elder) { e.vx = (e.x < fromX ? -1 : 1) * (e.spec.flying ? 1.6 : 1.2); if (!e.spec.flying) e.vy = Math.min(e.vy, -1.4); }
+    if (!e.elder) { e.vx = (e.x < fromX ? -1 : 1) * (e.spec.flying ? 1.6 : e.spec.stout ? 0.4 : 1.2); if (!e.spec.flying && !e.spec.stout) e.vy = Math.min(e.vy, -1.4); }
     // a blow during the wind-up breaks an ordinary creature's attack
     if (e.attack && e.attack.phase === 'windup' && !e.elder && !e.attack.def.steady) { if (e.attack.def.end) e.attack.def.end(e, ctx); e.attack = null; e.boxes = []; e.cooldown = 40; }
     if (e.spec.struck) e.spec.struck(e, ctx);
@@ -586,7 +596,7 @@
   }
   // which attack, if any, the creature will begin: the first whose range the Warden stands in
   function chooseAttack(e, ctx, sees) {
-    if (!sees || e.cooldown > 0 || e.hurt > 0) return null;
+    if (!sees || e.cooldown > 0 || (e.hurt > 0 && !e.spec.stout)) return null;   // a stout kind (the Rootwalker) may begin while it is being struck
     var hero = ctx.hero, dx = Math.abs(hero.x - e.x), dy = (hero.y - 11) - (e.spec.flying ? e.y : e.y - e.h / 2), list = e.spec.attacks;
     for (var k = 0; k < list.length; k++) {
       var A = list[k];

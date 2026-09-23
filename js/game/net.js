@@ -52,7 +52,7 @@
     function start(config) {
       if (S.role !== 'host' || !S.guest || S.state !== 'lobby') return false;   // once: a second Start (a double click, Enter twice) would begin the host's game again under a guest already playing
       S.delay = opts.delay || chooseDelay();
-      S.config = { seed: config.seed, roster: [{ who: config.who, power: config.power }, { who: S.guest.who, power: S.guest.power }], delay: S.delay };
+      S.config = { seed: config.seed, floor: config.floor || 1, roster: [{ who: config.who, power: config.power }, { who: S.guest.who, power: S.guest.power }], delay: S.delay };   // floor: where the host chose to begin
       send({ t: 'start', config: S.config, you: 1 });
       begin(0);
       return true;
@@ -60,7 +60,7 @@
     function begin(meIndex) {
       S.me = meIndex; S.other = 1 - meIndex; S.step = 0; S.state = 'run'; S.stalled = 0;
       clearBuffers(0);
-      game.begin({ seed: S.config.seed, roster: S.config.roster, me: S.me });
+      game.begin({ seed: S.config.seed, floor: S.config.floor || 1, roster: S.config.roster, me: S.me });
     }
 
     /* ---- the run ---- */
